@@ -1,24 +1,24 @@
 {
-	"folders": [
-		{
-			"name": "Game",
-			"path": "./game",
-		},
-		{
-			"name": "Tools",
-			"path": "./tools",
-		},
-		{
-			"name": "Resources",
-			"path": "./resources",
-		},
-		{
-			"name": "Builds",
-			"path": "./builds",
-		},
-		{
-			"name": "Root",
-			"path": ".",
-		}
-	]
+  "folders": [
+    {
+      "name": "Game",
+      "path": "./game",
+    },
+    {
+      "name": "Tools",
+    "path": "./tools",
+    },
+    {
+      "name": "Resources",
+      "path": "./resources",
+    },
+    {
+      "name": "Builds",
+      "path": "./builds",
+    },
+    {
+      "name": "Root",
+      "path": ".",
+    }
+  ]
 }
