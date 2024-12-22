@@ -1,0 +1,34 @@
+name: Build LÖVE
+
+on:
+  push:
+    tags:
+      - "v?[0-9]+.[0-9]+.[0-9]+*"
+  workflow_dispatch:
+
+env:
+  BUILD_TYPE: ${{ fromJSON('["dev", "release"]')[startsWith(github.ref, 'refs/tags/v')] }}
+  CORE_LOVE_PACKAGE_PATH: ./core.love
+  CORE_LOVE_ARTIFACT_NAME: core_love_package
+  PRODUCT_NAME: Game
+  BUNDLE_ID: com.oval-tutu.game
+
+jobs:
+  build-core:
+    runs-on: ubuntu-latest
+    env:
+      OUTPUT_FOLDER: ./builds
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Build core love package
+        uses: love-actions/love-actions-core@v1
+        with:
+          build-list: ./game/
+          package-path: ${{ env.CORE_LOVE_PACKAGE_PATH }}
+      - name: Upload core love package
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.CORE_LOVE_ARTIFACT_NAME }}
+          path: ${{ env.CORE_LOVE_PACKAGE_PATH }}
