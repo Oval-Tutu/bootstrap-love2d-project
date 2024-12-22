@@ -5,4 +5,8 @@
 	],
 	"Lua.runtime.version": "LuaJIT",
 	"Lua.workspace.checkThirdParty": false,
+  "pixelbyte.love2d.debug": false,
+  "pixelbyte.love2d.path" : "love",
+  "pixelbyte.love2d.runOnSave" : false,
+  "pixelbyte.love2d.srcDir" : "game/"
 }

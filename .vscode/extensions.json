@@ -1,7 +1,9 @@
 {
-    "recommendations": [
-        "sumneko.lua",
-        "tomblind.local-lua-debugger-vscode",
-        "editorconfig.editorconfig"
-    ]
+  "recommendations": [
+    "editorconfig.editorconfig",
+    "pixelbyte-studios.pixelbyte-love2d",
+    "slevesque.shader",
+    "sumneko.lua",
+    "tomblind.local-lua-debugger-vscode"
+  ]
 }
