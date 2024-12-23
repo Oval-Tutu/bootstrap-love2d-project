@@ -35,6 +35,8 @@ Adapted from <https://github.com/Keyslam/LOVE-VSCode-Game-Template>
     - [Editorconfig](https://marketplace.visualstudio.com/items?itemName=EditorConfig.EditorConfig)
     - [Shader languages support](https://marketplace.visualstudio.com/items?itemName=slevesque.shader)
 - Configure the `game/conf.lua` and `tools/build/makelove.toml` with the settings specific for your game.
+- Configure `.github/workflows/build.yml` with the settings specific for your game.
+  - **Make sure that `PRODUCT_UUID` is changed using `uuidgen`.
 
 ## Running
 
