@@ -149,3 +149,59 @@ jobs:
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_Android_release
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}-release.apk
+  build-macos-portable:
+    runs-on: macos-latest
+    needs: [build-love]
+    env:
+      OUTPUT_FOLDER: ./build
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Download love package
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_love
+      - name: Build macOS packages
+        id: build-packages
+        uses: love-actions/love-actions-macos-portable@v1
+        with:
+          app-name: ${{ env.PRODUCT_NAME }}
+          bundle-id: ${{ env.PRODUCT_ID }}
+          copyright: ${{ env.PRODUCT_COPYRIGHT }}
+          #icon-path: ./.github/build/macOS/${{ env.BUILD_TYPE }}/icon.icns
+          love-package: ${{ env.CORE_LOVE_PACKAGE_PATH }}
+          product-name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}
+          version-string: ${{ env.PRODUCT_VERSION }}
+          output-folder: ${{ env.OUTPUT_FOLDER }}
+          #account-username: ${{ secrets.APPLE_ACCOUNT_USERNAME }}
+          #account-password: ${{ secrets.APPLE_ACCOUNT_PASSWORD }}
+          #team-id: "${{ secrets.APPLE_DEVELOPER_TEAM_ID }}"
+          #developer-id-application-base64: ${{ secrets.APPLE_CERT_DEVELOPER_ID_APPLICATION }}
+          #developer-id-application-password: ${{ secrets.APPLE_CERT_DEVELOPER_ID_APPLICATION_PWD }}
+          #developer-id-installer-base64: ${{ secrets.APPLE_CERT_DEVELOPER_ID_INSTALLER }}
+          #developer-id-installer-password: ${{ secrets.APPLE_CERT_DEVELOPER_ID_INSTALLER_PWD }}
+          #dmg-background-path: ./.github/build/macOS/${{ env.BUILD_TYPE }}/dmg.png
+          #dmg-icon-position: "239 203"
+          #dmg-icon-size: "100"
+          #dmg-link-position: "565 203"
+          #dmg-text-size: "12"
+          #dmg-volume-icon-path: ./.github/build/macOS/${{ env.BUILD_TYPE }}/dmg.icns
+          dmg-volume-name: ${{ env.PRODUCT_NAME }}
+          #dmg-window-position: "200 120"
+          #dmg-window-size: "800 500"
+      - name: Upload pkg artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_macOS_portable_pkg
+          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}.pkg
+      - name: Upload dmg artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_macOS_portable_dmg
+          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}.dmg
+      - name: Upload bare artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_macOS_portable_zip
+          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}.zip
