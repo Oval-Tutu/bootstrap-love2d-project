@@ -10,16 +10,16 @@ Adapted from <https://github.com/Keyslam/LOVE-VSCode-Game-Template>
 - 🩷 Intellisense for the LÖVE API via [Love2D Support](https://marketplace.visualstudio.com/items?itemName=pixelbyte-studios.pixelbyte-love2d)
 - 👨‍💻 Consistent coding styles with [Editorconfig](https://github.com/editorconfig/editorconfig-vscode)
 - ️⛱️ [Shader languages support](https://marketplace.visualstudio.com/items?itemName=slevesque.shader)
-- ️👷 Automated builds with [Makelove](https://github.com/pfirsich/makelove)
+- ️👷 Automated builds of the `.love` file.
 - 🗂️ Organized with [Workspaces](https://code.visualstudio.com/docs/editor/workspaces)
 
 ## Prerequisites
 
 - Visual Studio Code
 - [LÖVE 11.5](https://love2d.org/)
-- [Makelove](https://github.com/pfirsich/makelove)
-
-**LÖVE and Makelove should be in your PATH environment variable.**
+  - **`love` should be in your `PATH`**
+- `bash`
+- `zip`
 
 ## Setup
 
@@ -41,8 +41,13 @@ Adapted from <https://github.com/Keyslam/LOVE-VSCode-Game-Template>
 - Press <kbd>F5</kbd> to **Debug** the game.
   - In debug mode you can use breakpoints and inspect variables.
   - This does have some performance impact though.
+  - You can switch to *Release mode* in the `Run and Debug` tab (<kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>D</kbd>)
 
-You can switch to *Release mode* in the `Run and Debug` tab (<kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>D</kbd>)
+## Building
+
+*WIP* 🚧 - This currently only builds the `.love` file and puts it in the `builds` folder.
+
+- Press <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>B</kbd> to **Build** the game.
 
 ## Structure
 ```
@@ -60,7 +65,7 @@ You can switch to *Release mode* in the `Run and Debug` tab (<kbd>Ctrl</kbd> + <
 │   ├── lib                   3rd party libraries
 │   └── src                   Source code
 ├── resources                 Resources that should not be shipped, e.g. asset collections
-└── tools                     Tools for building and packaging the game
+└── tools                     Tools for building and packaging the game (WIP)
 ```
 
 ### .vscode
