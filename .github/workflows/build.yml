@@ -7,12 +7,14 @@ on:
   workflow_dispatch:
 
 env:
+  BUILD_TYPE: ${{ fromJSON('["dev", "release"]')[startsWith(github.ref, 'refs/tags/v')] }}
   PRODUCT_NAME: Game
   PRODUCT_ID: com.oval-tutu.game
   PRODUCT_DESC: A game made with LÖVE by Oval Tutu
   PRODUCT_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || '0.0.0' }}
   PRODUCT_PNG: ./tools/icon.png
   PRODUCT_ICO: ./tools/icon.ico
+  PRODUCT_RES: ./tools/res/
   PRODUCT_COPYRIGHT: Copyright (c)️ 2024 Oval Tutu
   PRODUCT_COMPANY: Oval Tutu
   PRODUCT_WEBSITE: https://oval-tutu.com
@@ -112,3 +114,38 @@ jobs:
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_Windows_installer
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_installer.exe
+  build-android:
+    runs-on: ubuntu-22.04
+    needs: [build-love]
+    env:
+      OUTPUT_FOLDER: ./build
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Download love package
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_love
+      - name: Build Android packages
+        id: build-packages
+        uses: love-actions/love-actions-android@v2
+        with:
+          app-name: ${{ env.PRODUCT_NAME }}
+          bundle-id: com.ovaltutu.${{ env.PRODUCT_NAME }}
+          #icon-specifier: "@mipmap/icon"
+          #keystore-alias: ${{ secrets.ANDROID_KEYSTORE_ALIAS }}
+          #keystore-base64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          #keystore-key-password: ${{ secrets.ANDROID_KEYSTORE_KEYPASSWORD }}
+          #keystore-store-password: ${{ secrets.ANDROID_KEYSTORE_STOREPASSWORD }}
+          love-package: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}.love
+          resource-path: ${{ env.PRODUCT_RES }}
+          product-name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}
+          version-string: ${{ env.PRODUCT_VERSION }}
+          version-code: ${{ github.run_number }}
+          output-folder: ${{ env.OUTPUT_FOLDER }}
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_Android_release
+          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}-release.apk
