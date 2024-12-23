@@ -12,9 +12,11 @@ env:
   PRODUCT_DESC: A game made with LÖVE by Oval Tutu
   PRODUCT_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || '0.0.0' }}
   PRODUCT_PNG: ./tools/icon.png
+  PRODUCT_ICO: ./tools/icon.ico
   PRODUCT_COPYRIGHT: Copyright (c)️ 2024 Oval Tutu
   PRODUCT_COMPANY: Oval Tutu
   PRODUCT_WEBSITE: https://oval-tutu.com
+  PRODUCT_UUID: 3e64d17c-8797-4382-921f-cf488b22073f
 
 jobs:
   build-love:
@@ -70,3 +72,43 @@ jobs:
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_deb
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}.deb
+  build-windows:
+    runs-on: windows-latest
+    needs: [build-love]
+    env:
+      OUTPUT_FOLDER: ./build
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Download love package
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_love
+      - name: Build Windows packages
+        id: build-packages
+        uses: love-actions/love-actions-windows@v1
+        with:
+          app-id: ${{ env.PRODUCT_UUID }}
+          love-package: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}.love
+          icon-path: ${{ env.PRODUCT_ICO }}
+          #rc-path: ./.github/build/windows/${{ env.BUILD_TYPE }}/template.rc
+          project-website: ${{ env.PRODUCT_WEBSITE }}
+          installer-languages: English.isl
+          product-name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}
+          output-folder: ${{ env.OUTPUT_FOLDER }}
+      - name: Upload 32-bit artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_Windows_x86
+          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_x86.zip
+      - name: Upload 64-bit artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_Windows_x64
+          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_x64.zip
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_Windows_installer
+          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_installer.exe
