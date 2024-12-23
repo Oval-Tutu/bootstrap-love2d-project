@@ -12,6 +12,7 @@ Adapted from <https://github.com/Keyslam/LOVE-VSCode-Game-Template>
 - ️⛱️ [Shader languages support](https://marketplace.visualstudio.com/items?itemName=slevesque.shader)
 - ️👷 Automated builds of the `.love` file.
 - 🗂️ Organized with [Workspaces](https://code.visualstudio.com/docs/editor/workspaces)
+- ️❄️ Nix flake to provision a dev shell
 
 ## Prerequisites
 
