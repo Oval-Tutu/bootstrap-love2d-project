@@ -7,6 +7,7 @@ on:
   workflow_dispatch:
 
 env:
+  BUILD_LIST: ./game/
   BUILD_TYPE: ${{ fromJSON('["dev", "release"]')[startsWith(github.ref, 'refs/tags/v')] }}
   OUTPUT_FOLDER: ./builds
   PRODUCT_NAME: Game
@@ -17,13 +18,13 @@ env:
   PRODUCT_ICNS: ./tools/icns/icon.icns
   PRODUCT_ICO: ./tools/icon.ico
   PRODUCT_RES: ./tools/res/
-  PRODUCT_COPYRIGHT: Copyright (c)️ 2024 Oval Tutu
+  PRODUCT_COPYRIGHT: Copyright (c) 2024 Oval Tutu
   PRODUCT_COMPANY: Oval Tutu
   PRODUCT_WEBSITE: https://oval-tutu.com
   PRODUCT_UUID: 3e64d17c-8797-4382-921f-cf488b22073f
 
 jobs:
-  pre:
+  configure:
     runs-on: ubuntu-22.04
     outputs:
       build_num: ${{ steps.set_build_num.outputs.build_num }}
@@ -34,9 +35,9 @@ jobs:
 
   build-love:
     runs-on: ubuntu-22.04
-    needs: [pre]
+    needs: [configure]
     env:
-      BUILD_NUM: ${{ needs.pre.outputs.build_num }}
+      BUILD_NUM: ${{ needs.configure.outputs.build_num }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -44,38 +45,40 @@ jobs:
       - name: Build love package
         uses: love-actions/love-actions-core@v1
         with:
-          build-list: ./game/
+          build-list: ${{ env.BUILD_LIST }}
           package-path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.love
       - name: Upload love package
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_love
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.love
+
   build-linux:
     runs-on: ubuntu-22.04
-    needs: [pre, build-love]
+    needs: [configure]
     env:
-      BUILD_NUM: ${{ needs.pre.outputs.build_num }}
+      BUILD_NUM: ${{ needs.configure.outputs.build_num }}
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-      - name: Download love package
-        uses: actions/download-artifact@v4
+      - name: Build love package
+        uses: love-actions/love-actions-core@v1
         with:
-          name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_love
+          build-list: ${{ env.BUILD_LIST }}
+          package-path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love
       - name: Build Linux packages
         id: build-packages
         uses: love-actions/love-actions-linux@v2
         with:
+          love-package: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love
+          output-folder: ${{ env.OUTPUT_FOLDER }}
+          product-name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}
           app-name: ${{ env.PRODUCT_NAME }}
           bundle-id: ${{ env.PRODUCT_ID }}
           description: ${{ env.PRODUCT_DESC }}
-          version-string: ${{ env.PRODUCT_VERSION }}
           icon-path: ${{ env.PRODUCT_PNG }}
-          love-package: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.love
-          product-name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}
-          output-folder: ${{ env.OUTPUT_FOLDER }}
+          version-string: ${{ env.PRODUCT_VERSION }}
       - name: Upload AppImage
         uses: actions/upload-artifact@v4
         with:
@@ -86,31 +89,33 @@ jobs:
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_Linux_deb
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.deb
+
   build-windows:
     runs-on: windows-latest
-    needs: [pre, build-love]
+    needs: [configure]
     env:
-      BUILD_NUM: ${{ needs.pre.outputs.build_num }}
+      BUILD_NUM: ${{ needs.configure.outputs.build_num }}
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-      - name: Download love package
-        uses: actions/download-artifact@v4
+      - name: Build love package
+        uses: love-actions/love-actions-core@v1
         with:
-          name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_love
+          build-list: ${{ env.BUILD_LIST }}
+          package-path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love
       - name: Build Windows packages
         id: build-packages
         uses: love-actions/love-actions-windows@v1
         with:
-          app-id: ${{ env.PRODUCT_UUID }}
-          love-package: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.love
-          icon-path: ${{ env.PRODUCT_ICO }}
-          #rc-path: ./.github/build/windows/${{ env.BUILD_TYPE }}/template.rc
-          project-website: ${{ env.PRODUCT_WEBSITE }}
-          installer-languages: English.isl
-          product-name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}
+          love-package: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love
           output-folder: ${{ env.OUTPUT_FOLDER }}
+          product-name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}
+          app-id: ${{ env.PRODUCT_UUID }}
+          icon-path: ${{ env.PRODUCT_ICO }}
+          installer-languages: English.isl
+          project-website: ${{ env.PRODUCT_WEBSITE }}
+          #rc-path: ./.github/build/windows/${{ env.BUILD_TYPE }}/template.rc
       - name: Upload 32-bit artifact
         uses: actions/upload-artifact@v4
         with:
@@ -126,23 +131,28 @@ jobs:
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_Windows_installer_exe
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-installer.exe
+
   build-android:
     runs-on: ubuntu-22.04
-    needs: [pre, build-love]
+    needs: [configure]
     env:
-      BUILD_NUM: ${{ needs.pre.outputs.build_num }}
+      BUILD_NUM: ${{ needs.configure.outputs.build_num }}
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-      - name: Download love package
-        uses: actions/download-artifact@v4
+      - name: Build love package
+        uses: love-actions/love-actions-core@v1
         with:
-          name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_love
+          build-list: ${{ env.BUILD_LIST }}
+          package-path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love
       - name: Build Android packages
         id: build-packages
         uses: love-actions/love-actions-android@v2
         with:
+          love-package: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love
+          output-folder: ${{ env.OUTPUT_FOLDER }}
+          product-name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}
           app-name: ${{ env.PRODUCT_NAME }}
           bundle-id: com.ovaltutu.${{ env.PRODUCT_NAME }}
           #icon-specifier: "@mipmap/icon"
@@ -150,45 +160,42 @@ jobs:
           #keystore-base64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           #keystore-key-password: ${{ secrets.ANDROID_KEYSTORE_KEYPASSWORD }}
           #keystore-store-password: ${{ secrets.ANDROID_KEYSTORE_STOREPASSWORD }}
-          love-package: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.love
           resource-path: ${{ env.PRODUCT_RES }}
-          product-name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}
           version-string: ${{ env.PRODUCT_VERSION }}
           version-code: ${{ github.run_number }}
-          output-folder: ${{ env.OUTPUT_FOLDER }}
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_Android_release_apk
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-release.apk
+
   build-macos-portable:
     runs-on: macos-latest
-    needs: [pre, build-love]
+    needs: [configure]
     env:
-      BUILD_NUM: ${{ needs.pre.outputs.build_num }}
+      BUILD_NUM: ${{ needs.configure.outputs.build_num }}
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-      - name: Download love package
-        uses: actions/download-artifact@v4
+      - name: Build love package
+        uses: love-actions/love-actions-core@v1
         with:
-          name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_love
+          build-list: ${{ env.BUILD_LIST }}
+          package-path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love
       - name: Build macOS packages
         id: build-packages
         uses: love-actions/love-actions-macos-portable@v1
         with:
-          app-name: ${{ env.PRODUCT_NAME }}
-          bundle-id: ${{ env.PRODUCT_ID }}
-          copyright: ${{ env.PRODUCT_COPYRIGHT }}
-          icon-path: ${{ env.PRODUCT_ICNS }}
-          love-package: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.love
-          product-name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-portable
-          version-string: ${{ env.PRODUCT_VERSION }}
+          love-package: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love
           output-folder: ${{ env.OUTPUT_FOLDER }}
+          product-name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-portable
           #account-username: ${{ secrets.APPLE_ACCOUNT_USERNAME }}
           #account-password: ${{ secrets.APPLE_ACCOUNT_PASSWORD }}
           #team-id: "${{ secrets.APPLE_DEVELOPER_TEAM_ID }}"
+          app-name: ${{ env.PRODUCT_NAME }}
+          bundle-id: ${{ env.PRODUCT_ID }}
+          copyright: ${{ env.PRODUCT_COPYRIGHT }}
           #developer-id-application-base64: ${{ secrets.APPLE_CERT_DEVELOPER_ID_APPLICATION }}
           #developer-id-application-password: ${{ secrets.APPLE_CERT_DEVELOPER_ID_APPLICATION_PWD }}
           #developer-id-installer-base64: ${{ secrets.APPLE_CERT_DEVELOPER_ID_INSTALLER }}
@@ -202,6 +209,8 @@ jobs:
           dmg-volume-name: ${{ env.PRODUCT_NAME }}
           #dmg-window-position: "200 120"
           #dmg-window-size: "800 500"
+          icon-path: ${{ env.PRODUCT_ICNS }}
+          version-string: ${{ env.PRODUCT_VERSION }}
       - name: Upload pkg artifact
         uses: actions/upload-artifact@v3
         with:
@@ -212,37 +221,34 @@ jobs:
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_macOS_portable_dmg
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-portable.dmg
-      - name: Upload bare artifact
+      - name: Upload zip artifact
         uses: actions/upload-artifact@v3
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_macOS_portable_zip
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-portable.zip
+
   build-macos-appstore:
     runs-on: macos-latest
-    needs: [pre, build-love]
+    needs: [configure]
     env:
-      BUILD_NUM: ${{ needs.pre.outputs.build_num }}
+      BUILD_NUM: ${{ needs.configure.outputs.build_num }}
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-      - name: Download love package
-        uses: actions/download-artifact@v4
+      - name: Build love package
+        uses: love-actions/love-actions-core@v1
         with:
-          name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_love
+          build-list: ${{ env.BUILD_LIST }}
+          package-path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love
       - name: Build macOS packages
         id: build-packages
         uses: love-actions/love-actions-macos-appstore@v1
         with:
-          app-name: ${{ env.PRODUCT_NAME }}
-          bundle-id: ${{ env.PRODUCT_ID }}
-          copyright: ${{ env.PRODUCT_COPYRIGHT }}
-          icon-path: ${{ env.PRODUCT_ICNS }}
-          love-package: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.love
-          #libs-path: ./ColdClear/universal/
-          product-name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-appstore
-          version-string: ${{ env.PRODUCT_VERSION }}
+          love-package: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love
           output-folder: ${{ env.OUTPUT_FOLDER }}
+          product-name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-appstore
+          app-name: ${{ env.PRODUCT_NAME }}
           #apple-development-base64: ${{ secrets.APPLE_CERT_APPLE_DEVELOPMENT_BASE64 }}
           #apple-development-password: ${{ secrets.APPLE_CERT_APPLE_DEVELOPMENT_PWD }}
           #api-key: ${{ secrets.APPLE_API_KEY }}
@@ -250,8 +256,13 @@ jobs:
           #api-issuer-id: ${{ secrets.APPLE_API_ISSUER_ID }}
           #team-id: ${{ secrets.APPLE_DEVELOPER_TEAM_ID }}
           #apple-id: ${{ secrets.APPLE_APPLE_ID }}
+          bundle-id: ${{ env.PRODUCT_ID }}
+          copyright: ${{ env.PRODUCT_COPYRIGHT }}
+          icon-path: ${{ env.PRODUCT_ICNS }}
+          #libs-path: ./ColdClear/universal/
           external-test: ${{ startsWith(github.ref, 'refs/tags/pre') }}
           store-release: ${{ startsWith(github.ref, 'refs/tags/v') }}
+          version-string: ${{ env.PRODUCT_VERSION }}
       - name: Upload logs artifact
         uses: actions/upload-artifact@v3
         with:
@@ -265,33 +276,29 @@ jobs:
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_macOS_appstore_pkg
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-appstore.pkg
+
   build-ios:
     runs-on: macos-latest
-    needs: [pre, build-love]
+    needs: [configure]
     env:
-      BUILD_NUM: ${{ needs.pre.outputs.build_num }}
+      BUILD_NUM: ${{ needs.configure.outputs.build_num }}
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-      - name: Download love package
-        uses: actions/download-artifact@v4
+      - name: Build love package
+        uses: love-actions/love-actions-core@v1
         with:
-          name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_love
+          build-list: ${{ env.BUILD_LIST }}
+          package-path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love
       - name: Build iOS packages
         id: build-packages
         uses: love-actions/love-actions-ios@v1
         with:
-          app-name: ${{ env.PRODUCT_NAME }}
-          bundle-id: ${{ env.PRODUCT_ID }}
-          copyright: ${{ env.PRODUCT_COPYRIGHT }}
-          icon-path: ./tools/icns
-          #love-patch: ./.github/build/iOS/love.patch
-          love-package: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.love
-          #libs-path: ./ColdClear/arm64/
-          product-name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}
-          version-string: ${{ env.PRODUCT_VERSION }}
+          love-package: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love
           output-folder: ${{ env.OUTPUT_FOLDER }}
+          product-name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}
+          app-name: ${{ env.PRODUCT_NAME }}
           #apple-development-base64: ${{ secrets.APPLE_CERT_APPLE_DEVELOPMENT_BASE64 }}
           #apple-development-password: ${{ secrets.APPLE_CERT_APPLE_DEVELOPMENT_PWD }}
           #api-key: ${{ secrets.APPLE_API_KEY }}
@@ -299,8 +306,14 @@ jobs:
           #api-issuer-id: ${{ secrets.APPLE_API_ISSUER_ID }}
           #team-id: ${{ secrets.APPLE_DEVELOPER_TEAM_ID }}
           #apple-id: ${{ secrets.APPLE_APPLE_ID }}
+          bundle-id: ${{ env.PRODUCT_ID }}
+          copyright: ${{ env.PRODUCT_COPYRIGHT }}
+          icon-path: ./tools/icns
+          #libs-path: ./ColdClear/arm64/
+          #love-patch: ./.github/build/iOS/love.patch
           external-test: ${{ startsWith(github.ref, 'refs/tags/pre') }}
           store-release: ${{ startsWith(github.ref, 'refs/tags/v') }}
+          version-string: ${{ env.PRODUCT_VERSION }}
       - name: Upload logs artifact
         uses: actions/upload-artifact@v3
         with:
