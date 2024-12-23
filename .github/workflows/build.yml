@@ -7,7 +7,6 @@ on:
   workflow_dispatch:
 
 env:
-  BUILD_LIST: ./game/
   BUILD_TYPE: ${{ fromJSON('["dev", "release"]')[startsWith(github.ref, 'refs/tags/v')] }}
   OUTPUT_FOLDER: ./builds
   PRODUCT_NAME: Game
@@ -43,10 +42,7 @@ jobs:
         with:
           submodules: recursive
       - name: Build love package
-        uses: love-actions/love-actions-core@v1
-        with:
-          build-list: ${{ env.BUILD_LIST }}
-          package-path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.love
+        run: ./tools/build-love.sh "${{ env.PRODUCT_NAME }}" "${{ env.BUILD_NUM }}"
       - name: Upload love package
         uses: actions/upload-artifact@v4
         with:
@@ -63,10 +59,7 @@ jobs:
         with:
           submodules: recursive
       - name: Build love package
-        uses: love-actions/love-actions-core@v1
-        with:
-          build-list: ${{ env.BUILD_LIST }}
-          package-path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love
+        run: ./tools/build-love.sh "${{ env.PRODUCT_NAME }}"
       - name: Build Linux packages
         id: build-packages
         uses: love-actions/love-actions-linux@v2
@@ -100,10 +93,7 @@ jobs:
         with:
           submodules: recursive
       - name: Build love package
-        uses: love-actions/love-actions-core@v1
-        with:
-          build-list: ${{ env.BUILD_LIST }}
-          package-path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love
+        run: ./tools/build-love.sh "${{ env.PRODUCT_NAME }}"
       - name: Build Windows packages
         id: build-packages
         uses: love-actions/love-actions-windows@v1
@@ -142,10 +132,7 @@ jobs:
         with:
           submodules: recursive
       - name: Build love package
-        uses: love-actions/love-actions-core@v1
-        with:
-          build-list: ${{ env.BUILD_LIST }}
-          package-path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love
+        run: ./tools/build-love.sh "${{ env.PRODUCT_NAME }}"
       - name: Build Android packages
         id: build-packages
         uses: love-actions/love-actions-android@v2
@@ -179,10 +166,7 @@ jobs:
         with:
           submodules: recursive
       - name: Build love package
-        uses: love-actions/love-actions-core@v1
-        with:
-          build-list: ${{ env.BUILD_LIST }}
-          package-path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love
+        run: ./tools/build-love.sh "${{ env.PRODUCT_NAME }}"
       - name: Build macOS packages
         id: build-packages
         uses: love-actions/love-actions-macos-portable@v1
@@ -237,10 +221,7 @@ jobs:
         with:
           submodules: recursive
       - name: Build love package
-        uses: love-actions/love-actions-core@v1
-        with:
-          build-list: ${{ env.BUILD_LIST }}
-          package-path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love
+        run: ./tools/build-love.sh "${{ env.PRODUCT_NAME }}"
       - name: Build macOS packages
         id: build-packages
         uses: love-actions/love-actions-macos-appstore@v1
@@ -287,10 +268,7 @@ jobs:
         with:
           submodules: recursive
       - name: Build love package
-        uses: love-actions/love-actions-core@v1
-        with:
-          build-list: ${{ env.BUILD_LIST }}
-          package-path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love
+        run: ./tools/build-love.sh "${{ env.PRODUCT_NAME }}"
       - name: Build iOS packages
         id: build-packages
         uses: love-actions/love-actions-ios@v1

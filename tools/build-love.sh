@@ -1,9 +1,14 @@
 #!/usr/bin/env bash
 
-# Get the directory of the current script
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-# Source the config file relative to the script directory
-source "${SCRIPT_DIR}/config.sh"
+PACKAGE_NAME="Game";
+if [ -n "${1}" ]; then
+  PACKAGE_NAME="${1}"
+fi
+
+#If $2 is set use it as the package name suffix
+if [ -n "${2}" ]; then
+  PACKAGE_NAME="${PACKAGE_NAME}-${2}"
+fi
 
 # Create love package using zip
 if command -v zip &>/dev/null; then
