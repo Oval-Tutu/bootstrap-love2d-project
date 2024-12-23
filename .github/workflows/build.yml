@@ -12,6 +12,7 @@ on:
 # - Create Android res/ directory at build time
 # - Add BUILD_NUM to replace PRODUCT_VERSION in the build artifacts
 # - Update artifact name to clearly indicate the file extension
+# - Move build meta data/resource to resources/
 
 env:
   BUILD_TYPE: ${{ fromJSON('["dev", "release"]')[startsWith(github.ref, 'refs/tags/v')] }}
@@ -20,6 +21,7 @@ env:
   PRODUCT_DESC: A game made with LÖVE by Oval Tutu
   PRODUCT_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || '0.0.0' }}
   PRODUCT_PNG: ./tools/icon.png
+  PRODUCT_ICNS: ./tools/icns/icon.icns
   PRODUCT_ICO: ./tools/icon.ico
   PRODUCT_RES: ./tools/res/
   PRODUCT_COPYRIGHT: Copyright (c)️ 2024 Oval Tutu
@@ -176,9 +178,9 @@ jobs:
           app-name: ${{ env.PRODUCT_NAME }}
           bundle-id: ${{ env.PRODUCT_ID }}
           copyright: ${{ env.PRODUCT_COPYRIGHT }}
-          #icon-path: ./.github/build/macOS/${{ env.BUILD_TYPE }}/icon.icns
-          love-package: ${{ env.CORE_LOVE_PACKAGE_PATH }}
-          product-name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}
+          icon-path: ${{ env.PRODUCT_ICNS }}
+          love-package: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}.love
+          product-name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}-portable
           version-string: ${{ env.PRODUCT_VERSION }}
           output-folder: ${{ env.OUTPUT_FOLDER }}
           #account-username: ${{ secrets.APPLE_ACCOUNT_USERNAME }}
@@ -201,14 +203,62 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_macOS_portable_pkg
-          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}.pkg
+          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}-portable.pkg
       - name: Upload dmg artifact
         uses: actions/upload-artifact@v3
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_macOS_portable_dmg
-          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}.dmg
+          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}-portable.dmg
       - name: Upload bare artifact
         uses: actions/upload-artifact@v3
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_macOS_portable_zip
-          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}.zip
+          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}-portable.zip
+  build-macos-appstore:
+    runs-on: macos-latest
+    needs: [build-love]
+    env:
+      OUTPUT_FOLDER: ./build
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Download love package
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_love
+      - name: Build macOS packages
+        id: build-packages
+        uses: love-actions/love-actions-macos-appstore@v1
+        with:
+          app-name: ${{ env.PRODUCT_NAME }}
+          bundle-id: ${{ env.PRODUCT_ID }}
+          copyright: ${{ env.PRODUCT_COPYRIGHT }}
+          icon-path: ${{ env.PRODUCT_ICNS }}
+          love-package: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}.love
+          #libs-path: ./ColdClear/universal/
+          product-name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}-appstore
+          version-string: ${{ env.PRODUCT_VERSION }}
+          output-folder: ${{ env.OUTPUT_FOLDER }}
+          #apple-development-base64: ${{ secrets.APPLE_CERT_APPLE_DEVELOPMENT_BASE64 }}
+          #apple-development-password: ${{ secrets.APPLE_CERT_APPLE_DEVELOPMENT_PWD }}
+          #api-key: ${{ secrets.APPLE_API_KEY }}
+          #api-key-id: ${{ secrets.APPLE_API_KEY_ID }}
+          #api-issuer-id: ${{ secrets.APPLE_API_ISSUER_ID }}
+          #team-id: ${{ secrets.APPLE_DEVELOPER_TEAM_ID }}
+          #apple-id: ${{ secrets.APPLE_APPLE_ID }}
+          external-test: ${{ startsWith(github.ref, 'refs/tags/pre') }}
+          store-release: ${{ startsWith(github.ref, 'refs/tags/v') }}
+      - name: Upload logs artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_macOS_appstore_logs
+          path: |
+            ${{ env.OUTPUT_FOLDER }}/DistributionSummary.plist
+            ${{ env.OUTPUT_FOLDER }}/ExportOptions.plist
+            ${{ env.OUTPUT_FOLDER }}/Packaging.log
+      - name: Upload pkg artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_macOS_appstore_pkg
+          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}-appstore.pkg
