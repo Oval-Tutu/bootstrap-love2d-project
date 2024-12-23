@@ -65,12 +65,12 @@ jobs:
       - name: Upload AppImage
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_AppImage
+          name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_Linux_AppImage
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}.AppImage
       - name: Upload Deb
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_deb
+          name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_Linux_deb
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}.deb
   build-windows:
     runs-on: windows-latest
@@ -98,18 +98,18 @@ jobs:
       - name: Upload 32-bit artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_Windows_x86
+          name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_Windows_x86_zip
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_x86.zip
       - name: Upload 64-bit artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_Windows_x64
+          name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_Windows_x64_zip
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_x64.zip
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_Windows_installer
-          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_installer.exe
+          name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_Windows_installer_exe
+          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}-installer.exe
   build-android:
     runs-on: ubuntu-22.04
     needs: [build-love]
@@ -141,7 +141,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_Android_release
+          name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_Android_release_apk
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}-release.apk
   build-macos-portable:
     runs-on: macos-latest
