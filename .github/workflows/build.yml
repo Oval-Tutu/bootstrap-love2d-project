@@ -262,3 +262,52 @@ jobs:
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_macOS_appstore_pkg
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}-appstore.pkg
+  build-ios:
+    runs-on: macos-latest
+    needs: [build-love]
+    env:
+      OUTPUT_FOLDER: ./build
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Download love package
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_love
+      - name: Build iOS packages
+        id: build-packages
+        uses: love-actions/love-actions-ios@v1
+        with:
+          app-name: ${{ env.PRODUCT_NAME }}
+          bundle-id: ${{ env.PRODUCT_ID }}
+          copyright: ${{ env.PRODUCT_COPYRIGHT }}
+          icon-path: ./tools/icns
+          #love-patch: ./.github/build/iOS/love.patch
+          love-package: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}.love
+          #libs-path: ./ColdClear/arm64/
+          product-name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}
+          version-string: ${{ env.PRODUCT_VERSION }}
+          output-folder: ${{ env.OUTPUT_FOLDER }}
+          #apple-development-base64: ${{ secrets.APPLE_CERT_APPLE_DEVELOPMENT_BASE64 }}
+          #apple-development-password: ${{ secrets.APPLE_CERT_APPLE_DEVELOPMENT_PWD }}
+          #api-key: ${{ secrets.APPLE_API_KEY }}
+          #api-key-id: ${{ secrets.APPLE_API_KEY_ID }}
+          #api-issuer-id: ${{ secrets.APPLE_API_ISSUER_ID }}
+          #team-id: ${{ secrets.APPLE_DEVELOPER_TEAM_ID }}
+          #apple-id: ${{ secrets.APPLE_APPLE_ID }}
+          external-test: ${{ startsWith(github.ref, 'refs/tags/pre') }}
+          store-release: ${{ startsWith(github.ref, 'refs/tags/v') }}
+      - name: Upload logs artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_iOS_logs
+          path: |
+            ${{ env.OUTPUT_FOLDER }}/DistributionSummary.plist
+            ${{ env.OUTPUT_FOLDER }}/ExportOptions.plist
+            ${{ env.OUTPUT_FOLDER }}/Packaging.log
+      - name: Upload ipa artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_iOS_ipa
+          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}.ipa
