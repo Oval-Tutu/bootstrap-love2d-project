@@ -8,6 +8,7 @@ on:
 
 env:
   BUILD_TYPE: ${{ fromJSON('["dev", "release"]')[startsWith(github.ref, 'refs/tags/v')] }}
+  OUTPUT_FOLDER: ./builds
   PRODUCT_NAME: Game
   PRODUCT_ID: com.oval-tutu.game
   PRODUCT_DESC: A game made with LÖVE by Oval Tutu
@@ -24,8 +25,6 @@ env:
 jobs:
   build-love:
     runs-on: ubuntu-22.04
-    env:
-      OUTPUT_FOLDER: ./builds
     steps:
       - uses: actions/checkout@v4
         with:
@@ -43,8 +42,6 @@ jobs:
   build-linux:
     runs-on: ubuntu-22.04
     needs: [build-love]
-    env:
-      OUTPUT_FOLDER: ./builds
     steps:
       - uses: actions/checkout@v4
         with:
@@ -78,8 +75,6 @@ jobs:
   build-windows:
     runs-on: windows-latest
     needs: [build-love]
-    env:
-      OUTPUT_FOLDER: ./build
     steps:
       - uses: actions/checkout@v4
         with:
@@ -118,8 +113,6 @@ jobs:
   build-android:
     runs-on: ubuntu-22.04
     needs: [build-love]
-    env:
-      OUTPUT_FOLDER: ./build
     steps:
       - uses: actions/checkout@v4
         with:
@@ -153,8 +146,6 @@ jobs:
   build-macos-portable:
     runs-on: macos-latest
     needs: [build-love]
-    env:
-      OUTPUT_FOLDER: ./build
     steps:
       - uses: actions/checkout@v4
         with:
@@ -209,8 +200,6 @@ jobs:
   build-macos-appstore:
     runs-on: macos-latest
     needs: [build-love]
-    env:
-      OUTPUT_FOLDER: ./build
     steps:
       - uses: actions/checkout@v4
         with:
@@ -257,8 +246,6 @@ jobs:
   build-ios:
     runs-on: macos-latest
     needs: [build-love]
-    env:
-      OUTPUT_FOLDER: ./build
     steps:
       - uses: actions/checkout@v4
         with:
