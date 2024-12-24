@@ -23,11 +23,24 @@ jobs:
     runs-on: ubuntu-22.04
     outputs:
       build_num: ${{ steps.set_build_num.outputs.build_num }}
+      release_id: ${{ steps.create_release.outputs.id || '' }}
+      upload_url: ${{ steps.create_release.outputs.upload_url || '' }}
     steps:
       - name: Generate build number
         id: set_build_num
         shell: bash
         run: echo "build_num=$(date +%y.%j.%H%M)" >> $GITHUB_OUTPUT
+      - name: Create draft release
+        if: env.BUILD_TYPE == 'release'
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref_name }}
+          draft: true
+          prerelease: false
 
   build-love:
     runs-on: ubuntu-22.04
@@ -41,11 +54,22 @@ jobs:
           submodules: recursive
       - name: Build love package
         run: 7z a -tzip "${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.love" ./game/* -xr!.gitkeep
-      - name: Upload love package
+      - name: Upload .love artifact
+        if: env.BUILD_TYPE == 'dev'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_love
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.love
+      - name: Upload .love release
+        if: env.BUILD_TYPE == 'release'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.configure.outputs.upload_url }}
+          asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.love
+          asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}.love
+          asset_content_type: application/x-love-game
 
   build-linux:
     runs-on: ubuntu-22.04
@@ -74,16 +98,38 @@ jobs:
           description: ${{ env.PRODUCT_DESC }}
           icon-path: ${{ env.OUTPUT_FOLDER }}/icon.png
           version-string: ${{ env.PRODUCT_VERSION }}
-      - name: Upload AppImage
+      - name: Upload AppImage artifact
+        if: env.BUILD_TYPE == 'dev'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_Linux_AppImage
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.AppImage
-      - name: Upload Deb
+      - name: Upload Deb artifact
+        if: env.BUILD_TYPE == 'dev'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_Linux_deb
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.deb
+      - name: Upload AppImage Release Asset
+        if: env.BUILD_TYPE == 'release'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.configure.outputs.upload_url }}
+          asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.AppImage
+          asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}.AppImage
+          asset_content_type: application/x-executable
+      - name: Upload Deb Release Asset
+        if: env.BUILD_TYPE == 'release'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.configure.outputs.upload_url }}
+          asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.deb
+          asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}.deb
+          asset_content_type: application/vnd.debian.binary-package
 
   build-windows:
     runs-on: windows-latest
@@ -114,21 +160,54 @@ jobs:
           installer-languages: English.isl
           project-website: ${{ env.PRODUCT_WEBSITE }}
           #rc-path: ./.github/build/windows/${{ env.BUILD_TYPE }}/template.rc
-      - name: Upload 32-bit artifact
+      - name: Upload Windows 32-bit artifact
+        if: env.BUILD_TYPE == 'dev'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_Windows_x86_zip
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_x86.zip
-      - name: Upload 64-bit artifact
+      - name: Upload Windows 64-bit artifact
+        if: env.BUILD_TYPE == 'dev'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_Windows_x64_zip
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_x64.zip
-      - name: Upload installer artifact
+      - name: Upload Windows installer artifact
+        if: env.BUILD_TYPE == 'dev'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_Windows_installer_exe
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-installer.exe
+      - name: Upload Windows 32-bit release
+        if: env.BUILD_TYPE == 'release'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.configure.outputs.upload_url }}
+          asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_x86.zip
+          asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_x86.zip
+          asset_content_type: application/zip
+      - name: Upload Windows 64-bit release
+        if: env.BUILD_TYPE == 'release'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.configure.outputs.upload_url }}
+          asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_x64.zip
+          asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_x64.zip
+          asset_content_type: application/zip
+      - name: Upload Windows installer release
+        if: env.BUILD_TYPE == 'release'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.configure.outputs.upload_url }}
+          asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-installer.exe
+          asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}-installer.exe
+          asset_content_type: application/x-msdownload
 
   build-android:
     runs-on: ubuntu-22.04
@@ -170,11 +249,22 @@ jobs:
           resource-path: ${{ env.OUTPUT_FOLDER }}/res
           version-string: ${{ env.PRODUCT_VERSION }}
           version-code: ${{ github.run_number }}
-      - name: Upload artifact
+      - name: Upload Android artifact
+        if: env.BUILD_TYPE == 'dev'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_Android_release_apk
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-release.apk
+      - name: Upload Android release
+        if: env.BUILD_TYPE == 'release'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.configure.outputs.upload_url }}
+          asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-release.apk
+          asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}-release.apk
+          asset_content_type: application/vnd.android.package-archive
 
   build-macos-portable:
     runs-on: macos-latest
@@ -232,21 +322,54 @@ jobs:
           #dmg-window-size: "800 500"
           icon-path: ${{ env.OUTPUT_FOLDER }}/icon.icns
           version-string: ${{ env.PRODUCT_VERSION }}
-      - name: Upload pkg artifact
+      - name: Upload macOS portable pkg artifact
+        if: env.BUILD_TYPE == 'dev'
         uses: actions/upload-artifact@v3
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_macOS_portable_pkg
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-portable.pkg
-      - name: Upload dmg artifact
+      - name: Upload macOS portable dmg artifact
+        if: env.BUILD_TYPE == 'dev'
         uses: actions/upload-artifact@v3
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_macOS_portable_dmg
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-portable.dmg
-      - name: Upload zip artifact
+      - name: Upload macOS zip artifact
+        if: env.BUILD_TYPE == 'dev'
         uses: actions/upload-artifact@v3
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_macOS_portable_zip
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-portable.zip
+      - name: Upload macOS portable pkg release
+        if: env.BUILD_TYPE == 'release'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.configure.outputs.upload_url }}
+          asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-portable.pkg
+          asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}-portable.pkg
+          asset_content_type: application/x-installer
+      - name: Upload macOS portable dmg release
+        if: env.BUILD_TYPE == 'release'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.configure.outputs.upload_url }}
+          asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-portable.dmg
+          asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}-portable.dmg
+          asset_content_type: application/x-apple-diskimage
+      - name: Upload macOS portable zip release
+        if: env.BUILD_TYPE == 'release'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.configure.outputs.upload_url }}
+          asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-portable.zip
+          asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}-portable.zip
+          asset_content_type: application/zip
 
   build-macos-appstore:
     runs-on: macos-latest
@@ -298,7 +421,7 @@ jobs:
           external-test: ${{ startsWith(github.ref, 'refs/tags/pre') }}
           store-release: ${{ startsWith(github.ref, 'refs/tags/v') }}
           version-string: ${{ env.PRODUCT_VERSION }}
-      - name: Upload logs artifact
+      - name: Upload macOS appstore logs artifact
         uses: actions/upload-artifact@v3
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_macOS_appstore_logs
@@ -306,11 +429,22 @@ jobs:
             ${{ env.OUTPUT_FOLDER }}/DistributionSummary.plist
             ${{ env.OUTPUT_FOLDER }}/ExportOptions.plist
             ${{ env.OUTPUT_FOLDER }}/Packaging.log
-      - name: Upload pkg artifact
+      - name: Upload macOS appstore pkg artifact
+        if: env.BUILD_TYPE == 'dev'
         uses: actions/upload-artifact@v3
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_macOS_appstore_pkg
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-appstore.pkg
+      - name: Upload macOS appstore pkg release
+        if: env.BUILD_TYPE == 'release'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.configure.outputs.upload_url }}
+          asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-appstore.pkg
+          asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}-appstore.pkg
+          asset_content_type: application/x-installer
 
   build-ios:
     runs-on: macos-latest
@@ -356,7 +490,7 @@ jobs:
           external-test: ${{ startsWith(github.ref, 'refs/tags/pre') }}
           store-release: ${{ startsWith(github.ref, 'refs/tags/v') }}
           version-string: ${{ env.PRODUCT_VERSION }}
-      - name: Upload logs artifact
+      - name: Upload iOS logs artifact
         uses: actions/upload-artifact@v3
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_iOS_logs
@@ -364,8 +498,39 @@ jobs:
             ${{ env.OUTPUT_FOLDER }}/DistributionSummary.plist
             ${{ env.OUTPUT_FOLDER }}/ExportOptions.plist
             ${{ env.OUTPUT_FOLDER }}/Packaging.log
-      - name: Upload ipa artifact
+      - name: Upload iOS artifact
+        if: env.BUILD_TYPE == 'dev'
         uses: actions/upload-artifact@v3
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_iOS_ipa
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.ipa
+      - name: Upload iOS release
+        if: env.BUILD_TYPE == 'release'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.configure.outputs.upload_url }}
+          asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.ipa
+          asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}.ipa
+          asset_content_type: application/octet-stream
+
+  publish:
+    needs:
+      - configure
+      - build-love
+      - build-linux
+      - build-windows
+      - build-android
+      - build-macos-portable
+      - build-macos-appstore
+      - build-ios
+    runs-on: ubuntu-22.04
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Publish release
+        uses: eregon/publish-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          release_id: ${{ needs.configure.outputs.release_id }}
