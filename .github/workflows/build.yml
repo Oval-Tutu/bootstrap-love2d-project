@@ -30,6 +30,11 @@ jobs:
         id: set_build_num
         shell: bash
         run: echo "build_num=$(date +%y.%j.%H%M)" >> $GITHUB_OUTPUT
+      - uses: actions/checkout@v4
+        if: env.BUILD_TYPE == 'release'
+        with:
+          fetch-depth: 1
+          submodules: recursive
       - name: Get PR and Issue List
         id: get_changes
         if: env.BUILD_TYPE == 'release'
