@@ -20,5 +20,11 @@
       "name": "Root",
       "path": ".",
     }
-  ]
+  ],
+  "settings": {
+    "cSpell.words": [
+      "LÖVE",
+      "ovaltutu"
+    ]
+  }
 }
