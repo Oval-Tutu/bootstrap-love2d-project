@@ -56,17 +56,17 @@ Doubles up as a poor man's backup system.
 
 ## Releasing
 
-Make a new release by creating a git tag:
+Make a new release by creating a version number git tag **without the `v` prefix**.
 
 - **Create a new tag**: Use the following command to create a new tag.
-  - *Replace `v1.0.0` with your desired version number.*
+  - *Replace `1.0.0` with your desired version number.*
 ```bash
-git tag v1.0.0
+git tag 1.0.0
 ```
 
 - **Push the tag to GitHub**: Push the tag to the remote repository.
 ```bash
-git push origin v1.0.0
+git push origin 1.0.0
 ```
 
 - **GitHub Actions**: The GitHub workflow will automatically create a release and upload packages for all the supported platforms as an assets.
