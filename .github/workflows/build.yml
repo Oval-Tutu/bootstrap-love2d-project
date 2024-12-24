@@ -13,10 +13,6 @@ env:
   PRODUCT_ID: com.oval-tutu.game
   PRODUCT_DESC: A game made with LÖVE by Oval Tutu
   PRODUCT_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || '0.0.0' }}
-  PRODUCT_PNG: ./tools/icon.png
-  PRODUCT_ICNS: ./tools/icns/icon.icns
-  PRODUCT_ICO: ./tools/icon.ico
-  PRODUCT_RES: ./tools/res/
   PRODUCT_COPYRIGHT: Copyright (c) 2024 Oval Tutu
   PRODUCT_COMPANY: Oval Tutu
   PRODUCT_WEBSITE: https://oval-tutu.com
@@ -40,6 +36,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          fetch-depth: 1
           submodules: recursive
       - name: Build love package
         run: ./tools/build-love.sh "${{ env.PRODUCT_NAME }}" "${{ env.BUILD_NUM }}"
@@ -57,9 +54,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          fetch-depth: 1
           submodules: recursive
       - name: Build love package
         run: ./tools/build-love.sh "${{ env.PRODUCT_NAME }}"
+      - name: Create .png icon
+        run: |
+          sudo apt-get -y install imagemagick
+          convert "resources/icon.png" -resize 256x256 "${{ env.OUTPUT_FOLDER }}/icon.png"
       - name: Build Linux packages
         id: build-packages
         uses: love-actions/love-actions-linux@v2
@@ -70,7 +72,7 @@ jobs:
           app-name: ${{ env.PRODUCT_NAME }}
           bundle-id: ${{ env.PRODUCT_ID }}
           description: ${{ env.PRODUCT_DESC }}
-          icon-path: ${{ env.PRODUCT_PNG }}
+          icon-path: ${{ env.OUTPUT_FOLDER }}/icon.png
           version-string: ${{ env.PRODUCT_VERSION }}
       - name: Upload AppImage
         uses: actions/upload-artifact@v4
@@ -91,9 +93,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          fetch-depth: 1
           submodules: recursive
       - name: Build love package
-        run: ./tools/build-love.sh "${{ env.PRODUCT_NAME }}"
+        shell: bash
+        run: 7z a -tzip "${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love" ./game
+      - name: Create .ico icon
+        shell: bash
+        run: magick "resources/icon.png" -define icon:auto-resize="256,128,96,64,48,32,16" "${{ env.OUTPUT_FOLDER }}/icon.ico"
       - name: Build Windows packages
         id: build-packages
         uses: love-actions/love-actions-windows@v1
@@ -102,7 +109,7 @@ jobs:
           output-folder: ${{ env.OUTPUT_FOLDER }}
           product-name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}
           app-id: ${{ env.PRODUCT_UUID }}
-          icon-path: ${{ env.PRODUCT_ICO }}
+          icon-path: ${{ env.OUTPUT_FOLDER }}/icon.ico
           installer-languages: English.isl
           project-website: ${{ env.PRODUCT_WEBSITE }}
           #rc-path: ./.github/build/windows/${{ env.BUILD_TYPE }}/template.rc
@@ -130,9 +137,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          fetch-depth: 1
           submodules: recursive
       - name: Build love package
         run: ./tools/build-love.sh "${{ env.PRODUCT_NAME }}"
+      - name: Create Android res/ folder
+        run: |
+          sudo apt-get install -y imagemagick
+          mkdir -p ${{ env.OUTPUT_FOLDER }}/res/mipmap-{hdpi,mdpi,xhdpi,xxhdpi,xxxhdpi}
+          mkdir -p ${{ env.OUTPUT_FOLDER }}/res/values
+          convert ./resources/icon.png -resize 72x72 ${{ env.OUTPUT_FOLDER }}/res/mipmap-hdpi/ic_launcher.png
+          convert ./resources/icon.png -resize 48x48 ${{ env.OUTPUT_FOLDER }}/res/mipmap-mdpi/ic_launcher.png
+          convert ./resources/icon.png -resize 96x96 ${{ env.OUTPUT_FOLDER }}/res/mipmap-xhdpi/ic_launcher.png
+          convert ./resources/icon.png -resize 144x144 ${{ env.OUTPUT_FOLDER }}/res/mipmap-xxhdpi/ic_launcher.png
+          convert ./resources/icon.png -resize 192x192 ${{ env.OUTPUT_FOLDER }}/res/mipmap-xxxhdpi/ic_launcher.png
+          echo '<resources><string name="app_name">${{ env.PRODUCT_NAME }}</string></resources>' > ${{ env.OUTPUT_FOLDER }}/res/values/strings.xml
       - name: Build Android packages
         id: build-packages
         uses: love-actions/love-actions-android@v2
@@ -164,9 +183,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          fetch-depth: 1
           submodules: recursive
       - name: Build love package
         run: ./tools/build-love.sh "${{ env.PRODUCT_NAME }}"
+      - name: Create macOS icon.icns
+        run: |
+          mkdir -p icon.iconset
+          sips -z 16 16     ./resources/icon.png --out icon.iconset/icon_16x16.png
+          sips -z 32 32     ./resources/icon.png --out icon.iconset/icon_16x16@2x.png
+          sips -z 32 32     ./resources/icon.png --out icon.iconset/icon_32x32.png
+          sips -z 64 64     ./resources/icon.png --out icon.iconset/icon_32x32@2x.png
+          sips -z 128 128   ./resources/icon.png --out icon.iconset/icon_128x128.png
+          sips -z 256 256   ./resources/icon.png --out icon.iconset/icon_128x128@2x.png
+          sips -z 256 256   ./resources/icon.png --out icon.iconset/icon_256x256.png
+          sips -z 512 512   ./resources/icon.png --out icon.iconset/icon_256x256@2x.png
+          sips -z 512 512   ./resources/icon.png --out icon.iconset/icon_512x512.png
+          sips -z 1024 1024 ./resources/icon.png --out icon.iconset/icon_512x512@2x.png
+          iconutil -c icns icon.iconset -o ${{ env.OUTPUT_FOLDER }}/icon.icns
       - name: Build macOS packages
         id: build-packages
         uses: love-actions/love-actions-macos-portable@v1
@@ -193,7 +227,7 @@ jobs:
           dmg-volume-name: ${{ env.PRODUCT_NAME }}
           #dmg-window-position: "200 120"
           #dmg-window-size: "800 500"
-          icon-path: ${{ env.PRODUCT_ICNS }}
+          icon-path: ${{ env.OUTPUT_FOLDER }}/icon.icns
           version-string: ${{ env.PRODUCT_VERSION }}
       - name: Upload pkg artifact
         uses: actions/upload-artifact@v3
@@ -219,9 +253,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          fetch-depth: 1
           submodules: recursive
       - name: Build love package
         run: ./tools/build-love.sh "${{ env.PRODUCT_NAME }}"
+      - name: Create macOS icon.icns
+        run: |
+          mkdir -p icon.iconset
+          sips -z 16 16     ./resources/icon.png --out icon.iconset/icon_16x16.png
+          sips -z 32 32     ./resources/icon.png --out icon.iconset/icon_16x16@2x.png
+          sips -z 32 32     ./resources/icon.png --out icon.iconset/icon_32x32.png
+          sips -z 64 64     ./resources/icon.png --out icon.iconset/icon_32x32@2x.png
+          sips -z 128 128   ./resources/icon.png --out icon.iconset/icon_128x128.png
+          sips -z 256 256   ./resources/icon.png --out icon.iconset/icon_128x128@2x.png
+          sips -z 256 256   ./resources/icon.png --out icon.iconset/icon_256x256.png
+          sips -z 512 512   ./resources/icon.png --out icon.iconset/icon_256x256@2x.png
+          sips -z 512 512   ./resources/icon.png --out icon.iconset/icon_512x512.png
+          sips -z 1024 1024 ./resources/icon.png --out icon.iconset/icon_512x512@2x.png
+          iconutil -c icns icon.iconset -o ${{ env.OUTPUT_FOLDER }}/icon.icns
       - name: Build macOS packages
         id: build-packages
         uses: love-actions/love-actions-macos-appstore@v1
@@ -239,7 +288,7 @@ jobs:
           #apple-id: ${{ secrets.APPLE_APPLE_ID }}
           bundle-id: ${{ env.PRODUCT_ID }}
           copyright: ${{ env.PRODUCT_COPYRIGHT }}
-          icon-path: ${{ env.PRODUCT_ICNS }}
+          icon-path: ${{ env.OUTPUT_FOLDER }}/icon.icns
           #libs-path: ./ColdClear/universal/
           external-test: ${{ startsWith(github.ref, 'refs/tags/pre') }}
           store-release: ${{ startsWith(github.ref, 'refs/tags/v') }}
@@ -266,9 +315,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          fetch-depth: 1
           submodules: recursive
       - name: Build love package
         run: ./tools/build-love.sh "${{ env.PRODUCT_NAME }}"
+      - name: Convert iOS icns
+        run: |
+          mkdir -p ${{ env.OUTPUT_FOLDER }}/icns
+          sips -z 180 180   ./resources/icon.png --out ${{ env.OUTPUT_FOLDER }}/icns/icon-60@3x.png
+          sips -z 120 120   ./resources/icon.png --out ${{ env.OUTPUT_FOLDER }}/icns/icon-60@2x.png
+          sips -z 167 167   ./resources/icon.png --out ${{ env.OUTPUT_FOLDER }}/icns/icon-83.5@2x.png
+          sips -z 152 152   ./resources/icon.png --out ${{ env.OUTPUT_FOLDER }}/icns/icon-76@2x.png
+          sips -z 1024 1024 ./resources/icon.png --out ${{ env.OUTPUT_FOLDER }}/icns/icon-1024.png
       - name: Build iOS packages
         id: build-packages
         uses: love-actions/love-actions-ios@v1
@@ -286,7 +344,7 @@ jobs:
           #apple-id: ${{ secrets.APPLE_APPLE_ID }}
           bundle-id: ${{ env.PRODUCT_ID }}
           copyright: ${{ env.PRODUCT_COPYRIGHT }}
-          icon-path: ./tools/icns
+          icon-path: ${{ env.OUTPUT_FOLDER }}/icns
           #libs-path: ./ColdClear/arm64/
           #love-patch: ./.github/build/iOS/love.patch
           external-test: ${{ startsWith(github.ref, 'refs/tags/pre') }}
