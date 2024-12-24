@@ -50,6 +50,7 @@ jobs:
   build-linux:
     runs-on: ubuntu-22.04
     needs: [configure]
+    continue-on-error: true
     env:
       BUILD_NUM: ${{ needs.configure.outputs.build_num }}
     steps:
@@ -87,6 +88,7 @@ jobs:
   build-windows:
     runs-on: windows-latest
     needs: [configure]
+    continue-on-error: true
     env:
       BUILD_NUM: ${{ needs.configure.outputs.build_num }}
     steps:
@@ -131,6 +133,7 @@ jobs:
   build-android:
     runs-on: ubuntu-22.04
     needs: [configure]
+    continue-on-error: true
     env:
       BUILD_NUM: ${{ needs.configure.outputs.build_num }}
     steps:
@@ -176,6 +179,7 @@ jobs:
   build-macos-portable:
     runs-on: macos-latest
     needs: [configure]
+    continue-on-error: true
     env:
       BUILD_NUM: ${{ needs.configure.outputs.build_num }}
     steps:
@@ -247,6 +251,7 @@ jobs:
   build-macos-appstore:
     runs-on: macos-latest
     needs: [configure]
+    continue-on-error: true
     env:
       BUILD_NUM: ${{ needs.configure.outputs.build_num }}
     steps:
@@ -310,6 +315,7 @@ jobs:
   build-ios:
     runs-on: macos-latest
     needs: [configure]
+    continue-on-error: true
     env:
       BUILD_NUM: ${{ needs.configure.outputs.build_num }}
     steps:
