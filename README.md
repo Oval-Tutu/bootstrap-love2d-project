@@ -54,6 +54,23 @@ Doubles up as a poor man's backup system.
 
 - Press <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>B</kbd> to **Build** the game.
 
+## Releasing
+
+Make a new release by creating a git tag:
+
+- **Create a new tag**: Use the following command to create a new tag.
+  - *Replace `v1.0.0` with your desired version number.*
+```bash
+git tag v1.0.0
+```
+
+- **Push the tag to GitHub**: Push the tag to the remote repository.
+```bash
+git push origin v1.0.0
+```
+
+- **GitHub Actions**: The GitHub workflow will automatically create a release and upload packages for all the supported platforms as an assets.
+
 ## Structure
 ```
 .
@@ -81,3 +98,4 @@ The `.vscode` folder contains project specific configuration.
 - `extensions.json`: Contains the list of recommended extensions
 - `launch.json`: Contains the settings for running the game or launching the debugger
 - `settings.json`: Contains the settings for the Lua extension
+- `tasks.json`: Contains the settings for building the game
