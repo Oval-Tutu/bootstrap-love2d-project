@@ -20,7 +20,7 @@ Adapted from <https://github.com/Keyslam/LOVE-VSCode-Game-Template>
 - [LÖVE 11.5](https://love2d.org/)
   - **`love` should be in your `PATH`**
 - `bash`
-- `zip`
+- `7z`
 
 ## Setup
 
@@ -34,9 +34,10 @@ Adapted from <https://github.com/Keyslam/LOVE-VSCode-Game-Template>
     - [Love2D Support](https://marketplace.visualstudio.com/items?itemName=pixelbyte-studios.pixelbyte-love2d)
     - [Editorconfig](https://marketplace.visualstudio.com/items?itemName=EditorConfig.EditorConfig)
     - [Shader languages support](https://marketplace.visualstudio.com/items?itemName=slevesque.shader)
-- Configure the `game/conf.lua` and `tools/build/makelove.toml` with the settings specific for your game.
+- Configure the `game/conf.lua` with the settings specific for your game.
 - Configure `.github/workflows/build.yml` with the settings specific for your game.
   - **Make sure that `PRODUCT_UUID` is changed using `uuidgen`.
+- Replace `resources/icon.png` with your game's high-resolution icon.
 
 ## Running
 
@@ -48,7 +49,8 @@ Adapted from <https://github.com/Keyslam/LOVE-VSCode-Game-Template>
 
 ## Building
 
-*WIP* 🚧 - This currently only builds the `.love` file and puts it in the `builds` folder.
+Builds a date stamped `.love` file and puts it in the `builds` folder.
+Doubles up as a poor man's backup system.
 
 - Press <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>B</kbd> to **Build** the game.
 
@@ -59,7 +61,8 @@ Adapted from <https://github.com/Keyslam/LOVE-VSCode-Game-Template>
 ├── .vscode                   Visual Studio Code configuration
 │   ├── extensions.json
 │   ├── launch.json
-│   └── settings.json
+│   ├── settings.json
+│   └── tasks.json
 ├── builds                    Game builds
 ├── game
 │   ├── conf.lua              LÖVE configuration file
@@ -67,8 +70,8 @@ Adapted from <https://github.com/Keyslam/LOVE-VSCode-Game-Template>
 │   ├── assets                Game assets
 │   ├── lib                   3rd party libraries
 │   └── src                   Source code
-├── resources                 Resources that should not be shipped, e.g. asset collections
-└── tools                     Tools for building and packaging the game (WIP)
+├── resources                 Resources use when building the game. Icons, shared libraries, etc.
+└── tools                     Tools for building and packaging the game
 ```
 
 ### .vscode
