@@ -26,6 +26,7 @@ jobs:
     steps:
       - name: Generate build number
         id: set_build_num
+        shell: bash
         run: echo "build_num=$(date +%y.%j.%H%M)" >> $GITHUB_OUTPUT
 
   build-love:
@@ -39,7 +40,7 @@ jobs:
           fetch-depth: 1
           submodules: recursive
       - name: Build love package
-        run: ./tools/build-love.sh "${{ env.PRODUCT_NAME }}" "${{ env.BUILD_NUM }}"
+        run: 7z a -tzip "${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.love" ./game/* -xr!.gitkeep
       - name: Upload love package
         uses: actions/upload-artifact@v4
         with:
@@ -57,11 +58,9 @@ jobs:
           fetch-depth: 1
           submodules: recursive
       - name: Build love package
-        run: ./tools/build-love.sh "${{ env.PRODUCT_NAME }}"
+        run: 7z a -tzip "${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love" ./game/* -xr!.gitkeep
       - name: Create .png icon
-        run: |
-          sudo apt-get -y install imagemagick
-          convert "resources/icon.png" -resize 256x256 "${{ env.OUTPUT_FOLDER }}/icon.png"
+        run: convert ./resources/icon.png -resize 256x256 "${{ env.OUTPUT_FOLDER }}/icon.png"
       - name: Build Linux packages
         id: build-packages
         uses: love-actions/love-actions-linux@v2
@@ -97,10 +96,10 @@ jobs:
           submodules: recursive
       - name: Build love package
         shell: bash
-        run: 7z a -tzip "${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love" ./game
+        run: 7z a -tzip "${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love" ./game/* -xr!.gitkeep
       - name: Create .ico icon
         shell: bash
-        run: magick "resources/icon.png" -define icon:auto-resize="256,128,96,64,48,32,16" "${{ env.OUTPUT_FOLDER }}/icon.ico"
+        run: magick ./resources/icon.png -define icon:auto-resize="256,128,96,64,48,32,16" "${{ env.OUTPUT_FOLDER }}/icon.ico"
       - name: Build Windows packages
         id: build-packages
         uses: love-actions/love-actions-windows@v1
@@ -140,10 +139,9 @@ jobs:
           fetch-depth: 1
           submodules: recursive
       - name: Build love package
-        run: ./tools/build-love.sh "${{ env.PRODUCT_NAME }}"
+        run: 7z a -tzip "${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love" ./game/* -xr!.gitkeep
       - name: Create Android res/ folder
         run: |
-          sudo apt-get install -y imagemagick
           mkdir -p ${{ env.OUTPUT_FOLDER }}/res/mipmap-{hdpi,mdpi,xhdpi,xxhdpi,xxxhdpi}
           mkdir -p ${{ env.OUTPUT_FOLDER }}/res/values
           convert ./resources/icon.png -resize 72x72 ${{ env.OUTPUT_FOLDER }}/res/mipmap-hdpi/ic_launcher.png
@@ -166,7 +164,7 @@ jobs:
           #keystore-base64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           #keystore-key-password: ${{ secrets.ANDROID_KEYSTORE_KEYPASSWORD }}
           #keystore-store-password: ${{ secrets.ANDROID_KEYSTORE_STOREPASSWORD }}
-          resource-path: ${{ env.PRODUCT_RES }}
+          resource-path: ${{ env.OUTPUT_FOLDER }}/res
           version-string: ${{ env.PRODUCT_VERSION }}
           version-code: ${{ github.run_number }}
       - name: Upload artifact
@@ -186,7 +184,7 @@ jobs:
           fetch-depth: 1
           submodules: recursive
       - name: Build love package
-        run: ./tools/build-love.sh "${{ env.PRODUCT_NAME }}"
+        run: 7z a -tzip "${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love" ./game/* -xr!.gitkeep
       - name: Create macOS icon.icns
         run: |
           mkdir -p icon.iconset
@@ -201,6 +199,7 @@ jobs:
           sips -z 512 512   ./resources/icon.png --out icon.iconset/icon_512x512.png
           sips -z 1024 1024 ./resources/icon.png --out icon.iconset/icon_512x512@2x.png
           iconutil -c icns icon.iconset -o ${{ env.OUTPUT_FOLDER }}/icon.icns
+          rm -rf icon.iconset
       - name: Build macOS packages
         id: build-packages
         uses: love-actions/love-actions-macos-portable@v1
@@ -256,7 +255,7 @@ jobs:
           fetch-depth: 1
           submodules: recursive
       - name: Build love package
-        run: ./tools/build-love.sh "${{ env.PRODUCT_NAME }}"
+        run: 7z a -tzip "${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love" ./game/* -xr!.gitkeep
       - name: Create macOS icon.icns
         run: |
           mkdir -p icon.iconset
@@ -271,6 +270,7 @@ jobs:
           sips -z 512 512   ./resources/icon.png --out icon.iconset/icon_512x512.png
           sips -z 1024 1024 ./resources/icon.png --out icon.iconset/icon_512x512@2x.png
           iconutil -c icns icon.iconset -o ${{ env.OUTPUT_FOLDER }}/icon.icns
+          rm -rf icon.iconset
       - name: Build macOS packages
         id: build-packages
         uses: love-actions/love-actions-macos-appstore@v1
@@ -318,7 +318,7 @@ jobs:
           fetch-depth: 1
           submodules: recursive
       - name: Build love package
-        run: ./tools/build-love.sh "${{ env.PRODUCT_NAME }}"
+        run: 7z a -tzip "${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love" ./game/* -xr!.gitkeep
       - name: Convert iOS icns
         run: |
           mkdir -p ${{ env.OUTPUT_FOLDER }}/icns
