@@ -25,6 +25,7 @@
             curl
             love
             luajit
+            p7zip
             zip
           ];
         };
