@@ -3,11 +3,11 @@ name: Build LÖVE 🩷💙
 on:
   push:
     tags:
-      - "v?[0-9]+.[0-9]+.[0-9]+*"
+      - "[0-9]+.[0-9]+.[0-9]+*"
   workflow_dispatch:
 
 env:
-  BUILD_TYPE: ${{ fromJSON('["dev", "release"]')[startsWith(github.ref, 'refs/tags/v')] }}
+  BUILD_TYPE: ${{ fromJSON('["dev", "release"]')[startsWith(github.ref, '^refs/tags/[0-9]')] }}
   OUTPUT_FOLDER: ./builds
   PRODUCT_NAME: Template
   PRODUCT_ID: com.ovaltutu.template
@@ -80,7 +80,11 @@ jobs:
             ${{ env.PRODUCT_DESC }}. ${{ env.PRODUCT_COPYRIGHT }}
             * ${{ env.PRODUCT_WEBSITE }}
 
-            This release of ${{ env.PRODUCT_NAME }} is from build number ${{ steps.set_build_num.outputs.build_num }}.
+            This release of ${{ env.PRODUCT_NAME }} was built via:
+            - Build number: ${{ steps.set_build_num.outputs.build_num }}
+            - GitHub Run: ${{github.run_number}}
+            - iOS App store version: 0.0.${{github.run_number}}
+            - macOS App store version: 0.0.${{github.run_number}}
 
             ## 🔀 Merged Pull Requests
             ${{ steps.get_changes.outputs.prs }}
@@ -229,7 +233,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_Windows_installer_exe
-          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-installer.exe
+          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_installer.exe
       - name: Upload Windows 32-bit release
         if: env.BUILD_TYPE == 'release'
         uses: actions/upload-release-asset@v1
@@ -238,7 +242,7 @@ jobs:
         with:
           upload_url: ${{ needs.configure.outputs.upload_url }}
           asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_x86.zip
-          asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_x86.zip
+          asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_Windows_x86.zip
           asset_content_type: application/zip
       - name: Upload Windows 64-bit release
         if: env.BUILD_TYPE == 'release'
@@ -248,7 +252,7 @@ jobs:
         with:
           upload_url: ${{ needs.configure.outputs.upload_url }}
           asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_x64.zip
-          asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_x64.zip
+          asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_Windows_x64.zip
           asset_content_type: application/zip
       - name: Upload Windows installer release
         if: env.BUILD_TYPE == 'release'
@@ -257,8 +261,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.configure.outputs.upload_url }}
-          asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-installer.exe
-          asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}-installer.exe
+          asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_installer.exe
+          asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_installer.exe
           asset_content_type: application/x-msdownload
 
   build-android:
@@ -300,8 +304,16 @@ jobs:
           #keystore-store-password: ${{ secrets.ANDROID_KEYSTORE_STOREPASSWORD }}
           resource-path: ${{ env.OUTPUT_FOLDER }}/res
           version-string: ${{ env.PRODUCT_VERSION }}
+          # An always incrementing integer so app stores can track versions
+          # But not the actual version number
           version-code: ${{ github.run_number }}
-      - name: Upload Android artifact
+      - name: Upload Android debug .apk artifact
+        if: env.BUILD_TYPE == 'dev'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_Android_debug_apk
+          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-debug.apk
+      - name: Upload Android release .apk artifact
         if: env.BUILD_TYPE == 'dev'
         uses: actions/upload-artifact@v4
         with:
@@ -470,9 +482,11 @@ jobs:
           copyright: ${{ env.PRODUCT_COPYRIGHT }}
           icon-path: ${{ env.OUTPUT_FOLDER }}/icon.icns
           #libs-path: ./ColdClear/universal/
-          external-test: ${{ startsWith(github.ref, 'refs/tags/pre') }}
-          store-release: ${{ startsWith(github.ref, 'refs/tags/v') }}
-          version-string: ${{ env.PRODUCT_VERSION }}
+          external-test: ${{ !startsWith(github.ref, 'refs/tags/') }}
+          store-release: ${{ startsWith(github.ref, '^refs/tags/[0-9]') }}
+          # An always incrementing integer so app stores can track versions
+          # But not the actual version number
+          version-string: 0.0.${{ github.run_number }}
       - name: Upload macOS appstore logs artifact
         uses: actions/upload-artifact@v3
         with:
@@ -539,9 +553,11 @@ jobs:
           icon-path: ${{ env.OUTPUT_FOLDER }}/icns
           #libs-path: ./ColdClear/arm64/
           #love-patch: ./.github/build/iOS/love.patch
-          external-test: ${{ startsWith(github.ref, 'refs/tags/pre') }}
-          store-release: ${{ startsWith(github.ref, 'refs/tags/v') }}
-          version-string: ${{ env.PRODUCT_VERSION }}
+          external-test: ${{ !startsWith(github.ref, 'refs/tags/') }}
+          store-release: ${{ startsWith(github.ref, '^refs/tags/[0-9]') }}
+          # An always incrementing integer so app stores can track versions
+          # But not the actual version number
+          version-string: 0.0.${{ github.run_number }}
       - name: Upload iOS logs artifact
         uses: actions/upload-artifact@v3
         with:
@@ -578,7 +594,7 @@ jobs:
       - build-macos-appstore
       - build-ios
     runs-on: ubuntu-22.04
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, '^refs/tags/[0-9]')
     steps:
       - name: Publish release
         uses: eregon/publish-release@v1
