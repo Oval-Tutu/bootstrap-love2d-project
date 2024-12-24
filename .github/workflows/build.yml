@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 env:
-  BUILD_TYPE: ${{ fromJSON('["dev", "release"]')[startsWith(github.ref, '^refs/tags/[0-9]')] }}
+  BUILD_TYPE: ${{ fromJSON('["dev", "release"]')[startsWith(github.ref, 'refs/tags/')] }}
   OUTPUT_FOLDER: ./builds
   PRODUCT_NAME: Template
   PRODUCT_ID: com.ovaltutu.template
@@ -483,7 +483,7 @@ jobs:
           icon-path: ${{ env.OUTPUT_FOLDER }}/icon.icns
           #libs-path: ./ColdClear/universal/
           external-test: ${{ !startsWith(github.ref, 'refs/tags/') }}
-          store-release: ${{ startsWith(github.ref, '^refs/tags/[0-9]') }}
+          store-release: ${{ startsWith(github.ref, 'refs/tags/') }}
           # An always incrementing integer so app stores can track versions
           # But not the actual version number
           version-string: 0.0.${{ github.run_number }}
@@ -554,7 +554,7 @@ jobs:
           #libs-path: ./ColdClear/arm64/
           #love-patch: ./.github/build/iOS/love.patch
           external-test: ${{ !startsWith(github.ref, 'refs/tags/') }}
-          store-release: ${{ startsWith(github.ref, '^refs/tags/[0-9]') }}
+          store-release: ${{ startsWith(github.ref, 'refs/tags/') }}
           # An always incrementing integer so app stores can track versions
           # But not the actual version number
           version-string: 0.0.${{ github.run_number }}
@@ -594,7 +594,7 @@ jobs:
       - build-macos-appstore
       - build-ios
     runs-on: ubuntu-22.04
-    if: startsWith(github.ref, '^refs/tags/[0-9]')
+    if: startsWith(github.ref, 'refs/tags/')
     steps:
       - name: Publish release
         uses: eregon/publish-release@v1
