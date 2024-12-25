@@ -258,7 +258,6 @@ jobs:
             rm ./love-${ARCH}/changes.txt
             rm ./love-${ARCH}/readme.txt
           done
-
           curl -fsSL --retry 5 --retry-delay 15 --connect-timeout 30 --max-time 300 http://www.angusj.com/resourcehacker/resource_hacker.zip -o ${{ env.TEMP_FILE }} || exit 1
           7z x ${{ env.TEMP_FILE }} -o'./'
           rm ${{ env.TEMP_FILE }}
@@ -267,16 +266,13 @@ jobs:
         run: |
           cd .\tools\
           cp ${{ env.OUTPUT_FOLDER }}\icon.ico icon.ico
-          # Remove the default icons and version info
-          cmd /c '".\ResourceHacker.exe" -open ".\love-win32\love.exe" -save ".\love-win32\love.exe" -action delete -mask ICONGROUP,,'
-          cmd /c '".\ResourceHacker.exe" -open ".\love-win32\love.exe" -save ".\love-win32\love.exe" -action delete -mask VERSIONINFO,,'
-          cmd /c '".\ResourceHacker.exe" -open ".\love-win64\love.exe" -save ".\love-win64\love.exe" -action delete -mask ICONGROUP,,'
-          cmd /c '".\ResourceHacker.exe" -open ".\love-win64\love.exe" -save ".\love-win64\love.exe" -action delete -mask VERSIONINFO,,'
-
-          # Add the new icon
-          cmd /c '".\ResourceHacker.exe" -open ".\love-win32\love.exe" -save ".\love-win32\love.exe" -action addoverwrite -res ".\icon.ico" -mask ICONGROUP,1,'
-          cmd /c '".\ResourceHacker.exe" -open ".\love-win64\love.exe" -save ".\love-win64\love.exe" -action addoverwrite -res ".\icon.ico" -mask ICONGROUP,1,'
-
+          $exeFiles = @(".\love-win32\love.exe", ".\love-win64\love.exe")
+          foreach ($exe in $exeFiles) {
+            # Remove the default icon and version info then add the new icon
+            cmd /c '".\ResourceHacker.exe" -open "$exe" -save "$exe" -action delete -mask ICONGROUP,,'
+            cmd /c '".\ResourceHacker.exe" -open "$exe" -save "$exe" -action delete -mask VERSIONINFO,,'
+            cmd /c '".\ResourceHacker.exe" -open "$exe" -save "$exe" -action addoverwrite -res ".\icon.ico" -mask ICONGROUP,1,'
+          }
           #TODO: Add rc file support
           #cmd /c '".\ResourceHacker.exe" -open "${{ inputs.rc-path }}" -save ".\${{ env.PRODUCT_NAME }}.res" -action compile'
           #cmd /c '".\ResourceHacker.exe" -open ".\love-win32\love.exe" -save ".\love-win32\love.exe" -action addoverwrite -res ".\${{ env.PRODUCT_NAME }}.res" -mask VERSIONINFO,1,'
