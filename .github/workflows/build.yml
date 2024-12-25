@@ -295,8 +295,9 @@ jobs:
       - name: Create Windows .zip files
         shell: bash
         run: |
-          7z a -tzip ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_win32.zip ./tools/build/win32/*
-          7z a -tzip ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_win64.zip ./tools/build/win64/*
+          for ARCH in win32 win64; do
+            7z a -tzip ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_$ARCH.zip ./tools/build/$ARCH/*
+          done
       - name: Upload Windows 32-bit artifact
         if: env.BUILD_TYPE == 'dev'
         uses: actions/upload-artifact@v4
