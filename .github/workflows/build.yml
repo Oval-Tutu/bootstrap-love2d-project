@@ -239,81 +239,61 @@ jobs:
       - name: Create .ico icon
         shell: bash
         run: magick ./resources/icon.png -define icon:auto-resize="256,128,96,64,48,32,16" "${{ env.OUTPUT_FOLDER }}/icon.ico"
-      # - name: Build Windows packages
-      #   id: build-packages
-      #   uses: love-actions/love-actions-windows@v1
-      #   with:
-      #     love-package: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love
-      #     output-folder: ${{ env.OUTPUT_FOLDER }}
-      #     product-name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}
-      #     app-id: ${{ env.PRODUCT_UUID }}
-      #     icon-path: ${{ env.OUTPUT_FOLDER }}/icon.ico
-      #     installer-languages: English.isl
-      #     project-website: ${{ env.PRODUCT_WEBSITE }}
-      #     #rc-path: ./.github/build/windows/${{ env.BUILD_TYPE }}/template.rc
 
       # Adapted from:
       # - https://github.com/love-actions/love-actions-windows/blob/main/action.yml
       - name: Download Windows tools
         env:
           TEMP_PATH: ./temp.zip
-        shell: pwsh
+        shell: bash
         run: |
           cd ./tools
+          cp ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love game.love
+          cp ${{ env.OUTPUT_FOLDER }}/icon.ico icon.ico
+
           curl -L --retry 5 https://github.com/love2d/love/releases/download/${{ env.VER_LOVE }}/love-${{ env.VER_LOVE }}-win32.zip -o ${{ env.TEMP_PATH }}
           7z x ${{ env.TEMP_PATH }} -o'./'
           rm ${{ env.TEMP_PATH }}
           mv love-${{ env.VER_LOVE }}-win32 love-win32
+          rm ./love-win32/lovec.exe
+          rm ./love-win32/game.ico
+          rm ./love-win32/love.ico
+          rm ./love-win32/changes.txt
+          rm ./love-win32/readme.txt
 
           curl -L --retry 5 https://github.com/love2d/love/releases/download/${{ env.VER_LOVE }}/love-${{ env.VER_LOVE }}-win64.zip -o ${{ env.TEMP_PATH }}
           7z x ${{ env.TEMP_PATH }} -o'./'
           rm ${{ env.TEMP_PATH }}
           mv love-${{ env.VER_LOVE }}-win64 love-win64
+          rm ./love-win64/lovec.exe
+          rm ./love-win64/game.ico
+          rm ./love-win64/love.ico
+          rm ./love-win64/changes.txt
+          rm ./love-win64/readme.txt
 
           curl -L --retry 5 http://www.angusj.com/resourcehacker/resource_hacker.zip -o ${{ env.TEMP_PATH }}
           7z x ${{ env.TEMP_PATH }} -o'./'
           rm ${{ env.TEMP_PATH }}
-
-          curl -L --retry 5 https://jrsoftware.org/download.php/is.exe -o is.exe
-          ./is.exe /verysilent
-
-      - name: Assemble product folders
+      - name: Resource patch Windows executables
         shell: pwsh
         run: |
-          cp ${{ env.OUTPUT_FOLDER }}\${{ env.PRODUCT_NAME }}.love .\tools\game.love
-
           cd .\tools\
-
           cmd /c '".\ResourceHacker.exe" -open ".\love-win32\love.exe" -save ".\love-win32\love.exe" -action delete -mask ICONGROUP,,'
           cmd /c '".\ResourceHacker.exe" -open ".\love-win32\love.exe" -save ".\love-win32\love.exe" -action delete -mask VERSIONINFO,,'
 
           cmd /c '".\ResourceHacker.exe" -open ".\love-win64\love.exe" -save ".\love-win64\love.exe" -action delete -mask ICONGROUP,,'
           cmd /c '".\ResourceHacker.exe" -open ".\love-win64\love.exe" -save ".\love-win64\love.exe" -action delete -mask VERSIONINFO,,'
 
-          cd ..
-          cp ${{ env.OUTPUT_FOLDER }}\icon.ico .\tools\icon.ico
-          cd .\tools\
           cmd /c '".\ResourceHacker.exe" -open ".\love-win32\love.exe" -save ".\love-win32\love.exe" -action addoverwrite -res ".\icon.ico" -mask ICONGROUP,1,'
           cmd /c '".\ResourceHacker.exe" -open ".\love-win64\love.exe" -save ".\love-win64\love.exe" -action addoverwrite -res ".\icon.ico" -mask ICONGROUP,1,'
 
+          #TODO: Add rc file support
           #if("${{ inputs.rc-path }}")
           #{
           #  cmd /c '".\ResourceHacker.exe" -open "${{ inputs.rc-path }}" -save ".\${{ env.PRODUCT_NAME }}.res" -action compile'
           #  cmd /c '".\ResourceHacker.exe" -open ".\love-win32\love.exe" -save ".\love-win32\love.exe" -action addoverwrite -res ".\${{ env.PRODUCT_NAME }}.res" -mask VERSIONINFO,1,'
           #  cmd /c '".\ResourceHacker.exe" -open ".\love-win64\love.exe" -save ".\love-win64\love.exe" -action addoverwrite -res ".\${{ env.PRODUCT_NAME }}.res" -mask VERSIONINFO,1,'
           #}
-
-          del .\love-win32\lovec.exe
-          del .\love-win32\game.ico
-          del .\love-win32\love.ico
-          del .\love-win32\changes.txt
-          del .\love-win32\readme.txt
-
-          del .\love-win64\lovec.exe
-          del .\love-win64\game.ico
-          del .\love-win64\love.ico
-          del .\love-win64\changes.txt
-          del .\love-win64\readme.txt
 
           mkdir -p .\build\x86
           mkdir -p .\build\x64
@@ -326,7 +306,7 @@ jobs:
 
           cmd /c copy /b .\build\x64\love.exe + .\game.love .\build\x64\${{ env.PRODUCT_NAME }}.exe
           del .\build\x64\love.exe
-      - name: Copy Windows libraries
+      - name: Inject Windows libraries
         shell: bash
         run: |
           # 32-bit
@@ -337,234 +317,11 @@ jobs:
           if [ -d ./resources/windows/x64 ]; then
             cp -r -f ./resources/windows/x64 ./tools/build/x64/
           fi
-      - name: Checkout issrc
-        uses: actions/checkout@v4
-        with:
-          path: ./tools/issrc
-          repository: jrsoftware/issrc
-      - name: Processing language files
-        shell: bash
-        run: |
-          mkdir -p ./tools/language
-          languages="English.isl"
-          mv ./tools/issrc/Files/Languages/Unofficial/* ./tools/issrc/Files/Languages/
-          cp ./tools/issrc/Files/Default.isl ./tools/issrc/Files/Languages/English.isl
-          rm -rf ./tools/issrc/Files/Languages/Unofficial
-          for item in $languages; do
-            if test -f $item; then
-              cp $item ./tools/language
-            else
-              cp ./tools/issrc/Files/Languages/$item ./tools/language
-            fi
-          done
-      - name: Create iss file
-        shell: python3 {0}
-        run: |
-          import os
-          import re
-
-          #rc_path = "${{ inputs.rc-path }}"
-          value_dict: dict = {}
-
-          #if rc_path != "":
-          #    with open("${{ inputs.rc-path }}", "r", encoding="UTF-8") as f:
-          #        content = f.read()
-          #        string_file_info = re.findall(
-          #            r'BLOCK "StringFileInfo"[\s\S]*?}', content, re.IGNORECASE
-          #        )
-          #
-          #    value_dict = {}
-          #
-          #    for i in string_file_info:
-          #        value = dict(re.findall((r'VALUE "([\w ]+)", (.*)'), i, re.IGNORECASE))
-          #        value_dict.update(value)
-          #
-          #    for i, j in value_dict.items():
-          #        j = j.replace('"', "")
-          #        value_dict[i] = j
-
-          template_iss = r"""
-          #define AppName "@AppName"
-          #define AppWebsite "${{ env.PRODUCT_WEBSITE }}"
-
-          [Setup]
-          AppId=${{ env.PRODUCT_UUID }}
-          AppName={#AppName}
-          AppVersion=@AppVersion
-          AppVerName={#AppName} @AppVersion
-          AppPublisher=@AppPublisher
-          AppCopyright=@Copyright
-          AppPublisherURL={#AppWebsite}
-          AppSupportURL={#AppWebsite}
-          AppUpdatesURL={#AppWebsite}
-          DefaultDirName={autopf}\{#AppName}
-          DefaultGroupName={#AppName}
-          AllowNoIcons=yes
-          LicenseFile=.\love-win64\license.txt
-          PrivilegesRequired=lowest
-          PrivilegesRequiredOverridesAllowed=dialog
-          OutputDir=.\installer
-          OutputBaseFilename=@OutName
-          @Icon
-          UninstallDisplayIcon={app}\{#AppName}.exe
-          Compression=zip
-          SolidCompression=no
-          WizardStyle=modern
-          ArchitecturesInstallIn64BitMode=x64
-
-          [Languages]
-          @Languages
-
-          [Tasks]
-          Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
-
-          [Files]
-          Source: ".\game.love"; DestDir: "{app}\Temp"
-
-          Source: ".\love-win64\love.exe"; DestDir: "{app}\Temp"; Check: Is64BitInstallMode
-          Source: ".\love-win64\license.txt"; DestDir: "{app}"; Check: Is64BitInstallMode
-          Source: ".\love-win64\love.dll"; DestDir: "{app}"; Check: Is64BitInstallMode
-          Source: ".\love-win64\lua51.dll"; DestDir: "{app}"; Check: Is64BitInstallMode
-          Source: ".\love-win64\mpg123.dll"; DestDir: "{app}"; Check: Is64BitInstallMode
-          Source: ".\love-win64\msvcp120.dll"; DestDir: "{app}"; Check: Is64BitInstallMode
-          Source: ".\love-win64\msvcr120.dll"; DestDir: "{app}"; Check: Is64BitInstallMode
-          Source: ".\love-win64\OpenAL32.dll"; DestDir: "{app}"; Check: Is64BitInstallMode
-          Source: ".\love-win64\SDL2.dll"; DestDir: "{app}"; Check: Is64BitInstallMode
-
-          Source: ".\love-win32\love.exe"; DestDir: "{app}\Temp"; Check: not Is64BitInstallMode
-          Source: ".\love-win32\license.txt"; DestDir: "{app}"; Check: not Is64BitInstallMode
-          Source: ".\love-win32\love.dll"; DestDir: "{app}"; Check: not Is64BitInstallMode
-          Source: ".\love-win32\lua51.dll"; DestDir: "{app}"; Check: not Is64BitInstallMode
-          Source: ".\love-win32\mpg123.dll"; DestDir: "{app}"; Check: not Is64BitInstallMode
-          Source: ".\love-win32\msvcp120.dll"; DestDir: "{app}"; Check: not Is64BitInstallMode
-          Source: ".\love-win32\msvcr120.dll"; DestDir: "{app}"; Check: not Is64BitInstallMode
-          Source: ".\love-win32\OpenAL32.dll"; DestDir: "{app}"; Check: not Is64BitInstallMode
-          Source: ".\love-win32\SDL2.dll"; DestDir: "{app}"; Check: not Is64BitInstallMode
-
-          @ExtraAssets
-
-          [Icons]
-          Name: "{group}\{#AppName}"; Filename: "{app}\@ExeName"
-          Name: "{group}\{cm:UninstallProgram,{#AppName}}"; Filename: "{uninstallexe}"
-          Name: "{autodesktop}\{#AppName}"; Filename: "{app}\@ExeName"; Tasks: desktopicon
-
-          [Run]
-          Filename: "{app}\@ExeName"; Description: "{cm:LaunchProgram,{#StringChange(AppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
-
-          [Code]
-          procedure CurStepChanged(CurStep: TSetupStep);
-          var
-              InstallDir: string;
-              ResultCode: Integer;
-          begin
-              if CurStep = ssPostinstall then
-              begin
-                  InstallDir := ExpandConstant('{app}');
-                  Exec('cmd.exe', '/c copy /b .\love.exe + .\game.love "..\@ExeName"', InstallDir + '\Temp', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-                  Exec('cmd.exe', '/c rd /S /Q "' + InstallDir + '\Temp"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-              end;
-          end;
-          """
-
-          x86_path = r"./resources/windows/x86/"
-          x64_path = r"./resources/windows/x64/"
-          extra_assets = ""
-
-          # Check x86 directory
-          if os.path.exists(x86_path):
-            extra_assets_x86_list = x86_path.split()
-            for i in extra_assets_x86_list:
-              dest_dir = "{app}"
-              flag = ""
-              i = i.rstrip("/")
-              i = i.rstrip("\\")
-              i = os.path.abspath(i)
-              if os.path.isdir(i):
-                  dir_name = os.path.basename(i)
-                  dest_dir = f"{{app}}/{os.path.basename(i)}"
-                  flag = "; Flags: recursesubdirs"
-              extra_assets += (
-                  f'Source: "{i}"; DestDir: "{dest_dir}"{flag}; Check: not Is64BitInstallMode\n'
-              )
-
-          # Check x64 directory
-          if os.path.exists(x64_path):
-            extra_assets_x64_list = x64_path.split()
-            for i in extra_assets_x64_list:
-              dest_dir = "{app}"
-              flag = ""
-              i = i.rstrip("/")
-              i = i.rstrip("\\")
-              i = os.path.abspath(i)
-              if os.path.isdir(i):
-                  dir_name = os.path.basename(i)
-                  dest_dir = f"{{app}}/{os.path.basename(i)}"
-                  flag = "; Flags: recursesubdirs"
-              extra_assets += (
-                  f'Source: "{i}"; DestDir: "{dest_dir}"{flag}; Check: Is64BitInstallMode\n'
-              )
-
-          language_file_list = os.listdir("./tools/language")
-          languages = ""
-          for i in language_file_list:
-              name = os.path.splitext(i)[0]
-              languages += f'Name: "{name}"; MessagesFile: ".\\language\\{i}"\n'
-
-          processed_iss = (
-              template_iss.replace(
-                  "@AppName",
-                  product_name := (
-                      value_dict["ProductName"]
-                      if "ProductName" in value_dict
-                      else r"${{ env.PRODUCT_NAME }}"
-                  ),
-              )
-              .replace(
-                  "@AppVersion",
-                  value_dict["ProductVersion"]
-                  if "ProductVersion" in value_dict
-                  else value_dict["FileVersion"]
-                  if "FileVersion" in value_dict
-                  else "0.0.0.0",
-              )
-              .replace(
-                  "@AppPublisher",
-                  value_dict["CompanyName"] if "CompanyName" in value_dict else "",
-              )
-              .replace(
-                  "@Copyright",
-                  value_dict["LegalCopyright"] if "LegalCopyright" in value_dict else "",
-              )
-              .replace("@ExeName", f"{product_name}.exe")
-              .replace("@ExtraAssets", extra_assets)
-              .replace("@Languages", languages)
-              .replace(
-                  "@Icon",
-                  r"SetupIconFile=.\icon.ico"
-                  if r"${{ env.OUTPUT_FOLDER }}/icon.ico" != ""
-                  else "",
-              )
-              .replace("@OutName", "${{ env.PRODUCT_NAME }}_installer")
-          )
-
-          with open(
-              "./tools/${{ env.PRODUCT_NAME }}.iss",
-              "w",
-              encoding="UTF-8",
-          ) as file:
-              file.write(processed_iss)
-      - name: Build installer
-        shell: pwsh
-        run: |
-          cd ./tools
-          iscc ./${{ env.PRODUCT_NAME }}.iss
-      - name: Gather packages in output folder
-        id: gather-packages
+      - name: Create Windows .zip files
         shell: bash
         run: |
           7z a -tzip ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_x86.zip ./tools/build/x86/*
           7z a -tzip ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_x64.zip ./tools/build/x64/*
-          mv ./tools/installer/${{ env.PRODUCT_NAME }}_installer.exe ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_installer.exe
       - name: Upload Windows 32-bit artifact
         if: env.BUILD_TYPE == 'dev'
         uses: actions/upload-artifact@v4
@@ -577,12 +334,6 @@ jobs:
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_Windows_x64_zip
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_x64.zip
-      - name: Upload Windows installer artifact
-        if: env.BUILD_TYPE == 'dev'
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_Windows_installer_exe
-          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_installer.exe
       - name: Upload Windows 32-bit release
         if: env.BUILD_TYPE == 'release'
         uses: actions/upload-release-asset@v1
@@ -603,16 +354,6 @@ jobs:
           asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_x64.zip
           asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_Windows_x64.zip
           asset_content_type: application/zip
-      - name: Upload Windows installer release
-        if: env.BUILD_TYPE == 'release'
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.configure.outputs.upload_url }}
-          asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_installer.exe
-          asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_installer.exe
-          asset_content_type: application/x-msdownload
 
   build-android:
     runs-on: ubuntu-22.04
