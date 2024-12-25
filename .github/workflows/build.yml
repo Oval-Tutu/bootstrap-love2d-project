@@ -239,42 +239,33 @@ jobs:
       - name: Create .ico icon
         shell: bash
         run: magick ./resources/icon.png -define icon:auto-resize="256,128,96,64,48,32,16" "${{ env.OUTPUT_FOLDER }}/icon.ico"
-
       # Adapted from:
       # - https://github.com/love-actions/love-actions-windows/blob/main/action.yml
       - name: Download Windows tools
         env:
-          TEMP_PATH: ./temp.zip
+          TEMP_FILE: ./temp.zip
         shell: bash
         run: |
           cd ./tools
           cp ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love game.love
           cp ${{ env.OUTPUT_FOLDER }}/icon.ico icon.ico
 
-          curl -L --retry 5 https://github.com/love2d/love/releases/download/${{ env.VER_LOVE }}/love-${{ env.VER_LOVE }}-win32.zip -o ${{ env.TEMP_PATH }}
-          7z x ${{ env.TEMP_PATH }} -o'./'
-          rm ${{ env.TEMP_PATH }}
-          mv love-${{ env.VER_LOVE }}-win32 love-win32
-          rm ./love-win32/lovec.exe
-          rm ./love-win32/game.ico
-          rm ./love-win32/love.ico
-          rm ./love-win32/changes.txt
-          rm ./love-win32/readme.txt
+          for ARCH in win32 win64; do
+            curl -L --retry 5 https://github.com/love2d/love/releases/download/${{ env.VER_LOVE }}/love-${{ env.VER_LOVE }}-${ARCH}.zip -o ${{ env.TEMP_FILE }}
+            7z x ${{ env.TEMP_FILE }} -o'./'
+            rm ${{ env.TEMP_FILE }}
+            mv love-${{ env.VER_LOVE }}-${ARCH} love-${ARCH}
+            rm ./love-${ARCH}/lovec.exe
+            rm ./love-${ARCH}/game.ico
+            rm ./love-${ARCH}/love.ico
+            rm ./love-${ARCH}/changes.txt
+            rm ./love-${ARCH}/readme.txt
+          done
 
-          curl -L --retry 5 https://github.com/love2d/love/releases/download/${{ env.VER_LOVE }}/love-${{ env.VER_LOVE }}-win64.zip -o ${{ env.TEMP_PATH }}
-          7z x ${{ env.TEMP_PATH }} -o'./'
-          rm ${{ env.TEMP_PATH }}
-          mv love-${{ env.VER_LOVE }}-win64 love-win64
-          rm ./love-win64/lovec.exe
-          rm ./love-win64/game.ico
-          rm ./love-win64/love.ico
-          rm ./love-win64/changes.txt
-          rm ./love-win64/readme.txt
-
-          curl -L --retry 5 http://www.angusj.com/resourcehacker/resource_hacker.zip -o ${{ env.TEMP_PATH }}
-          7z x ${{ env.TEMP_PATH }} -o'./'
-          rm ${{ env.TEMP_PATH }}
-      - name: Resource patch Windows executables
+          curl -L --retry 5 http://www.angusj.com/resourcehacker/resource_hacker.zip -o ${{ env.TEMP_FILE }}
+          7z x ${{ env.TEMP_FILE }} -o'./'
+          rm ${{ env.TEMP_FILE }}
+      - name: Resource patch love.exe
         shell: pwsh
         run: |
           cd .\tools\
@@ -295,6 +286,7 @@ jobs:
           #  cmd /c '".\ResourceHacker.exe" -open ".\love-win64\love.exe" -save ".\love-win64\love.exe" -action addoverwrite -res ".\${{ env.PRODUCT_NAME }}.res" -mask VERSIONINFO,1,'
           #}
 
+          #TODO: Move to the step below and rename it
           mkdir -p .\build\x86
           mkdir -p .\build\x64
 
@@ -309,14 +301,11 @@ jobs:
       - name: Inject Windows libraries
         shell: bash
         run: |
-          # 32-bit
-          if [ -d ./resources/windows/x86 ]; then
-            cp -r -f ./resources/windows/x86 ./tools/build/x86/
-          fi
-          # 64-bit
-          if [ -d ./resources/windows/x64 ]; then
-            cp -r -f ./resources/windows/x64 ./tools/build/x64/
-          fi
+          for ARCH in x86 x64; do
+            if [ -d ./resources/windows/$ARCH ]; then
+              cp -r -f ./resources/windows/$ARCH ./tools/build/$ARCH/
+            fi
+          done
       - name: Create Windows .zip files
         shell: bash
         run: |
