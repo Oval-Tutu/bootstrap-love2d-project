@@ -17,6 +17,8 @@ env:
   PRODUCT_COMPANY: Oval Tutu
   PRODUCT_WEBSITE: https://oval-tutu.com
   PRODUCT_UUID: 3e64d17c-8797-4382-921f-cf488b22073f
+  VER_LOVE: 11.5
+  VER_APPIMAGE: 1.9.0
 
 jobs:
   configure:
@@ -142,31 +144,74 @@ jobs:
         run: 7z a -tzip "${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love" ./game/* -xr!.gitkeep
       - name: Create .png icon
         run: convert ./resources/icon.png -resize 256x256 "${{ env.OUTPUT_FOLDER }}/icon.png"
-      - name: Build Linux packages
-        id: build-packages
-        uses: love-actions/love-actions-linux@v2
-        with:
-          love-package: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love
-          output-folder: ${{ env.OUTPUT_FOLDER }}
-          product-name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}
-          app-name: ${{ env.PRODUCT_NAME }}
-          bundle-id: ${{ env.PRODUCT_ID }}
-          description: ${{ env.PRODUCT_DESC }}
-          icon-path: ${{ env.OUTPUT_FOLDER }}/icon.png
-          version-string: ${{ env.PRODUCT_VERSION }}
+      # Adapted from:
+      # - https://github.com/love-actions/love-actions-linux/blob/main/action.yml
+      - name: Create AppImage
+        run: |
+          sudo add-apt-repository universe
+          sudo apt-get -y install desktop-file-utils libfuse2
+
+          curl -L --retry 5 https://github.com/AppImage/appimagetool/releases/download/${{ env.VER_APPIMAGE }}/appimagetool-x86_64.AppImage -o ./tools/appimagetool.AppImage
+          curl -L --retry 5 https://github.com/love2d/love/releases/download/${{ env.VER_LOVE }}/love-${{ env.VER_LOVE }}-x86_64.AppImage -o ./tools/love.AppImage
+          chmod a+x ./tools/appimagetool.AppImage
+          chmod a+x ./tools/love.AppImage
+          pushd ./tools
+            ./love.AppImage --appimage-extract
+          popd
+
+          rm -f ./tools/squashfs-root/love.desktop
+          cat > ./tools/squashfs-root/${{ env.PRODUCT_NAME }}.desktop << EOF
+          [Desktop Entry]
+          Name=${{ env.PRODUCT_NAME }}
+          Comment=${{ env.PRODUCT_DESC }}
+          Type=Application
+          Keywords=love;game;
+          MimeType=application/x-love-game;
+          Categories=Game;
+          Exec=${{ env.PRODUCT_NAME }} %f
+          Icon=${{ env.PRODUCT_NAME }}
+          Terminal=false
+          NoDisplay=false
+          EOF
+
+          echo "Assembling executable..."
+          sed -i 's|bin/love|bin/${{ env.PRODUCT_NAME }}|g' ./tools/squashfs-root/AppRun
+          cat ./tools/squashfs-root/bin/love ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love > ./tools/squashfs-root/bin/${{ env.PRODUCT_NAME }}
+          chmod +x ./tools/squashfs-root/bin/${{ env.PRODUCT_NAME }}
+          rm -f ./tools/squashfs-root/bin/love
+
+          if [ -f "${{ env.OUTPUT_FOLDER }}/icon.png" ]; then
+            echo "Copying icon..."
+            rm -rf ./tools/squashfs-root/love.svg ./tools/squashfs-root/.DirIcon
+            ICON_PATH=$(basename -- "${{ env.OUTPUT_FOLDER }}/icon.png")
+            cp ${{ env.OUTPUT_FOLDER }}/icon.png "./tools/squashfs-root/${{ env.PRODUCT_NAME }}.${ICON_PATH##*.}"
+            cp ${{ env.OUTPUT_FOLDER }}/icon.png ./tools/squashfs-root/.DirIcon
+          fi
+
+          # Copy any required shared libraries
+          if [ -d ./resources/linux/lib ]; then
+            echo "Copying lib..."
+            mkdir -p ./tools/squashfs-root/lib
+            cp -r -f ./resources/linux/lib/* ./tools/squashfs-root/lib
+          fi
+
+          # Copy any required shared resources
+          if [ -d ./resources/linux/share ]; then
+            echo "Copying share..."
+            mkdir -p ./tools/squashfs-root/share
+            cp -r -f ./resources/linux/share/* ./tools/squashfs-root/share
+          fi
+
+          # Build appImage package
+          ./tools/appimagetool.AppImage ./tools/squashfs-root ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.AppImage
+          chmod a+x ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.AppImage
       - name: Upload AppImage artifact
         if: env.BUILD_TYPE == 'dev'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_Linux_AppImage
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.AppImage
-      - name: Upload Deb artifact
-        if: env.BUILD_TYPE == 'dev'
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_Linux_deb
-          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.deb
-      - name: Upload AppImage Release Asset
+      - name: Upload AppImage release
         if: env.BUILD_TYPE == 'release'
         uses: actions/upload-release-asset@v1
         env:
@@ -176,16 +221,6 @@ jobs:
           asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.AppImage
           asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}.AppImage
           asset_content_type: application/x-executable
-      - name: Upload Deb Release Asset
-        if: env.BUILD_TYPE == 'release'
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.configure.outputs.upload_url }}
-          asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.deb
-          asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}.deb
-          asset_content_type: application/vnd.debian.binary-package
 
   build-windows:
     runs-on: windows-latest
