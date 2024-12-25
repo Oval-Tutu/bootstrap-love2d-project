@@ -22,6 +22,7 @@
         default = pkgs.mkShell {
           # Pinned packages available in the environment
           packages = with pkgs; [
+            act
             curl
             love
             luajit

@@ -110,6 +110,12 @@ jobs:
         with:
           fetch-depth: 1
           submodules: recursive
+      - name: Install tools
+        run: |
+          if [ "$ACT" == "true" ]; then
+            sudo apt-get -y update
+            sudo apt-get -y install p7zip-full
+          fi
       - name: Build love package
         run: 7z a -tzip "${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.love" ./game/* -xr!.gitkeep
       - name: Upload .love artifact
@@ -140,6 +146,12 @@ jobs:
         with:
           fetch-depth: 1
           submodules: recursive
+      - name: Install tools
+        run: |
+          if [ "$ACT" == "true" ]; then
+            sudo apt-get -y update
+            sudo apt-get -y install p7zip-full
+          fi
       - name: Build love package
         run: 7z a -tzip "${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love" ./game/* -xr!.gitkeep
       - name: Create .png icon
@@ -148,17 +160,21 @@ jobs:
       # - https://github.com/love-actions/love-actions-linux/blob/main/action.yml
       - name: Create AppImage
         run: |
-          sudo add-apt-repository universe
           sudo apt-get -y install desktop-file-utils libfuse2
-
           curl -fsSL --retry 5 --retry-delay 15 --connect-timeout 30 --max-time 300 https://github.com/AppImage/appimagetool/releases/download/${{ env.VER_APPIMAGE }}/appimagetool-x86_64.AppImage -o ./tools/appimagetool.AppImage || exit 1
           curl -fsSL --retry 5 --retry-delay 15 --connect-timeout 30 --max-time 300 https://github.com/love2d/love/releases/download/${{ env.VER_LOVE }}/love-${{ env.VER_LOVE }}-x86_64.AppImage -o ./tools/love.AppImage || exit 1
           chmod a+x ./tools/appimagetool.AppImage
           chmod a+x ./tools/love.AppImage
+          # Make AppImages work via act in Docker/Podman
+          if [ "$ACT" == "true" ]; then
+            #https://github.com/AppImage/AppImageKit/issues/1027
+            #https://github.com/AppImage/AppImageKit/issues/828
+            dd if=/dev/zero bs=1 count=3 seek=8 conv=notrunc of=./tools/appimagetool.AppImage
+            dd if=/dev/zero bs=1 count=3 seek=8 conv=notrunc of=./tools/love.AppImage
+          fi
           pushd ./tools
             ./love.AppImage --appimage-extract
           popd
-
           rm -f ./tools/squashfs-root/love.desktop
           cat > ./tools/squashfs-root/${{ env.PRODUCT_NAME }}.desktop << EOF
           [Desktop Entry]
@@ -203,7 +219,11 @@ jobs:
           fi
 
           # Build appImage package
-          ./tools/appimagetool.AppImage ./tools/squashfs-root ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.AppImage
+          if [ "$ACT" == "true" ]; then
+            ./tools/appimagetool.AppImage --appimage-extract-and-run ./tools/squashfs-root ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.AppImage
+          else
+            ./tools/appimagetool.AppImage --appimage-extract ./tools/squashfs-root ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.AppImage
+          fi
           chmod a+x ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.AppImage
       - name: Upload AppImage artifact
         if: env.BUILD_TYPE == 'dev'
@@ -342,6 +362,12 @@ jobs:
         with:
           fetch-depth: 1
           submodules: recursive
+      - name: Install tools
+        run: |
+          if [ "$ACT" == "true" ]; then
+            sudo apt-get -y update
+            sudo apt-get -y install p7zip-full
+          fi
       - name: Build love package
         run: 7z a -tzip "${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love" ./game/* -xr!.gitkeep
       - name: Create Android res/ folder
