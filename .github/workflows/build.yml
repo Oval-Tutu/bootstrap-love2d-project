@@ -151,8 +151,8 @@ jobs:
           sudo add-apt-repository universe
           sudo apt-get -y install desktop-file-utils libfuse2
 
-          curl -L --retry 5 https://github.com/AppImage/appimagetool/releases/download/${{ env.VER_APPIMAGE }}/appimagetool-x86_64.AppImage -o ./tools/appimagetool.AppImage
-          curl -L --retry 5 https://github.com/love2d/love/releases/download/${{ env.VER_LOVE }}/love-${{ env.VER_LOVE }}-x86_64.AppImage -o ./tools/love.AppImage
+          curl -fsSL --retry 5 --retry-delay 15 --connect-timeout 30 --max-time 300 https://github.com/AppImage/appimagetool/releases/download/${{ env.VER_APPIMAGE }}/appimagetool-x86_64.AppImage -o ./tools/appimagetool.AppImage || exit 1
+          curl -fsSL --retry 5 --retry-delay 15 --connect-timeout 30 --max-time 300 https://github.com/love2d/love/releases/download/${{ env.VER_LOVE }}/love-${{ env.VER_LOVE }}-x86_64.AppImage -o ./tools/love.AppImage || exit 1
           chmod a+x ./tools/appimagetool.AppImage
           chmod a+x ./tools/love.AppImage
           pushd ./tools
@@ -248,7 +248,7 @@ jobs:
         run: |
           cd ./tools
           for ARCH in win32 win64; do
-            curl -L --retry 5 https://github.com/love2d/love/releases/download/${{ env.VER_LOVE }}/love-${{ env.VER_LOVE }}-${ARCH}.zip -o ${{ env.TEMP_FILE }}
+            curl -fsSL --retry 5 --retry-delay 15 --connect-timeout 30 --max-time 300 https://github.com/love2d/love/releases/download/${{ env.VER_LOVE }}/love-${{ env.VER_LOVE }}-${ARCH}.zip -o ${{ env.TEMP_FILE }} || exit 1
             7z x ${{ env.TEMP_FILE }} -o'./'
             rm ${{ env.TEMP_FILE }}
             mv love-${{ env.VER_LOVE }}-${ARCH} love-${ARCH}
@@ -259,7 +259,7 @@ jobs:
             rm ./love-${ARCH}/readme.txt
           done
 
-          curl -L --retry 5 http://www.angusj.com/resourcehacker/resource_hacker.zip -o ${{ env.TEMP_FILE }}
+          curl -fsSL --retry 5 --retry-delay 15 --connect-timeout 30 --max-time 300 http://www.angusj.com/resourcehacker/resource_hacker.zip -o ${{ env.TEMP_FILE }} || exit 1
           7z x ${{ env.TEMP_FILE }} -o'./'
           rm ${{ env.TEMP_FILE }}
       - name: Resource patch love.exe
