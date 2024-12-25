@@ -247,9 +247,6 @@ jobs:
         shell: bash
         run: |
           cd ./tools
-          cp ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love game.love
-          cp ${{ env.OUTPUT_FOLDER }}/icon.ico icon.ico
-
           for ARCH in win32 win64; do
             curl -L --retry 5 https://github.com/love2d/love/releases/download/${{ env.VER_LOVE }}/love-${{ env.VER_LOVE }}-${ARCH}.zip -o ${{ env.TEMP_FILE }}
             7z x ${{ env.TEMP_FILE }} -o'./'
@@ -269,39 +266,32 @@ jobs:
         shell: pwsh
         run: |
           cd .\tools\
+          cp ${{ env.OUTPUT_FOLDER }}\icon.ico icon.ico
+          # Remove the default icons and version info
           cmd /c '".\ResourceHacker.exe" -open ".\love-win32\love.exe" -save ".\love-win32\love.exe" -action delete -mask ICONGROUP,,'
           cmd /c '".\ResourceHacker.exe" -open ".\love-win32\love.exe" -save ".\love-win32\love.exe" -action delete -mask VERSIONINFO,,'
-
           cmd /c '".\ResourceHacker.exe" -open ".\love-win64\love.exe" -save ".\love-win64\love.exe" -action delete -mask ICONGROUP,,'
           cmd /c '".\ResourceHacker.exe" -open ".\love-win64\love.exe" -save ".\love-win64\love.exe" -action delete -mask VERSIONINFO,,'
 
+          # Add the new icon
           cmd /c '".\ResourceHacker.exe" -open ".\love-win32\love.exe" -save ".\love-win32\love.exe" -action addoverwrite -res ".\icon.ico" -mask ICONGROUP,1,'
           cmd /c '".\ResourceHacker.exe" -open ".\love-win64\love.exe" -save ".\love-win64\love.exe" -action addoverwrite -res ".\icon.ico" -mask ICONGROUP,1,'
 
           #TODO: Add rc file support
-          #if("${{ inputs.rc-path }}")
-          #{
-          #  cmd /c '".\ResourceHacker.exe" -open "${{ inputs.rc-path }}" -save ".\${{ env.PRODUCT_NAME }}.res" -action compile'
-          #  cmd /c '".\ResourceHacker.exe" -open ".\love-win32\love.exe" -save ".\love-win32\love.exe" -action addoverwrite -res ".\${{ env.PRODUCT_NAME }}.res" -mask VERSIONINFO,1,'
-          #  cmd /c '".\ResourceHacker.exe" -open ".\love-win64\love.exe" -save ".\love-win64\love.exe" -action addoverwrite -res ".\${{ env.PRODUCT_NAME }}.res" -mask VERSIONINFO,1,'
-          #}
-
-          #TODO: Move to the step below and rename it
-          mkdir -p .\build\x86
-          mkdir -p .\build\x64
-
-          cp .\love-win32\* .\build\x86\
-          cp .\love-win64\* .\build\x64\
-
-          cmd /c copy /b .\build\x86\love.exe + .\game.love .\build\x86\${{ env.PRODUCT_NAME }}.exe
-          del .\build\x86\love.exe
-
-          cmd /c copy /b .\build\x64\love.exe + .\game.love .\build\x64\${{ env.PRODUCT_NAME }}.exe
-          del .\build\x64\love.exe
-      - name: Inject Windows libraries
+          #cmd /c '".\ResourceHacker.exe" -open "${{ inputs.rc-path }}" -save ".\${{ env.PRODUCT_NAME }}.res" -action compile'
+          #cmd /c '".\ResourceHacker.exe" -open ".\love-win32\love.exe" -save ".\love-win32\love.exe" -action addoverwrite -res ".\${{ env.PRODUCT_NAME }}.res" -mask VERSIONINFO,1,'
+          #cmd /c '".\ResourceHacker.exe" -open ".\love-win64\love.exe" -save ".\love-win64\love.exe" -action addoverwrite -res ".\${{ env.PRODUCT_NAME }}.res" -mask VERSIONINFO,1,'
+      - name: Create Windows .exe files
         shell: bash
         run: |
-          for ARCH in x86 x64; do
+          for ARCH in win32 win64; do
+            mkdir -p ./tools/build/$ARCH/
+            cp ./tools/love-$ARCH/* ./tools/build/$ARCH/
+            #cat ./tools/build/${ARCH}/love.exe ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love > ./tools/build/$ARCH/${{ env.PRODUCT_NAME }}.exe
+            # dd variant of the cat above
+            dd if=./tools/build/${ARCH}/love.exe of=./tools/build/$ARCH/${{ env.PRODUCT_NAME }}.exe
+            dd if=${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love of=/tools/build/$ARCH/${{ env.PRODUCT_NAME }}.exe obs=1M oflag=append conv=notrunc
+            rm ./tools/build/$ARCH/love.exe
             if [ -d ./resources/windows/$ARCH ]; then
               cp -r -f ./resources/windows/$ARCH ./tools/build/$ARCH/
             fi
@@ -309,20 +299,20 @@ jobs:
       - name: Create Windows .zip files
         shell: bash
         run: |
-          7z a -tzip ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_x86.zip ./tools/build/x86/*
-          7z a -tzip ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_x64.zip ./tools/build/x64/*
+          7z a -tzip ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_win32.zip ./tools/build/win32/*
+          7z a -tzip ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_win64.zip ./tools/build/win64/*
       - name: Upload Windows 32-bit artifact
         if: env.BUILD_TYPE == 'dev'
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_Windows_x86_zip
-          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_x86.zip
+          name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_win32_zip
+          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_win32.zip
       - name: Upload Windows 64-bit artifact
         if: env.BUILD_TYPE == 'dev'
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_Windows_x64_zip
-          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_x64.zip
+          name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_win64_zip
+          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_win64.zip
       - name: Upload Windows 32-bit release
         if: env.BUILD_TYPE == 'release'
         uses: actions/upload-release-asset@v1
@@ -330,8 +320,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.configure.outputs.upload_url }}
-          asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_x86.zip
-          asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_Windows_x86.zip
+          asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_win32.zip
+          asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_win32.zip
           asset_content_type: application/zip
       - name: Upload Windows 64-bit release
         if: env.BUILD_TYPE == 'release'
@@ -340,8 +330,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.configure.outputs.upload_url }}
-          asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_x64.zip
-          asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_Windows_x64.zip
+          asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_win64.zip
+          asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_win64.zip
           asset_content_type: application/zip
 
   build-android:
