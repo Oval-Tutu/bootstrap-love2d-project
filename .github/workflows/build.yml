@@ -25,21 +25,34 @@ jobs:
     runs-on: ubuntu-22.04
     outputs:
       build_num: ${{ steps.set_build_num.outputs.build_num }}
+      build_num: ${{ steps.set_build.outputs.num }}
+      build_type: ${{ steps.set_build.outputs.type }}
       release_id: ${{ steps.create_release.outputs.id || '' }}
       upload_url: ${{ steps.create_release.outputs.upload_url || '' }}
     steps:
-      - name: Generate build number
-        id: set_build_num
+      - name: Set build parameters
+        id: set_build
         shell: bash
-        run: echo "build_num=$(date +%y.%j.%H%M)" >> $GITHUB_OUTPUT
+        run: |
+          echo "num=$(date +%y.%j.%H%M)" >> $GITHUB_OUTPUT
+          echo "type=dev" >> $GITHUB_OUTPUT
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            echo "type=release" >> $GITHUB_OUTPUT
+          fi
+      - name: Check build parameters
+        run: |
+          echo "**************************"
+          echo "BUILD_NUM:  ${{ steps.set_build.outputs.num }}"
+          echo "BUILD_TYPE: ${{ steps.set_build.outputs.type }}"
+          echo "**************************"
       - uses: actions/checkout@v4
-        if: env.BUILD_TYPE == 'release'
+        if: ${{ steps.set_build.outputs.type == 'release' }}
         with:
           fetch-depth: 1
           submodules: recursive
       - name: Get PR and Issue List
         id: get_changes
-        if: env.BUILD_TYPE == 'release'
+        if: ${{ steps.set_build.outputs.type == 'release' }}
         run: |
           # Get the previous tag or default to first commit
           git fetch --all --tags
@@ -69,7 +82,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Create draft release
-        if: env.BUILD_TYPE == 'release'
+        if: ${{ steps.set_build.outputs.type == 'release' }}
         id: create_release
         uses: actions/create-release@v1
         env:
@@ -83,7 +96,7 @@ jobs:
             * ${{ env.PRODUCT_WEBSITE }}
 
             This release of ${{ env.PRODUCT_NAME }} was built via:
-            - Build number: ${{ steps.set_build_num.outputs.build_num }}
+            - Build number: ${{ steps.set_build.outputs.num }}
             - GitHub Run: ${{github.run_number}}
             - iOS App store version: 0.0.${{github.run_number}}
             - macOS App store version: 0.0.${{github.run_number}}
@@ -119,13 +132,13 @@ jobs:
       - name: Build love package
         run: 7z a -tzip "${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.love" ./game/* -xr!.gitkeep
       - name: Upload .love artifact
-        if: env.BUILD_TYPE == 'dev'
+        if: ${{ needs.configure.outputs.build_type == 'dev' }}
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_love
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.love
       - name: Upload .love release
-        if: env.BUILD_TYPE == 'release'
+        if: ${{ needs.configure.outputs.build_type == 'release' }}
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -226,13 +239,13 @@ jobs:
           fi
           chmod a+x ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.AppImage
       - name: Upload AppImage artifact
-        if: env.BUILD_TYPE == 'dev'
+        if: ${{ needs.configure.outputs.build_type == 'dev' }}
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_Linux_AppImage
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.AppImage
       - name: Upload AppImage release
-        if: env.BUILD_TYPE == 'release'
+        if: ${{ needs.configure.outputs.build_type == 'release' }}
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -319,19 +332,19 @@ jobs:
             7z a -tzip ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_$ARCH.zip ./tools/build/$ARCH/*
           done
       - name: Upload Windows 32-bit artifact
-        if: env.BUILD_TYPE == 'dev'
+        if: ${{ needs.configure.outputs.build_type == 'dev' }}
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_win32_zip
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_win32.zip
       - name: Upload Windows 64-bit artifact
-        if: env.BUILD_TYPE == 'dev'
+        if: ${{ needs.configure.outputs.build_type == 'dev' }}
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_win64_zip
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_win64.zip
       - name: Upload Windows 32-bit release
-        if: env.BUILD_TYPE == 'release'
+        if: ${{ needs.configure.outputs.build_type == 'release' }}
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -341,7 +354,7 @@ jobs:
           asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_win32.zip
           asset_content_type: application/zip
       - name: Upload Windows 64-bit release
-        if: env.BUILD_TYPE == 'release'
+        if: ${{ needs.configure.outputs.build_type == 'release' }}
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -479,25 +492,25 @@ jobs:
           icon-path: ${{ env.OUTPUT_FOLDER }}/icon.icns
           version-string: ${{ env.PRODUCT_VERSION }}
       - name: Upload macOS portable pkg artifact
-        if: env.BUILD_TYPE == 'dev'
+        if: ${{ needs.configure.outputs.build_type == 'dev' }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_macOS_portable_pkg
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-portable.pkg
       - name: Upload macOS portable dmg artifact
-        if: env.BUILD_TYPE == 'dev'
+        if: ${{ needs.configure.outputs.build_type == 'dev' }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_macOS_portable_dmg
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-portable.dmg
       - name: Upload macOS zip artifact
-        if: env.BUILD_TYPE == 'dev'
+        if: ${{ needs.configure.outputs.build_type == 'dev' }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_macOS_portable_zip
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-portable.zip
       - name: Upload macOS portable pkg release
-        if: env.BUILD_TYPE == 'release'
+        if: ${{ needs.configure.outputs.build_type == 'release' }}
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -507,7 +520,7 @@ jobs:
           asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}-portable.pkg
           asset_content_type: application/x-installer
       - name: Upload macOS portable dmg release
-        if: env.BUILD_TYPE == 'release'
+        if: ${{ needs.configure.outputs.build_type == 'release' }}
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -517,7 +530,7 @@ jobs:
           asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}-portable.dmg
           asset_content_type: application/x-apple-diskimage
       - name: Upload macOS portable zip release
-        if: env.BUILD_TYPE == 'release'
+        if: ${{ needs.configure.outputs.build_type == 'release' }}
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -588,13 +601,13 @@ jobs:
             ${{ env.OUTPUT_FOLDER }}/ExportOptions.plist
             ${{ env.OUTPUT_FOLDER }}/Packaging.log
       - name: Upload macOS appstore pkg artifact
-        if: env.BUILD_TYPE == 'dev'
+        if: ${{ needs.configure.outputs.build_type == 'dev' }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_macOS_appstore_pkg
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-appstore.pkg
       - name: Upload macOS appstore pkg release
-        if: env.BUILD_TYPE == 'release'
+        if: ${{ needs.configure.outputs.build_type == 'release' }}
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -659,13 +672,13 @@ jobs:
             ${{ env.OUTPUT_FOLDER }}/ExportOptions.plist
             ${{ env.OUTPUT_FOLDER }}/Packaging.log
       - name: Upload iOS artifact
-        if: env.BUILD_TYPE == 'dev'
+        if: ${{ needs.configure.outputs.build_type == 'dev' }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_iOS_ipa
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.ipa
       - name: Upload iOS release
-        if: env.BUILD_TYPE == 'release'
+        if: ${{ needs.configure.outputs.build_type == 'release' }}
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -686,7 +699,7 @@ jobs:
       - build-macos-appstore
       - build-ios
     runs-on: ubuntu-22.04
-    if: startsWith(github.ref, 'refs/tags/')
+    if: ${{ needs.configure.outputs.build_type == 'release' }}
     steps:
       - name: Publish release
         uses: eregon/publish-release@v1
