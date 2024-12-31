@@ -18,7 +18,7 @@ env:
   PRODUCT_ID: com.ovaltutu.template
   PRODUCT_DESC: A template game made with LÖVE
   PRODUCT_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || '0.0.0' }}
-  PRODUCT_COPYRIGHT: Copyright (c) 2024 Oval Tutu
+  PRODUCT_COPYRIGHT: Copyright (c) 2025 Oval Tutu
   PRODUCT_COMPANY: Oval Tutu
   PRODUCT_WEBSITE: https://oval-tutu.com
   PRODUCT_UUID: 3e64d17c-8797-4382-921f-cf488b22073f
@@ -563,7 +563,7 @@ jobs:
         run: |
           ls -lh ${{ env.OUTPUT_FOLDER }}/apk/* || true
           if [ -d ${{ env.OUTPUT_FOLDER }}/aab ]; then
-          ls -lh ${{ env.OUTPUT_FOLDER }}/aab/* || true
+            ls -lh ${{ env.OUTPUT_FOLDER }}/aab/* || true
           fi
       - name: Upload Android debug .apk artifact
         if: ${{ needs.configure.outputs.build_type == 'dev' }}
