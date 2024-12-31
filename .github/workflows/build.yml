@@ -379,7 +379,7 @@ jobs:
             #cat ./tools/build/${ARCH}/love.exe ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love > ./tools/build/$ARCH/${{ env.PRODUCT_NAME }}.exe
             # dd variant of the cat above
             dd if=./tools/build/${ARCH}/love.exe of=./tools/build/$ARCH/${{ env.PRODUCT_NAME }}.exe
-            dd if=${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love of=/tools/build/$ARCH/${{ env.PRODUCT_NAME }}.exe obs=1M oflag=append conv=notrunc
+            dd if=${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love of=./tools/build/$ARCH/${{ env.PRODUCT_NAME }}.exe obs=1M oflag=append conv=notrunc
             rm ./tools/build/$ARCH/love.exe
             if [ -d ./resources/windows/$ARCH ]; then
               cp -r -f ./resources/windows/$ARCH ./tools/build/$ARCH/
