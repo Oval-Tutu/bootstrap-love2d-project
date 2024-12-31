@@ -11,6 +11,7 @@ env:
   ANDROID_ORIENTATION: landscape
   # NoRecord or Record. Does the game need microphone access?
   ANDROID_RECORD: NoRecord
+  APPIMAGE_VERSION: 1.9.0
   LOVE_VERSION: 11.5
   OUTPUT_FOLDER: ./builds
   PRODUCT_NAME: Template
@@ -22,7 +23,14 @@ env:
   PRODUCT_WEBSITE: https://oval-tutu.com
   PRODUCT_UUID: 3e64d17c-8797-4382-921f-cf488b22073f
   TARGET_ANDROID: true
-  VER_APPIMAGE: 1.9.0
+  TARGET_IOS: false
+  TARGET_LINUX_APPIMAGE: true
+  TARGET_LINUX_TARBALL: false
+  TARGET_MACOS_PORTABLE: false
+  TARGET_MACOS_APPSTORE: false
+  TARGET_WEB: false
+  TARGET_WINDOWS_ZIP: true
+  TARGET_WINDOWS_SFX: false
 
 jobs:
   configure:
@@ -37,6 +45,15 @@ jobs:
       build_type: ${{ steps.set_build.outputs.type }}
       release_id: ${{ steps.create_release.outputs.id || '' }}
       upload_url: ${{ steps.create_release.outputs.upload_url || '' }}
+      target_android: ${{ env.TARGET_ANDROID }}
+      target_ios: ${{ env.TARGET_IOS }}
+      target_linux_appimage: ${{ env.TARGET_LINUX_APPIMAGE }}
+      target_linux_tarball: ${{ env.TARGET_LINUX_TARBALL }}
+      target_macos_portable: ${{ env.TARGET_MACOS_PORTABLE }}
+      target_macos_appstore: ${{ env.TARGET_MACOS_APPSTORE }}
+      target_web: ${{ env.TARGET_WEB }}
+      target_windows_zip: ${{ env.TARGET_WINDOWS_ZIP }}
+      target_windows_sfx: ${{ env.TARGET_WINDOWS_SFX }}
     steps:
       - name: Set build parameters
         id: set_build
@@ -49,10 +66,24 @@ jobs:
           fi
       - name: Check build parameters
         run: |
-          echo "**************************"
-          echo "BUILD_NUM:  ${{ steps.set_build.outputs.num }}"
-          echo "BUILD_TYPE: ${{ steps.set_build.outputs.type }}"
-          echo "**************************"
+          echo "******************************"
+          echo "Build Number: ${{ steps.set_build.outputs.num }}"
+          echo "Build Type:   ${{ steps.set_build.outputs.type }}"
+          echo "GitHub Run:   ${{ github.run_number }}"
+          echo "Game Version: ${{ env.PRODUCT_VERSION }}"
+          echo "LÖVE Version: ${{ env.LOVE_VERSION }}"
+          echo "3DS:          ${{ env.TARGET_3DS == 'true' && '✅' || '❌' }}"
+          echo "Android:      ${{ env.TARGET_ANDROID == 'true' && '✅' || '❌' }}"
+          echo "AppImage:     ${{ env.TARGET_LINUX_APPIMAGE == 'true' && '✅' || '❌' }}"
+          echo "iOS:          ${{ env.TARGET_IOS == 'true' && '✅' || '❌' }}"
+          echo "Linux:        ${{ env.TARGET_LINUX_TARBALL == 'true' && '✅' || '❌' }}"
+          echo "macOS:        ${{ env.TARGET_MACOS_PORTABLE == 'true' && '✅' || '❌' }}"
+          echo "macOS Store:  ${{ env.TARGET_MACOS_APPSTORE == 'true' && '️✅' || '❌' }}"
+          echo "Switch:       ${{ env.TARGET_SWITCH == 'true' && '✅' || '❌' }}"
+          echo "Web:          ${{ env.TARGET_WEB == 'true' && '✅' || '❌' }}"
+          echo "Windows:      ${{ env.TARGET_WINDOWS_ZIP == 'true' && '✅' || '❌' }}"
+          echo "Windows SFX   ${{ env.TARGET_WINDOWS_SFX == 'true' && '✅' || '❌' }}"
+          echo "******************************"
       - name: Generate Android parameters
         id: set_android
         shell: bash
@@ -176,6 +207,7 @@ jobs:
           asset_content_type: application/x-love-game
 
   build-linux:
+    if: ${{ needs.configure.outputs.target_linux_appimage == 'true' || needs.configure.outputs.target_linux_tarball == 'true' }}
     runs-on: ubuntu-22.04
     needs: [configure]
     continue-on-error: true
@@ -201,7 +233,7 @@ jobs:
       - name: Create AppImage
         run: |
           sudo apt-get -y install desktop-file-utils libfuse2
-          curl -fsSL --retry 5 --retry-delay 15 --connect-timeout 30 --max-time 300 https://github.com/AppImage/appimagetool/releases/download/${{ env.VER_APPIMAGE }}/appimagetool-x86_64.AppImage -o ./tools/appimagetool.AppImage || exit 1
+          curl -fsSL --retry 5 --retry-delay 15 --connect-timeout 30 --max-time 300 https://github.com/AppImage/appimagetool/releases/download/${{ env.APPIMAGE_VERSION }}/appimagetool-x86_64.AppImage -o ./tools/appimagetool.AppImage || exit 1
           curl -fsSL --retry 5 --retry-delay 15 --connect-timeout 30 --max-time 300 https://github.com/love2d/love/releases/download/${{ env.LOVE_VERSION }}/love-${{ env.LOVE_VERSION }}-x86_64.AppImage -o ./tools/love.AppImage || exit 1
           chmod a+x ./tools/appimagetool.AppImage
           chmod a+x ./tools/love.AppImage
@@ -269,7 +301,7 @@ jobs:
         if: ${{ needs.configure.outputs.build_type == 'dev' }}
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_Linux_AppImage
+          name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.AppImage.zip
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.AppImage
       - name: Upload AppImage release
         if: ${{ needs.configure.outputs.build_type == 'release' }}
@@ -283,6 +315,7 @@ jobs:
           asset_content_type: application/x-executable
 
   build-windows:
+    if: ${{ needs.configure.outputs.target_windows_sfx == 'true' || needs.configure.outputs.target_windows_zip == 'true' }}
     runs-on: windows-latest
     needs: [configure]
     continue-on-error: true
@@ -308,7 +341,7 @@ jobs:
         run: |
           cd ./tools
           for ARCH in win32 win64; do
-            curl -fsSL --retry 5 --retry-delay 15 --connect-timeout 30 --max-time 300 https://github.com/love2d/love/releases/download/${{ env.VER_LOVE }}/love-${{ env.VER_LOVE }}-${ARCH}.zip -o ${{ env.TEMP_FILE }} || exit 1
+            curl -fsSL --retry 5 --retry-delay 15 --connect-timeout 30 --max-time 300 https://github.com/love2d/love/releases/download/${{ env.LOVE_VERSION }}/love-${{ env.LOVE_VERSION }}-${ARCH}.zip -o ${{ env.TEMP_FILE }} || exit 1
             7z x ${{ env.TEMP_FILE }} -o'./'
             rm ${{ env.TEMP_FILE }}
             mv love-${{ env.LOVE_VERSION }}-${ARCH} love-${ARCH}
@@ -395,6 +428,7 @@ jobs:
   # https://github.com/love2d/love-android
   # https://github.com/love2d/love-android/wiki/Game-Packaging
   build-android:
+    if: ${{ needs.configure.outputs.target_android == 'true' }}
     runs-on: ubuntu-22.04
     needs: [configure]
     continue-on-error: true
@@ -561,6 +595,7 @@ jobs:
           asset_content_type: application/vnd.android.package-archive
 
   build-macos-portable:
+    if: ${{ needs.configure.outputs.target_macos_portable == 'true' }}
     runs-on: macos-latest
     needs: [configure]
     continue-on-error: true
@@ -666,6 +701,7 @@ jobs:
           asset_content_type: application/zip
 
   build-macos-appstore:
+    if: ${{ needs.configure.outputs.target_macos_appstore == 'true' }}
     runs-on: macos-latest
     needs: [configure]
     continue-on-error: true
@@ -743,6 +779,7 @@ jobs:
           asset_content_type: application/x-installer
 
   build-ios:
+    if: ${{ needs.configure.outputs.target_ios == 'true' }}
     runs-on: macos-latest
     needs: [configure]
     continue-on-error: true
