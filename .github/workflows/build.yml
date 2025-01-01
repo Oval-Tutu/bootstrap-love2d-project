@@ -555,10 +555,10 @@ jobs:
           BUILD_TOOLS_VERSION: ${{ needs.configure.outputs.android_build_tools_version }}
         with:
           releaseDirectory: ${{ env.OUTPUT_FOLDER }}/apk/debug
-          signingKeyBase64: ${{ secrets.ANDROID_DEBUG_KEYSTORE }}
+          signingKeyBase64: ${{ secrets.ANDROID_DEBUG_SIGNINGKEY_BASE64 }}
           alias: ${{ secrets.ANDROID_DEBUG_ALIAS }}
-          keyStorePassword: ${{ secrets.ANDROID_DEBUG_STOREPASS }}
-          keyPassword: ${{ secrets.ANDROID_DEBUG_KEYPASS }}
+          keyStorePassword: ${{ secrets.ANDROID_DEBUG_KEYSTORE_PASSWORD }}
+          keyPassword: ${{ secrets.ANDROID_DEBUG_KEY_PASSWORD }}
           zipAlign: true
       - name: Sign Android release .apk
         if: ${{ needs.configure.outputs.build_type == 'dev' }}
@@ -568,10 +568,10 @@ jobs:
           BUILD_TOOLS_VERSION: ${{ needs.configure.outputs.android_build_tools_version }}
         with:
           releaseDirectory: ${{ env.OUTPUT_FOLDER }}/apk/release
-          signingKeyBase64: ${{ secrets.ANDROID_RELEASE_KEYSTORE }}
+          signingKeyBase64: ${{ secrets.ANDROID_RELEASE_SIGNINGKEY_BASE64 }}
           alias: ${{ secrets.ANDROID_RELEASE_ALIAS }}
-          keyStorePassword: ${{ secrets.ANDROID_RELEASE_STOREPASS }}
-          keyPassword: ${{ secrets.ANDROID_RELEASE_KEYPASS }}
+          keyStorePassword: ${{ secrets.ANDROID_RELEASE_KEYSTORE_PASSWORD }}
+          keyPassword: ${{ secrets.ANDROID_RELEASE_KEY_PASSWORD }}
           zipAlign: true
       - name: Build Android .aab
         if: ${{ needs.configure.outputs.build_type == 'release' }}
