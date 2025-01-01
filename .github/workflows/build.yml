@@ -307,7 +307,7 @@ jobs:
           if [ "$ACT" == "true" ]; then
             ./tools/appimagetool.AppImage --appimage-extract-and-run ./tools/squashfs-root ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.AppImage
           else
-            ./tools/appimagetool.AppImage --appimage-extract ./tools/squashfs-root ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.AppImage
+            ./tools/appimagetool.AppImage ./tools/squashfs-root ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.AppImage
           fi
           chmod a+x ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.AppImage
       - name: Create Tarball
