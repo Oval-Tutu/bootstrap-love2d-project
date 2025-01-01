@@ -687,19 +687,19 @@ jobs:
           version-string: ${{ env.PRODUCT_VERSION }}
       - name: Upload macOS portable pkg artifact
         if: ${{ needs.configure.outputs.build_type == 'dev' }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_macOS_portable_pkg
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-portable.pkg
       - name: Upload macOS portable dmg artifact
         if: ${{ needs.configure.outputs.build_type == 'dev' }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_macOS_portable_dmg
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-portable.dmg
       - name: Upload macOS zip artifact
         if: ${{ needs.configure.outputs.build_type == 'dev' }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_macOS_portable_zip
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-portable.zip
@@ -788,7 +788,7 @@ jobs:
           # But not the actual version number
           version-string: 0.0.${{ github.run_number }}
       - name: Upload macOS appstore logs artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_macOS_appstore_logs
           path: |
@@ -797,7 +797,7 @@ jobs:
             ${{ env.OUTPUT_FOLDER }}/Packaging.log
       - name: Upload macOS appstore pkg artifact
         if: ${{ needs.configure.outputs.build_type == 'dev' }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_macOS_appstore_pkg
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-appstore.pkg
@@ -860,7 +860,7 @@ jobs:
           # But not the actual version number
           version-string: 0.0.${{ github.run_number }}
       - name: Upload iOS logs artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_iOS_logs
           path: |
@@ -869,7 +869,7 @@ jobs:
             ${{ env.OUTPUT_FOLDER }}/Packaging.log
       - name: Upload iOS artifact
         if: ${{ needs.configure.outputs.build_type == 'dev' }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_iOS_ipa
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.ipa
