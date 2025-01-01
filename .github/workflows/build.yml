@@ -389,21 +389,39 @@ jobs:
           7z x ${{ env.TEMP_FILE }} -o'./'
           rm ${{ env.TEMP_FILE }}
       - name: Resource patch love.exe
-        shell: pwsh
+        shell: bash
         run: |
-          cd .\tools\
-          cp ${{ env.OUTPUT_FOLDER }}\icon.ico icon.ico
-          $exeFiles = @(".\love-win32\love.exe", ".\love-win64\love.exe")
-          foreach ($exe in $exeFiles) {
-            # Remove the default icon and version info then add the new icon
-            cmd /c '".\ResourceHacker.exe" -open "$exe" -save "$exe" -action delete -mask ICONGROUP,,'
-            cmd /c '".\ResourceHacker.exe" -open "$exe" -save "$exe" -action delete -mask VERSIONINFO,,'
-            cmd /c '".\ResourceHacker.exe" -open "$exe" -save "$exe" -action addoverwrite -res ".\icon.ico" -mask ICONGROUP,1,'
+          cat > ./tools/version.rc <<EOF
+          1 VERSIONINFO
+          FILEVERSION 1,0,0,${{ github.run_number }}
+          PRODUCTVERSION 1,0,0,${{ github.run_number }}
+          {
+            BLOCK "StringFileInfo"
+            {
+              BLOCK "040904B0"
+              {
+                VALUE "CompanyName", "${{ env.PRODUCT_COMPANY }}"
+                VALUE "FileDescription", "${{ env.PRODUCT_NAME }}"
+                VALUE "FileVersion", "1.0.0.${{ github.run_number }}"
+                VALUE "InternalName", "${{ env.PRODUCT_NAME }}"
+                VALUE "LegalCopyright", "${{ env.PRODUCT_COPYRIGHT }}"
+                VALUE "OriginalFilename", "${{ env.PRODUCT_NAME }}.exe"
+                VALUE "ProductName", "${{ env.PRODUCT_NAME }}"
+                VALUE "ProductVersion", "1.0.0.${{ github.run_number }}"
+              }
+            }
           }
-          #TODO: Add rc file support
-          #cmd /c '".\ResourceHacker.exe" -open "${{ inputs.rc-path }}" -save ".\${{ env.PRODUCT_NAME }}.res" -action compile'
-          #cmd /c '".\ResourceHacker.exe" -open ".\love-win32\love.exe" -save ".\love-win32\love.exe" -action addoverwrite -res ".\${{ env.PRODUCT_NAME }}.res" -mask VERSIONINFO,1,'
-          #cmd /c '".\ResourceHacker.exe" -open ".\love-win64\love.exe" -save ".\love-win64\love.exe" -action addoverwrite -res ".\${{ env.PRODUCT_NAME }}.res" -mask VERSIONINFO,1,'
+          EOF
+
+          #TODO: Fix resource patching
+          #./tools/ResourceHacker.exe -open ./tools/version.rc -save "./tools/${{ env.PRODUCT_NAME }}.res" -action compile
+          for ARCH in win32 win64; do
+            # Remove the default icon and version info then add the new icon
+            ./tools/ResourceHacker.exe -open ./tools/love-${ARCH}/love.exe -save ./tools/love-${ARCH}/love.exe -action delete -mask ICONGROUP,,
+            ./tools/ResourceHacker.exe -open ./tools/love-${ARCH}/love.exe -save ./tools/love-${ARCH}/love.exe -action delete -mask VERSIONINFO,,
+            ./tools/ResourceHacker.exe -open ./tools/love-${ARCH}/love.exe -save ./tools/love-${ARCH}/love.exe -action addoverwrite -res "${{ env.OUTPUT_FOLDER }}/icon.ico" -mask ICONGROUP,1,
+            #./tools/ResourceHacker.exe -open ./tools/love-${ARCH}/love.exe -save ./tools/love-${ARCH}/love.exe -action addoverwrite -res "./tools/${{ env.PRODUCT_NAME }}.res" -mask VERSIONINFO,1,
+          done
       - name: Create Windows .exe files
         shell: bash
         run: |
@@ -429,13 +447,13 @@ jobs:
         if: ${{ needs.configure.outputs.build_type == 'dev' }}
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_win32_zip
+          name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_win32.zip
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_win32.zip
       - name: Upload Windows 64-bit artifact
         if: ${{ needs.configure.outputs.build_type == 'dev' }}
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_win64_zip
+          name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_win64.zip
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_win64.zip
       - name: Upload Windows 32-bit release
         if: ${{ needs.configure.outputs.build_type == 'release' }}
