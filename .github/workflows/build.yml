@@ -273,8 +273,6 @@ jobs:
 
           echo "Assembling executable..."
           sed -i 's|bin/love|bin/${{ env.PRODUCT_NAME }}|g' ./tools/squashfs-root/AppRun
-          #cat ./tools/squashfs-root/bin/love ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love > ./tools/squashfs-root/bin/${{ env.PRODUCT_NAME }}
-          # dd variant of the cat above
           dd if=./tools/squashfs-root/bin/love of=./tools/squashfs-root/bin/${{ env.PRODUCT_NAME }}
           dd if=${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love of=./tools/squashfs-root/bin/${{ env.PRODUCT_NAME }} obs=1M oflag=append conv=notrunc
           chmod +x ./tools/squashfs-root/bin/${{ env.PRODUCT_NAME }}
@@ -428,8 +426,6 @@ jobs:
           for ARCH in win32 win64; do
             mkdir -p ./tools/build/$ARCH/
             cp ./tools/love-$ARCH/* ./tools/build/$ARCH/
-            #cat ./tools/build/${ARCH}/love.exe ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love > ./tools/build/$ARCH/${{ env.PRODUCT_NAME }}.exe
-            # dd variant of the cat above
             dd if=./tools/build/${ARCH}/love.exe of=./tools/build/$ARCH/${{ env.PRODUCT_NAME }}.exe
             dd if=${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love of=./tools/build/$ARCH/${{ env.PRODUCT_NAME }}.exe obs=1M oflag=append conv=notrunc
             rm ./tools/build/$ARCH/love.exe
