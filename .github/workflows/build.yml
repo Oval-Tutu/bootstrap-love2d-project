@@ -192,7 +192,7 @@ jobs:
         if: ${{ needs.configure.outputs.build_type == 'dev' }}
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_love
+          name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.love.zip
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.love
       - name: Upload .love release
         if: ${{ needs.configure.outputs.build_type == 'release' }}
