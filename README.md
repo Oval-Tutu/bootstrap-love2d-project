@@ -1,7 +1,7 @@
 # LÖVE Template for Visual Studio Code
 
 A pre-configured Visual Studio Code template for LÖVE.
-Adapted from <https://github.com/Keyslam/LOVE-VSCode-Game-Template>
+Inspired by and adapted from [LOVE VSCode Game Template](https://github.com/Keyslam/LOVE-VSCode-Game-Template) and [LÖVE Actions](https://github.com/love-actions).
 
 ## Features
 
@@ -12,12 +12,13 @@ Adapted from <https://github.com/Keyslam/LOVE-VSCode-Game-Template>
 - ️⛱️ [Shader languages support](https://marketplace.visualstudio.com/items?itemName=slevesque.shader)
 - ️👷 Automated builds of the `.love` file.
 - 🗂️ Organized with [Workspaces](https://code.visualstudio.com/docs/editor/workspaces)
+- 📦 GitHub Actions for automated builds
 - ️❄️ Nix flake to provision a dev shell
 
 ## Prerequisites
 
 - Visual Studio Code
-- [LÖVE 11.5](https://love2d.org/)
+- [LÖVE 11.5](https://love2d.org/) (*currently only 11.5 is supported*)
   - **`love` should be in your `PATH`**
 - `bash`
 - `7z`
@@ -54,7 +55,7 @@ Doubles up as a poor man's backup system.
 
 - Press <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>B</kbd> to **Build** the game.
 
-## Releasing
+# Releasing
 
 Make a new release by creating a version number git tag **without the `v` prefix**.
 
@@ -74,6 +75,7 @@ git push origin 1.0.0
 ## Structure
 ```
 .
+├── .github                   GitHub Actions configuration
 ├── .editorconfig             EditorConfig file
 ├── .vscode                   Visual Studio Code configuration
 │   ├── extensions.json
@@ -99,3 +101,79 @@ The `.vscode` folder contains project specific configuration.
 - `launch.json`: Contains the settings for running the game or launching the debugger
 - `settings.json`: Contains the settings for the Lua extension
 - `tasks.json`: Contains the settings for building the game
+
+## GitHub Actions
+
+The GitHub Actions workflow will automatically build and package the game for all the supported platforms.
+
+- Android
+  - `.apk` debug and release builds for testing
+  - `.aab` release build for the Play Store
+- iOS
+- Linux
+  - AppImage
+  - Tarball
+- macOS
+  - portable .dmg
+  - App Store
+- Windows
+  - win32
+  - win64
+
+### Android
+
+In order to sign the APKs and AABs, the [zipalign & Sign Android Release Action](https://github.com/kevin-david/zipalign-sign-android-release) is used. You'll need to create Debug and Release keystores and set the appropriate secrets in the GitHub repository settings.
+
+#### Debug
+
+This creates a standard debug keystore matching Android Studio's defaults, except it is valid for 50 years.
+
+```shell
+keytool -genkey -v \
+  -keystore debug.keystore \
+  -alias androiddebugkey \
+  -keyalg RSA -keysize 2048 -validity 18250 \
+  -storepass android \
+  -keypass android \
+  -dname "CN=Android Debug,O=Android,C=US"
+```
+
+Create base64 encoded signing key to sign apps in GitHub CI.
+
+```shell
+openssl base64 < debug.keystore | tr -d '\n' | tee debug.keystore.base64.txt
+```
+
+Add these secrets to the GitHub repository settings:
+
+- `ANDROID_DEBUG_SIGNINGKEY_BASE64`
+- `ANDROID_DEBUG_ALIAS`
+- `ANDROID_DEBUG_KEYSTORE_PASSWORD`
+- `ANDROID_DEBUG_KEY_PASSWORD`
+
+#### Release
+
+This creates a release keystore with a validity of 25 years.
+
+```shell
+keytool -genkey -v \
+  -keystore release-key.jks \
+  -alias release-key \
+  -keyalg RSA -keysize 2048 -validity 9125 \
+  -storepass [secure-password] \
+  -keypass [secure-password] \
+  -dname "CN=[your name],O=[your organisation],L=[your town/city],S=[your state/region/county],C=[your country code]"
+```
+
+Create base64 encoded signing key to sign apps in GitHub CI.
+
+```shell
+openssl base64 < release-key.jks | tr -d '\n' | tee release-key.jks.base64.txt
+```
+
+Add these secrets to the GitHub repository settings:
+
+- `ANDROID_RELEASE_SIGNINGKEY_BASE64`
+- `ANDROID_RELEASE_ALIAS`
+- `ANDROID_RELEASE_KEYSTORE_PASSWORD`
+- `ANDROID_RELEASE_KEY_PASSWORD`
