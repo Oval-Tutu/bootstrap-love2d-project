@@ -348,7 +348,7 @@ jobs:
 
   build-windows:
     if: ${{ needs.configure.outputs.target_windows_sfx == 'true' || needs.configure.outputs.target_windows_zip == 'true' }}
-    runs-on: windows-latest
+    runs-on: ubuntu-22.04
     needs: [configure]
     continue-on-error: true
     env:
@@ -358,24 +358,31 @@ jobs:
         with:
           fetch-depth: 1
           submodules: recursive
+      - name: Install tools
+        run: |
+          # Install WineHQ
+          sudo dpkg --add-architecture i386
+          sudo mkdir -pm755 /etc/apt/keyrings
+          sudo wget -O /etc/apt/keyrings/winehq-archive.key https://dl.winehq.org/wine-builds/winehq.key
+          sudo wget -NP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/ubuntu/dists/jammy/winehq-jammy.sources
+          sudo apt-get -y update
+          sudo apt-get -y --no-install-recommends install winehq-stable
+          if [ "$ACT" == "true" ]; then
+            sudo apt-get -y install p7zip-full
+          fi
       - name: Build love package
-        shell: bash
         run: 7z a -tzip "${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love" ./game/* -xr!.gitkeep
       - name: Create .ico icon
-        shell: bash
-        run: magick ./resources/icon.png -define icon:auto-resize="256,128,96,64,48,32,16" "${{ env.OUTPUT_FOLDER }}/icon.ico"
+        run: convert ./resources/icon.png -define icon:auto-resize="256,128,96,64,48,32,16" "${{ env.OUTPUT_FOLDER }}/icon.ico"
       # Adapted from:
       # - https://github.com/love-actions/love-actions-windows/blob/main/action.yml
       - name: Download Windows tools
-        env:
-          TEMP_FILE: ./temp.zip
-        shell: bash
         run: |
           cd ./tools
           for ARCH in win32 win64; do
-            curl -fsSL --retry 5 --retry-delay 15 --connect-timeout 30 --max-time 300 https://github.com/love2d/love/releases/download/${{ env.LOVE_VERSION }}/love-${{ env.LOVE_VERSION }}-${ARCH}.zip -o ${{ env.TEMP_FILE }} || exit 1
-            7z x ${{ env.TEMP_FILE }} -o'./'
-            rm ${{ env.TEMP_FILE }}
+            curl -fsSL --retry 5 --retry-delay 15 --connect-timeout 30 --max-time 300 https://github.com/love2d/love/releases/download/${{ env.LOVE_VERSION }}/love-${{ env.LOVE_VERSION }}-${ARCH}.zip -o ./love-${{ env.LOVE_VERSION }}-${ARCH}.zip || exit 1
+            7z x ./love-${{ env.LOVE_VERSION }}-${ARCH}.zip -o'./'
+            rm ./love-${{ env.LOVE_VERSION }}-${ARCH}.zip
             mv love-${{ env.LOVE_VERSION }}-${ARCH} love-${ARCH}
             rm ./love-${ARCH}/lovec.exe
             rm ./love-${ARCH}/game.ico
@@ -383,45 +390,30 @@ jobs:
             rm ./love-${ARCH}/changes.txt
             rm ./love-${ARCH}/readme.txt
           done
-          curl -fsSL --retry 5 --retry-delay 15 --connect-timeout 30 --max-time 300 http://www.angusj.com/resourcehacker/resource_hacker.zip -o ${{ env.TEMP_FILE }} || exit 1
-          7z x ${{ env.TEMP_FILE }} -o'./'
-          rm ${{ env.TEMP_FILE }}
+          curl -fsSL --retry 5 --retry-delay 15 --connect-timeout 30 --max-time 300 https://github.com/electron/rcedit/releases/download/v2.0.0/rcedit-x86.exe -o ./rcedit-win32.exe || exit 1
+          curl -fsSL --retry 5 --retry-delay 15 --connect-timeout 30 --max-time 300 https://github.com/electron/rcedit/releases/download/v2.0.0/rcedit-x64.exe -o ./rcedit-win64.exe || exit 1
       - name: Resource patch love.exe
-        shell: bash
+        env:
+          BUILD_NUM: ${{ needs.configure.outputs.build_num }}
+          DISPLAY: ":99"     # Virtual display for headless operation
+          WINEDEBUG: "-all"  # Disable WINE debug output
         run: |
-          cat > ./tools/version.rc <<EOF
-          1 VERSIONINFO
-          FILEVERSION 1,0,0,${{ github.run_number }}
-          PRODUCTVERSION 1,0,0,${{ github.run_number }}
-          {
-            BLOCK "StringFileInfo"
-            {
-              BLOCK "040904B0"
-              {
-                VALUE "CompanyName", "${{ env.PRODUCT_COMPANY }}"
-                VALUE "FileDescription", "${{ env.PRODUCT_NAME }}"
-                VALUE "FileVersion", "1.0.0.${{ github.run_number }}"
-                VALUE "InternalName", "${{ env.PRODUCT_NAME }}"
-                VALUE "LegalCopyright", "${{ env.PRODUCT_COPYRIGHT }}"
-                VALUE "OriginalFilename", "${{ env.PRODUCT_NAME }}.exe"
-                VALUE "ProductName", "${{ env.PRODUCT_NAME }}"
-                VALUE "ProductVersion", "1.0.0.${{ github.run_number }}"
-              }
-            }
-          }
-          EOF
-
-          #TODO: Fix resource patching
-          #./tools/ResourceHacker.exe -open ./tools/version.rc -save "./tools/${{ env.PRODUCT_NAME }}.res" -action compile
+          # Remove the default icon and version info then add the new icon and version info
           for ARCH in win32 win64; do
-            # Remove the default icon and version info then add the new icon
-            ./tools/ResourceHacker.exe -open ./tools/love-${ARCH}/love.exe -save ./tools/love-${ARCH}/love.exe -action delete -mask ICONGROUP,,
-            ./tools/ResourceHacker.exe -open ./tools/love-${ARCH}/love.exe -save ./tools/love-${ARCH}/love.exe -action delete -mask VERSIONINFO,,
-            ./tools/ResourceHacker.exe -open ./tools/love-${ARCH}/love.exe -save ./tools/love-${ARCH}/love.exe -action addoverwrite -res "${{ env.OUTPUT_FOLDER }}/icon.ico" -mask ICONGROUP,1,
-            #./tools/ResourceHacker.exe -open ./tools/love-${ARCH}/love.exe -save ./tools/love-${ARCH}/love.exe -action addoverwrite -res "./tools/${{ env.PRODUCT_NAME }}.res" -mask VERSIONINFO,1,
+            env WINEARCH=${ARCH} WINEPREFIX="$HOME/.wine-${ARCH}" wineboot --init
+            env WINEARCH=${ARCH} WINEPREFIX="$HOME/.wine-${ARCH}" wine ./tools/rcedit-${ARCH}.exe ./tools/love-${ARCH}/love.exe \
+              --set-version-string CompanyName "${{ env.PRODUCT_COMPANY }}" \
+              --set-version-string ProductName "${{ env.PRODUCT_NAME }}" \
+              --set-version-string FileDescription "${{ env.PRODUCT_DESC }}" \
+              --set-version-string InternalName "${{ env.PRODUCT_NAME }}" \
+              --set-version-string LegalCopyright "${{ env.PRODUCT_COPYRIGHT }}" \
+              --set-version-string OriginalFilename "${{ env.PRODUCT_NAME }}.exe" \
+              --set-version-string PrivateBuild "${{ env.BUILD_NUM }}" \
+              --set-file-version "${{ env.BUILD_NUM }}" \
+              --set-product-version "${{ env.PRODUCT_VERSION }}" \
+              --set-icon "${{ env.OUTPUT_FOLDER }}/icon.ico"
           done
       - name: Create Windows .exe files
-        shell: bash
         run: |
           for ARCH in win32 win64; do
             mkdir -p ./tools/build/$ARCH/
@@ -434,7 +426,6 @@ jobs:
             fi
           done
       - name: Create Windows .zip files
-        shell: bash
         run: |
           for ARCH in win32 win64; do
             7z a -tzip ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_$ARCH.zip ./tools/build/$ARCH/*
