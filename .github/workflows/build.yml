@@ -265,120 +265,25 @@ jobs:
           submodules: recursive
       - name: Install tools
         uses: ./.github/actions/install-tools
-      - name: Install WineHQ
-        run: |
-          # Install WineHQ
-          sudo dpkg --add-architecture i386
-          sudo mkdir -pm755 /etc/apt/keyrings
-          sudo wget -O /etc/apt/keyrings/winehq-archive.key https://dl.winehq.org/wine-builds/winehq.key
-          sudo wget -NP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/ubuntu/dists/jammy/winehq-jammy.sources
-          sudo apt-get -y update
-          sudo apt-get -y --no-install-recommends install winehq-stable
       - name: Build LOVE package
         uses: ./.github/actions/build-love
         with:
           output_folder: ${{ env.OUTPUT_FOLDER }}
           product_name: ${{ env.PRODUCT_NAME }}
-      - name: Create .ico icon
-        run: convert ./resources/icon.png -define icon:auto-resize="256,128,96,64,48,32,24,16" "${{ env.OUTPUT_FOLDER }}/icon.ico"
-      # Adapted from:
-      # - https://github.com/love-actions/love-actions-windows/blob/main/action.yml
-      - name: Download Windows tools
-        run: |
-          for ARCH in win32 win64; do
-            [ "$ARCH" == "win32" ] && SHORT_ARCH="x86" || SHORT_ARCH="x64"
-            curl -fsSL --retry 5 --retry-delay 15 --connect-timeout 30 --max-time 300 https://github.com/electron/rcedit/releases/download/v2.0.0/rcedit-${SHORT_ARCH}.exe -o ./tools/rcedit-${ARCH}.exe || exit 1
-            curl -fsSL --retry 5 --retry-delay 15 --connect-timeout 30 --max-time 300 https://github.com/love2d/love/releases/download/${{ env.LOVE_VERSION }}/love-${{ env.LOVE_VERSION }}-${ARCH}.zip -o ./tools/love-${{ env.LOVE_VERSION }}-${ARCH}.zip || exit 1
-            7z x -o./tools/ ./tools/love-${{ env.LOVE_VERSION }}-${ARCH}.zip
-            rm ./tools/love-${{ env.LOVE_VERSION }}-${ARCH}.zip
-            mv ./tools/love-${{ env.LOVE_VERSION }}-${ARCH} ./tools/love-${ARCH}
-            rm ./tools/love-${ARCH}/lovec.exe
-            rm ./tools/love-${ARCH}/game.ico
-            rm ./tools/love-${ARCH}/love.ico
-            rm ./tools/love-${ARCH}/changes.txt
-            rm ./tools/love-${ARCH}/readme.txt
-          done
-          curl -fsSL --retry 5 --retry-delay 15 --connect-timeout 30 --max-time 300 https://www.7-zip.org/a/lzma2409.7z -o ./tools/lzma-sdk.7z || exit 1
-          mkdir -p ./tools/lzma-sdk
-          7z x -o./tools/lzma-sdk/ ./tools/lzma-sdk.7z
-      - name: Resource patch love.exe
-        env:
-          BUILD_NUM: ${{ needs.configure.outputs.build_num }}
-          DISPLAY: ":99"     # Virtual display for headless operation
-          WINEDEBUG: "-all"  # Disable WINE debug output
-        run: |
-          # Remove the default icon and version info then add the new icon and version info
-          for ARCH in win32 win64; do
-            env WINEARCH=${ARCH} WINEPREFIX="$HOME/.wine-${ARCH}" wineboot --init
-            env WINEARCH=${ARCH} WINEPREFIX="$HOME/.wine-${ARCH}" wine ./tools/rcedit-${ARCH}.exe \
-              ./tools/love-${ARCH}/love.exe \
-              --set-version-string CompanyName "${{ env.PRODUCT_COMPANY }}" \
-              --set-version-string ProductName "${{ env.PRODUCT_NAME }}" \
-              --set-version-string FileDescription "${{ env.PRODUCT_DESC }}" \
-              --set-version-string InternalName "${{ env.PRODUCT_NAME }}" \
-              --set-version-string LegalCopyright "${{ env.PRODUCT_COPYRIGHT }}" \
-              --set-version-string OriginalFilename "${{ env.PRODUCT_NAME }}.exe" \
-              --set-version-string PrivateBuild "${{ env.BUILD_NUM }}" \
-              --set-file-version "${{ env.BUILD_NUM }}" \
-              --set-product-version "${{ env.PRODUCT_VERSION }}" \
-              --set-icon "${{ env.OUTPUT_FOLDER }}/icon.ico"
-          done
-      - name: Create fused executables
-        run: |
-          for ARCH in win32 win64; do
-            mkdir -p ./tools/build/$ARCH/
-            cp ./tools/love-$ARCH/* ./tools/build/$ARCH/
-            mv -v ./tools/build/$ARCH/love.exe ./tools/build/$ARCH/${{ env.PRODUCT_NAME }}.exe
-            dd if=${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love of=./tools/build/$ARCH/${{ env.PRODUCT_NAME }}.exe obs=1M oflag=append conv=notrunc
-            if [ -d ./resources/windows/$ARCH ]; then
-              cp -r -f ./resources/windows/$ARCH ./tools/build/$ARCH/
-            fi
-          done
-      - name: Create Windows .zip files
-        if: ${{ needs.configure.outputs.build_type == 'release' && needs.configure.outputs.target_windows_zip == 'true' }}
-        run: |
-          for ARCH in win32 win64; do
-            7z a -tzip -mx=9 -mfb=273 -mpass=15 -mtc=off ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_$ARCH.zip ./tools/build/$ARCH/*
-          done
-      - name: Create Windows SFX file
-        if: ${{ needs.configure.outputs.target_windows_sfx == 'true' }}
-        env:
-          BUILD_NUM: ${{ needs.configure.outputs.build_num }}
-          DISPLAY: ":99"     # Virtual display for headless operation
-          WINEDEBUG: "-all"  # Disable WINE debug output
-        run: |
-          SFX_EXE="${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.exe"
-          # Create 7z archive of the game
-          mkdir -p ./tools/build/sfx
-          7z a -mx=5 -m0=BCJ -m1=LZMA2 ./tools/build/sfx/${{ env.PRODUCT_NAME }}.7z ./tools/build/win64/*
-
-          # Create SFX configuration
-          cat > ./tools/config.txt << EOF
-          ;!@Install@!UTF-8!
-          Title="${{ env.PRODUCT_NAME}}"
-          Progress="no"
-          RunProgram="${{ env.PRODUCT_NAME }}.exe"
-          ;!@InstallEnd@!
-          EOF
-
-          # Concatenate the SFX module, config and 7z archive
-          cp -v ./tools/lzma-sdk/bin/7zSD.sfx "${SFX_EXE}"
-          dd if=./tools/config.txt of="${SFX_EXE}" bs=1M oflag=append conv=notrunc
-          dd if=./tools/build/sfx/${{ env.PRODUCT_NAME }}.7z of="${SFX_EXE}" bs=1M oflag=append conv=notrunc
-
-          env WINEARCH=win64 WINEPREFIX="$HOME/.wine-win64" wine ./tools/rcedit-win64.exe \
-            "${SFX_EXE}" \
-            --set-version-string CompanyName "${{ env.PRODUCT_COMPANY }}" \
-            --set-version-string ProductName "${{ env.PRODUCT_NAME }}" \
-            --set-version-string FileDescription "${{ env.PRODUCT_DESC }}" \
-            --set-version-string InternalName "${{ env.PRODUCT_NAME }}" \
-            --set-version-string LegalCopyright "${{ env.PRODUCT_COPYRIGHT }}" \
-            --set-version-string OriginalFilename "${{ env.PRODUCT_NAME }}.exe" \
-            --set-version-string PrivateBuild "${{ env.BUILD_NUM }}" \
-            --set-file-version "${{ env.BUILD_NUM }}" \
-            --set-product-version "${{ env.PRODUCT_VERSION }}" \
-            --set-icon "${{ env.OUTPUT_FOLDER }}/icon.ico"
-          ls -lh "${SFX_EXE}"
+      - name: Build Windows
+        uses: ./.github/actions/build-windows
+        with:
+          build_num: ${{ env.BUILD_NUM }}
+          build_type: ${{ needs.configure.outputs.build_type }}
+          love_version: ${{ env.LOVE_VERSION }}
+          product_desc: ${{ env.PRODUCT_DESC }}
+          product_name: ${{ env.PRODUCT_NAME }}
+          product_company: ${{ env.PRODUCT_COMPANY }}
+          product_copyright: ${{ env.PRODUCT_COPYRIGHT }}
+          product_version: ${{ env.PRODUCT_VERSION }}
+          output_folder: ${{ env.OUTPUT_FOLDER }}
+          target_windows_zip: ${{ needs.configure.outputs.target_windows_zip }}
+          target_windows_sfx: ${{ needs.configure.outputs.target_windows_sfx }}
       - name: Upload Windows 32-bit artifact
         if: ${{ needs.configure.outputs.build_type == 'dev' && needs.configure.outputs.target_windows_zip == 'true' }}
         uses: actions/upload-artifact@v4
