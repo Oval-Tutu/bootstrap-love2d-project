@@ -205,89 +205,14 @@ jobs:
         with:
           output_folder: ${{ env.OUTPUT_FOLDER }}
           product_name: ${{ env.PRODUCT_NAME }}
-      - name: Create .png icon
-        run: convert ./resources/icon.png -resize 256x256 "${{ env.OUTPUT_FOLDER }}/icon.png"
-      # Adapted from:
-      # - https://github.com/love-actions/love-actions-linux/blob/main/action.yml
       - name: Create AppImage
-        run: |
-          sudo apt-get -y install desktop-file-utils libfuse2
-          curl -fsSL --retry 5 --retry-delay 15 --connect-timeout 30 --max-time 300 https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage -o ./tools/appimagetool.AppImage || exit 1
-          curl -fsSL --retry 5 --retry-delay 15 --connect-timeout 30 --max-time 300 https://github.com/love2d/love/releases/download/${{ env.LOVE_VERSION }}/love-${{ env.LOVE_VERSION }}-x86_64.AppImage -o ./tools/love.AppImage || exit 1
-          chmod a+x ./tools/appimagetool.AppImage
-          chmod a+x ./tools/love.AppImage
-          # Make AppImages work via act in Docker/Podman
-          if [ "$ACT" == "true" ]; then
-            #https://github.com/AppImage/AppImageKit/issues/1027
-            #https://github.com/AppImage/AppImageKit/issues/828
-            dd if=/dev/zero bs=1 count=3 seek=8 conv=notrunc of=./tools/appimagetool.AppImage
-            dd if=/dev/zero bs=1 count=3 seek=8 conv=notrunc of=./tools/love.AppImage
-          fi
-          pushd ./tools
-            ./love.AppImage --appimage-extract
-          popd
-
-          # Remove unwanted files
-          rm -v ./tools/squashfs-root/.DirIcon || true
-          rm -v ./tools/squashfs-root/love.svg || true
-          rm -v ./tools/squashfs-root/share/applications/*.desktop || true
-          rm -rfv ./tools/squashfs-root/share/icons || true
-          rm -rfv ./tools/squashfs-root/share/mime || true
-          rm -rfv ./tools/squashfs-root/share/pixmaps || true
-          rm -f ./tools/squashfs-root/love.desktop || true
-
-          # Create .desktop file
-          cat > ./tools/squashfs-root/${{ env.PRODUCT_NAME }}.desktop << EOF
-          [Desktop Entry]
-          Name=${{ env.PRODUCT_NAME }}
-          Comment=${{ env.PRODUCT_DESC }}
-          Type=Application
-          Keywords=love;game;
-          Categories=Game;
-          Exec=${{ env.PRODUCT_NAME }} %f
-          Icon=${{ env.PRODUCT_NAME }}
-          Terminal=false
-          NoDisplay=false
-          EOF
-          cp -v ./tools/squashfs-root/${{ env.PRODUCT_NAME }}.desktop ./tools/squashfs-root/share/applications/${{ env.PRODUCT_NAME }}.desktop
-
-          echo "Assembling executable..."
-          sed -i 's|bin/love|bin/${{ env.PRODUCT_NAME }}|g' ./tools/squashfs-root/AppRun
-          dd if=./tools/squashfs-root/bin/love of=./tools/squashfs-root/bin/${{ env.PRODUCT_NAME }}
-          dd if=${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love of=./tools/squashfs-root/bin/${{ env.PRODUCT_NAME }} obs=1M oflag=append conv=notrunc
-          chmod +x ./tools/squashfs-root/bin/${{ env.PRODUCT_NAME }}
-          rm -f ./tools/squashfs-root/bin/love
-
-          if [ -f "${{ env.OUTPUT_FOLDER }}/icon.png" ]; then
-            echo "Copying icon..."
-            ICON_PATH=$(basename -- "${{ env.OUTPUT_FOLDER }}/icon.png")
-            mkdir -p ./tools/squashfs-root/share/icons/hicolor/256x256/apps
-            cp ${{ env.OUTPUT_FOLDER }}/icon.png "./tools/squashfs-root/share/icons/hicolor/256x256/apps/${{ env.PRODUCT_NAME }}.${ICON_PATH##*.}"
-            cp ${{ env.OUTPUT_FOLDER }}/icon.png "./tools/squashfs-root/${{ env.PRODUCT_NAME }}.${ICON_PATH##*.}"
-            cp ${{ env.OUTPUT_FOLDER }}/icon.png ./tools/squashfs-root/.DirIcon
-          fi
-
-          # Copy any required shared libraries
-          if [ -d ./resources/linux/lib ]; then
-            echo "Copying lib..."
-            mkdir -p ./tools/squashfs-root/lib
-            cp -r -f ./resources/linux/lib/* ./tools/squashfs-root/lib
-          fi
-
-          # Copy any required shared resources
-          if [ -d ./resources/linux/share ]; then
-            echo "Copying share..."
-            mkdir -p ./tools/squashfs-root/share
-            cp -r -f ./resources/linux/share/* ./tools/squashfs-root/share
-          fi
-
-          # Build appImage package
-          if [ "$ACT" == "true" ]; then
-            ./tools/appimagetool.AppImage --appimage-extract-and-run ./tools/squashfs-root ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.AppImage
-          else
-            ./tools/appimagetool.AppImage ./tools/squashfs-root ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.AppImage
-          fi
-          chmod a+x ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.AppImage
+        uses: ./.github/actions/build-appimage
+        with:
+          build_num: ${{ env.BUILD_NUM }}
+          love_version: ${{ env.LOVE_VERSION }}
+          product_name: ${{ env.PRODUCT_NAME }}
+          product_desc: ${{ env.PRODUCT_DESC }}
+          output_folder: ${{ env.OUTPUT_FOLDER }}
       - name: Create Tarball
         if: ${{ needs.configure.outputs.target_linux_tarball == 'true' }}
         run: |

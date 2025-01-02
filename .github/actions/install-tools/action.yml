@@ -8,5 +8,9 @@ runs:
       run: |
         if [ "$ACT" == "true" ]; then
           sudo apt-get -y update
-          sudo apt-get -y install p7zip-full rsync
+          sudo apt-get -y install \
+            desktop-file-utils \
+            libfuse2 \
+            p7zip-full \
+            rsync
         fi
