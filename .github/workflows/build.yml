@@ -11,7 +11,6 @@ env:
   ANDROID_ORIENTATION: landscape
   # NoRecord or Record. Does the game need microphone access?
   ANDROID_RECORD: NoRecord
-  APPIMAGE_VERSION: 1.9.0
   LOVE_VERSION: 11.5
   OUTPUT_FOLDER: ./builds
   PRODUCT_NAME: Template
@@ -220,7 +219,7 @@ jobs:
       - name: Create AppImage
         run: |
           sudo apt-get -y install desktop-file-utils libfuse2
-          curl -fsSL --retry 5 --retry-delay 15 --connect-timeout 30 --max-time 300 https://github.com/AppImage/appimagetool/releases/download/${{ env.APPIMAGE_VERSION }}/appimagetool-x86_64.AppImage -o ./tools/appimagetool.AppImage || exit 1
+          curl -fsSL --retry 5 --retry-delay 15 --connect-timeout 30 --max-time 300 https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage -o ./tools/appimagetool.AppImage || exit 1
           curl -fsSL --retry 5 --retry-delay 15 --connect-timeout 30 --max-time 300 https://github.com/love2d/love/releases/download/${{ env.LOVE_VERSION }}/love-${{ env.LOVE_VERSION }}-x86_64.AppImage -o ./tools/love.AppImage || exit 1
           chmod a+x ./tools/appimagetool.AppImage
           chmod a+x ./tools/love.AppImage
