@@ -1,0 +1,12 @@
+name: 'Install Tools'
+description: 'Installs required build tools'
+runs:
+  using: 'composite'
+  steps:
+    - name: Install dependencies
+      shell: bash
+      run: |
+        if [ "$ACT" == "true" ]; then
+          sudo apt-get -y update
+          sudo apt-get -y install p7zip-full rsync
+        fi

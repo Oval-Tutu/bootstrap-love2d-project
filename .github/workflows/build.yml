@@ -163,11 +163,7 @@ jobs:
           fetch-depth: 1
           submodules: recursive
       - name: Install tools
-        run: |
-          if [ "$ACT" == "true" ]; then
-            sudo apt-get -y update
-            sudo apt-get -y install p7zip-full
-          fi
+        uses: ./.github/actions/install-tools
       - name: Build LOVE package
         uses: ./.github/actions/build-love
         with:
@@ -203,11 +199,7 @@ jobs:
           fetch-depth: 1
           submodules: recursive
       - name: Install tools
-        run: |
-          if [ "$ACT" == "true" ]; then
-            sudo apt-get -y update
-            sudo apt-get -y install p7zip-full
-          fi
+        uses: ./.github/actions/install-tools
       - name: Build LOVE package
         uses: ./.github/actions/build-love
         with:
@@ -347,6 +339,8 @@ jobs:
           fetch-depth: 1
           submodules: recursive
       - name: Install tools
+        uses: ./.github/actions/install-tools
+      - name: Install WineHQ
         run: |
           # Install WineHQ
           sudo dpkg --add-architecture i386
@@ -355,9 +349,6 @@ jobs:
           sudo wget -NP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/ubuntu/dists/jammy/winehq-jammy.sources
           sudo apt-get -y update
           sudo apt-get -y --no-install-recommends install winehq-stable
-          if [ "$ACT" == "true" ]; then
-            sudo apt-get -y install p7zip-full
-          fi
       - name: Build LOVE package
         uses: ./.github/actions/build-love
         with:
@@ -541,11 +532,7 @@ jobs:
           fetch-depth: 1
           submodules: recursive
       - name: Install tools
-        run: |
-          if [ "$ACT" == "true" ]; then
-            sudo apt-get -y update
-            sudo apt-get -y install p7zip-full rsync
-          fi
+        uses: ./.github/actions/install-tools
       - name: Checkout love-android ${{ env.ANDROID_LOVE_VERSION }}
         uses: actions/checkout@v4
         with:
