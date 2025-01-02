@@ -34,6 +34,7 @@ env:
 
 jobs:
   configure:
+    name: Configure build
     runs-on: ubuntu-22.04
     outputs:
       android_build_tools_version: ${{ steps.set_android.outputs.android_build_tools_version }}
