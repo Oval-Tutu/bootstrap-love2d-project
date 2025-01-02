@@ -1,0 +1,2 @@
+--secret-file=$HOME/.config/act/secrets
+--artifact-server-path=./builds
