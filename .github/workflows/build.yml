@@ -136,8 +136,7 @@ jobs:
             - Build number: ${{ steps.set_build.outputs.num }}
             - GitHub Run: ${{github.run_number}}
             - Android version code: ${{ steps.set_android.outputs.android_version_code }}
-            - iOS App store version: 0.0.${{github.run_number}}
-            - macOS App store version: 0.0.${{github.run_number}}
+            - iOS/macOS Store version: 0.0.${{github.run_number}}
 
             ## 🔀 Merged Pull Requests
             ${{ steps.get_changes.outputs.prs }}
@@ -977,7 +976,11 @@ jobs:
           echo "- Web:          ${{ env.TARGET_WEB == 'true' && '✅' || '❌' }}" >> $GITHUB_STEP_SUMMARY
           echo "- Windows:      ${{ env.TARGET_WINDOWS_ZIP == 'true' && '✅' || '❌' }}" >> $GITHUB_STEP_SUMMARY
           echo "- Windows SFX   ${{ env.TARGET_WINDOWS_SFX == 'true' && '✅' || '❌' }}" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ needs.configure.outputs.build_type}}" == "dev" ]; then
+          if [ "${{ needs.configure.outputs.build_type }}" == "release" ]; then
+            echo "## Version information" >> $GITHUB_STEP_SUMMARY
+            echo "- Android version code: ${{ steps.set_android.outputs.android_version_code }}" >> $GITHUB_STEP_SUMMARY
+            echo "- iOS/macOS Store version: 0.0.${{github.run_number}}" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ needs.configure.outputs.build_type }}" == "dev" ]; then
             echo "## Artifact downloads" >> $GITHUB_STEP_SUMMARY
             echo '**️⚠️ NOTE!** All the attached artifacts are **zipped** 🤏 and when downloaded will have a `.zip` file extension and will require extracting before use.' >> $GITHUB_STEP_SUMMARY
           fi
