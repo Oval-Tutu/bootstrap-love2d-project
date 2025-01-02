@@ -1,6 +1,6 @@
 # LÖVE Template for Visual Studio Code
 
-A pre-configured Visual Studio Code template for LÖVE.
+A pre-configured Visual Studio Code template for [LÖVE](https://love2d.org/) including GitHub Actions for automated builds.
 Inspired by and adapted from [LOVE VSCode Game Template](https://github.com/Keyslam/LOVE-VSCode-Game-Template) and [LÖVE Actions](https://github.com/love-actions).
 
 ## Features
@@ -10,7 +10,7 @@ Inspired by and adapted from [LOVE VSCode Game Template](https://github.com/Keys
 - 🩷 Intellisense for the LÖVE API via [Love2D Support](https://marketplace.visualstudio.com/items?itemName=pixelbyte-studios.pixelbyte-love2d)
 - 👨‍💻 Consistent coding styles with [Editorconfig](https://github.com/editorconfig/editorconfig-vscode)
 - ️⛱️ [Shader languages support](https://marketplace.visualstudio.com/items?itemName=slevesque.shader)
-- ️👷 Automated builds of the `.love` file.
+- ️👷 Automated builds of the `.love` file from within Visual Studio Code
 - 🗂️ Organized with [Workspaces](https://code.visualstudio.com/docs/editor/workspaces)
 - 📦 GitHub Actions for automated builds
 - ️❄️ Nix flake to provision a dev shell
@@ -37,7 +37,7 @@ Inspired by and adapted from [LOVE VSCode Game Template](https://github.com/Keys
     - [Shader languages support](https://marketplace.visualstudio.com/items?itemName=slevesque.shader)
 - Configure the `game/conf.lua` with the settings specific for your game.
 - Configure `.github/workflows/build.yml` with the settings specific for your game.
-  - **Make sure that `PRODUCT_UUID` is changed using `uuidgen`.
+  - **Make sure that `PRODUCT_UUID` is changed using `uuidgen`**.
 - Replace `resources/icon.png` with your game's high-resolution icon.
 
 ## Running
@@ -109,16 +109,18 @@ The GitHub Actions workflow will automatically build and package the game for al
 - Android
   - `.apk` debug and release builds for testing
   - `.aab` release build for the Play Store
-- iOS
+- iOS (🚧)
 - Linux
   - AppImage
   - Tarball
-- macOS
+- macOS (🚧)
   - portable .dmg
   - App Store
+- Web (️🚧)
 - Windows
   - win32
   - win64
+  - Self-extracting archive (*64-bit only*)
 
 ### Android
 
