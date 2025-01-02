@@ -61,7 +61,9 @@ jobs:
         run: |
           echo "num=$(date +%y.%j.%H%M)" >> $GITHUB_OUTPUT
           echo "type=dev" >> $GITHUB_OUTPUT
-          if [[ $GITHUB_REF == refs/tags/* ]]; then
+          if [[ $ACT == true ]]; then
+            echo "type=dev" >> $GITHUB_OUTPUT
+          elif [[ $GITHUB_REF == refs/tags/* ]]; then
             echo "type=release" >> $GITHUB_OUTPUT
           fi
       - name: Generate Android parameters
