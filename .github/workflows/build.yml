@@ -168,8 +168,11 @@ jobs:
             sudo apt-get -y update
             sudo apt-get -y install p7zip-full
           fi
-      - name: Build love package
-        run: 7z a -tzip -mx=6 -mpass=15 -mtc=off "${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.love" ./game/* -xr!.gitkeep
+      - name: Build LOVE package
+        uses: ./.github/actions/build-love
+        with:
+          output_folder: ${{ env.OUTPUT_FOLDER }}
+          product_name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}
       - name: Upload .love artifact
         if: ${{ needs.configure.outputs.build_type == 'dev' }}
         uses: actions/upload-artifact@v4
@@ -205,8 +208,11 @@ jobs:
             sudo apt-get -y update
             sudo apt-get -y install p7zip-full
           fi
-      - name: Build love package
-        run: 7z a -tzip -mx=6 -mpass=15 -mtc=off "${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love" ./game/* -xr!.gitkeep
+      - name: Build LOVE package
+        uses: ./.github/actions/build-love
+        with:
+          output_folder: ${{ env.OUTPUT_FOLDER }}
+          product_name: ${{ env.PRODUCT_NAME }}
       - name: Create .png icon
         run: convert ./resources/icon.png -resize 256x256 "${{ env.OUTPUT_FOLDER }}/icon.png"
       # Adapted from:
@@ -352,8 +358,11 @@ jobs:
           if [ "$ACT" == "true" ]; then
             sudo apt-get -y install p7zip-full
           fi
-      - name: Build love package
-        run: 7z a -tzip -mx=6 -mpass=15 -mtc=off "${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love" ./game/* -xr!.gitkeep
+      - name: Build LOVE package
+        uses: ./.github/actions/build-love
+        with:
+          output_folder: ${{ env.OUTPUT_FOLDER }}
+          product_name: ${{ env.PRODUCT_NAME }}
       - name: Create .ico icon
         run: convert ./resources/icon.png -define icon:auto-resize="256,128,96,64,48,32,24,16" "${{ env.OUTPUT_FOLDER }}/icon.ico"
       # Adapted from:
@@ -694,8 +703,11 @@ jobs:
         with:
           fetch-depth: 1
           submodules: recursive
-      - name: Build love package
-        run: 7z a -tzip -mx=6 -mpass=15 -mtc=off "${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love" ./game/* -xr!.gitkeep
+      - name: Build LOVE package
+        uses: ./.github/actions/build-love
+        with:
+          output_folder: ${{ env.OUTPUT_FOLDER }}
+          product_name: ${{ env.PRODUCT_NAME }}
       - name: Create macOS icon.icns
         run: |
           mkdir -p icon.iconset
@@ -800,8 +812,11 @@ jobs:
         with:
           fetch-depth: 1
           submodules: recursive
-      - name: Build love package
-        run: 7z a -tzip -mx=6 -mpass=15 -mtc=off "${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love" ./game/* -xr!.gitkeep
+      - name: Build LOVE package
+        uses: ./.github/actions/build-love
+        with:
+          output_folder: ${{ env.OUTPUT_FOLDER }}
+          product_name: ${{ env.PRODUCT_NAME }}
       - name: Create macOS icon.icns
         run: |
           mkdir -p icon.iconset
@@ -878,8 +893,11 @@ jobs:
         with:
           fetch-depth: 1
           submodules: recursive
-      - name: Build love package
-        run: 7z a -tzip -mx=6 -mpass=15 -mtc=off "${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love" ./game/* -xr!.gitkeep
+      - name: Build LOVE package
+        uses: ./.github/actions/build-love
+        with:
+          output_folder: ${{ env.OUTPUT_FOLDER }}
+          product_name: ${{ env.PRODUCT_NAME }}
       - name: Convert iOS icns
         run: |
           mkdir -p ${{ env.OUTPUT_FOLDER }}/icns
