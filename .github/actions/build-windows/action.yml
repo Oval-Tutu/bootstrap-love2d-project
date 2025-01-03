@@ -1,44 +1,44 @@
 # Adapted from:
 # - https://github.com/love-actions/love-actions-windows/blob/main/action.yml
-name: 'Build Windows'
-description: 'Creates Windows builds'
+name: Build Windows
+description: Creates Windows builds
 inputs:
   build_num:
-    description: 'Build number'
+    description: Build number
     required: true
   build_type:
-    description: 'Build type (release/debug)'
+    description: Build type (release/debug)
     required: true
   love_version:
-    description: 'LÖVE version to use'
+    description: LÖVE version to use
     required: true
   product_company:
-    description: 'Product company'
+    description: Product company
     required: true
   product_copyright:
-    description: 'Product copyright'
+    description: Product copyright
     required: true
   product_desc:
-    description: 'Product description'
+    description: Product description
     required: true
   product_name:
-    description: 'Product name'
+    description: Product name
     required: true
   product_version:
-    description: 'Product version'
+    description: Product version
     required: true
   output_folder:
-    description: 'Output folder path'
+    description: Output folder path
     required: true
   target_windows_zip:
-    description: 'Create Windows ZIP files'
+    description: Create Windows ZIP files
     required: true
   target_windows_sfx:
-    description: 'Create Windows SFX installer'
+    description: Create Windows SFX installer
     required: false
     default: 'true'
 runs:
-  using: 'composite'
+  using: composite
   steps:
     - name: Install WineHQ
       shell: bash

@@ -3,50 +3,50 @@
 # - https://github.com/love2d/love-android
 # - https://github.com/love2d/love-android/wiki/Game-Packaging
 # - https://github.com/love-actions/love-actions-android
-name: 'Build Android'
-description: 'Creates Android builds'
+name: Build Android
+description: Creates Android builds
 inputs:
   build_num:
-    description: 'Build number'
+    description: Build number
     required: true
   build_type:
-    description: 'Build type (release/debug)'
+    description: Build type (release/debug)
     required: true
   android_cmdline_tools_version:
-    description: 'Android cmdline-tools version'
+    description: Android cmdline-tools version
     required: false
     default: '11076708'
   android_java_version:
-    description: 'Android Java JDK version'
+    description: Android Java JDK version
     required: false
     default: '17'
   android_love_version:
-    description: 'LÖVE version for Android to use'
+    description: LÖVE version for Android to use
     required: false
     default: '11.5a'
   android_orientation:
-    description: 'Android screen orientation'
+    description: Android screen orientation
     required: false
     default: 'landscape'
   android_record:
-    description: 'Android microphone access - NoRecord or Record'
+    description: Android microphone access - NoRecord or Record
     required: false
     default: 'NoRecord'
   android_version_code:
-    description: 'Android version code'
+    description: Android version code
     required: false
     default: '1'
   product_id:
-    description: 'Product ID - reverse domain name'
+    description: Product ID - reverse domain name
     required: true
   product_name:
-    description: 'Product name'
+    description: Product name
     required: true
   output_folder:
-    description: 'Output folder path'
+    description: Output folder path
     required: true
 runs:
-  using: 'composite'
+  using: composite
   steps:
     - name: Checkout love-android ${{ inputs.android_love_version }}
       uses: actions/checkout@v4

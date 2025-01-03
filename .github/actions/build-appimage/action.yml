@@ -1,25 +1,25 @@
 # Adapted from:
 # - https://github.com/love-actions/love-actions-linux/blob/main/action.yml
-name: 'Build AppImage'
-description: 'Creates an AppImage for Linux distribution'
+name: Build AppImage
+description: Creates an AppImage for Linux distribution
 inputs:
   build_num:
-    description: 'Build number'
+    description: Build number
     required: true
   love_version:
-    description: 'LÖVE version to use'
+    description: LÖVE version to use
     required: true
   product_name:
-    description: 'Product name'
+    description: Product name
     required: true
   product_desc:
-    description: 'Product description'
+    description: Product description
     required: true
   output_folder:
-    description: 'Output folder path'
+    description: Output folder path
     required: true
 runs:
-  using: 'composite'
+  using: composite
   steps:
     - shell: bash
       run: |
