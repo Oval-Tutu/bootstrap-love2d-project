@@ -1,7 +1,7 @@
-name: 'Install Tools'
-description: 'Installs required build tools'
+name: Install Tools
+description: Installs required build tools
 runs:
-  using: 'composite'
+  using: composite
   steps:
     - name: Install dependencies
       shell: bash
