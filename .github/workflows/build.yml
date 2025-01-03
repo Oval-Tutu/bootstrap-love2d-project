@@ -433,6 +433,8 @@ jobs:
       - name: Upload Android release
         if: ${{ needs.configure.outputs.build_type == 'release' }}
         uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.configure.outputs.upload_url }}
           asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}-release.aab
