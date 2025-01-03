@@ -728,7 +728,7 @@ jobs:
           echo "- Windows SFX   ${{ env.TARGET_WINDOWS_SFX == 'true' && '✅' || '❌' }}" >> $GITHUB_STEP_SUMMARY
           if [ "${{ needs.configure.outputs.build_type }}" == "release" ]; then
             echo "## Version information" >> $GITHUB_STEP_SUMMARY
-            echo "- Android version code: ${{ steps.set_android.outputs.android_version_code }}" >> $GITHUB_STEP_SUMMARY
+            echo "- Android version code: ${{ needs.configure.outputs.android_version_code }}" >> $GITHUB_STEP_SUMMARY
             echo "- iOS/macOS Store version: 0.0.${{github.run_number}}" >> $GITHUB_STEP_SUMMARY
           elif [ "${{ needs.configure.outputs.build_type }}" == "dev" ]; then
             echo "## Artifact downloads" >> $GITHUB_STEP_SUMMARY
