@@ -1,0 +1,129 @@
+# Adapted from:
+# - https://love2d.org/wiki/Game_Distribution
+# - https://github.com/love2d/love-android
+# - https://github.com/love2d/love-android/wiki/Game-Packaging
+# - https://github.com/love-actions/love-actions-android
+name: 'Build Android'
+description: 'Creates Android builds'
+inputs:
+  build_num:
+    description: 'Build number'
+    required: true
+  build_type:
+    description: 'Build type (release/debug)'
+    required: true
+  android_cmdline_tools_version:
+    description: 'Android cmdline-tools version'
+    required: false
+    default: '11076708'
+  android_java_version:
+    description: 'Android Java JDK version'
+    required: false
+    default: '17'
+  android_love_version:
+    description: 'LÖVE version for Android to use'
+    required: false
+    default: '11.5a'
+  android_orientation:
+    description: 'Android screen orientation'
+    required: false
+    default: 'landscape'
+  android_record:
+    description: 'Android microphone access - NoRecord or Record'
+    required: false
+    default: 'NoRecord'
+  android_version_code:
+    description: 'Android version code'
+    required: false
+    default: '1'
+  product_id:
+    description: 'Product ID - reverse domain name'
+    required: true
+  product_name:
+    description: 'Product name'
+    required: true
+  output_folder:
+    description: 'Output folder path'
+    required: true
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout love-android ${{ inputs.android_love_version }}
+      uses: actions/checkout@v4
+      with:
+        repository: love2d/love-android
+        ref: ${{ inputs.android_love_version }}
+        submodules: recursive
+        path: ./tools/love-android
+        fetch-depth: 1
+    - name: Copy love assets
+      shell: bash
+      run: rsync -av --exclude='.gitkeep' ./game/ ./tools/love-android/app/src/embed/assets/
+    - name: Modify gradle.properties
+      shell: bash
+      run: |
+        # Convert PRODUCT_NAME to bytes and format as comma-separated decimal numbers
+        utf8_byte_array=$(echo -n "${{ inputs.product_name }}" | od -An -t u1 | tr '\n' ' ' | sed 's/ \+/ /g' | sed 's/^ *//;s/ *$//' | tr ' ' ',')
+        sed -i "s/^#app.name=.*/#app.name=${{ inputs.product_name }}/" ./tools/love-android/gradle.properties
+        sed -i "s/^app.name_byte_array=.*/app.name_byte_array=${utf8_byte_array}/" ./tools/love-android/gradle.properties
+        sed -i "s/^app.application_id=.*/app.application_id=${{ inputs.product_id }}/" ./tools/love-android/gradle.properties
+        sed -i "s/^app.orientation=.*/app.orientation=${{ inputs.android_orientation }}/" ./tools/love-android/gradle.properties
+        # version_code is an always incrementing integer so app stores can
+        # track versions, but not the actual version number
+        sed -i "s/^app.version_code=.*/app.version_code=${{ inputs.android_version_code }}/" ./tools/love-android/gradle.properties
+        if [ "${{ inputs.build_type }}" == "release" ]; then
+          sed -i "s/^app.version_name=.*/app.version_name=${{ inputs.product_version }}/" ./tools/love-android/gradle.properties
+        else
+          sed -i "s/^app.version_name=.*/app.version_name=${{ inputs.build_num }}/" ./tools/love-android/gradle.properties
+        fi
+        cat ./tools/love-android/gradle.properties
+    - name: Update android:label in AndroidManifest.xml
+      shell: bash
+      run: sed -i "s/\${NAME}/${{ inputs.product_name }}/" ./tools/love-android/app/src/main/AndroidManifest.xml
+    - name: Replace icons
+      shell: bash
+      run: |
+        convert ./resources/icon.png -resize 48x48 ./tools/love-android/app/src/main/res/drawable-mdpi/love.png
+        convert ./resources/icon.png -resize 72x72 ./tools/love-android/app/src/main/res/drawable-hdpi/love.png
+        convert ./resources/icon.png -resize 96x96 ./tools/love-android/app/src/main/res/drawable-xhdpi/love.png
+        convert ./resources/icon.png -resize 144x144 ./tools/love-android/app/src/main/res/drawable-xxhdpi/love.png
+        convert ./resources/icon.png -resize 192x192 ./tools/love-android/app/src/main/res/drawable-xxxhdpi/love.png
+        convert ./resources/icon.png -resize 512x512 ./tools/love-android/love_icon_512x512.png
+    - name: Add libs
+      shell: bash
+      run: |
+        if [ -d ./resources/android ]; then
+          mkdir -p ./tools/love-android/app/libs/
+          cp -r -f ./resources/android/* ./tools/love-android/app/libs/
+        fi
+    - name: Get Java ${{ inputs.android_java_version }}
+      uses: actions/setup-java@v4
+      with:
+        cache: gradle
+        distribution: temurin
+        java-version: ${{ inputs.android_java_version }}
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+      with:
+        cmdline-tools-version: ${{ inputs.android_cmdline_tools_version }}
+        log-accepted-android-sdk-licenses: false
+    - name: Build Android .apks
+      if: ${{ inputs.build_type == 'dev' }}
+      shell: bash
+      run: |
+        pushd ./tools/love-android
+          ./gradlew assembleNormal${{ inputs.android_record }}Debug assembleNormal${{ inputs.android_record }}Release
+        popd
+        mkdir -p ${{ inputs.output_folder }}/apk/{debug,release}
+        mv -v ./tools/love-android/app/build/outputs/apk/*/debug/app-normal-*-debug.apk ${{ inputs.output_folder }}/apk/debug/${{ inputs.product_name }}-${{ inputs.build_num }}-debug.apk
+        mv -v ./tools/love-android/app/build/outputs/apk/*/release/app-normal-*-release-unsigned.apk ${{ inputs.output_folder }}/apk/release/${{ inputs.product_name }}-${{ inputs.build_num }}-release.apk
+        tree ${{ inputs.output_folder }}
+    - name: Build Android .aab
+      if: ${{ inputs.build_type == 'release' }}
+      shell: bash
+      run: |
+        pushd ./tools/love-android
+          ./gradlew bundleEmbed${{ inputs.android_record }}Release
+        popd
+        mkdir -p ${{ inputs.output_folder }}/aab/release
+        mv -v ./tools/love-android/app/build/outputs/bundle/*/app-embed-*-release.aab ${{ inputs.output_folder }}/aab/release/${{ inputs.product_name }}-${{ inputs.build_num }}-release.aab
