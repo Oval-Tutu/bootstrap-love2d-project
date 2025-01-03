@@ -13,6 +13,7 @@ Inspired by and adapted from [LOVE VSCode Game Template](https://github.com/Keys
 - ️👷 Automated builds of the `.love` file from within Visual Studio Code
 - 🗂️ Organized with [Workspaces](https://code.visualstudio.com/docs/editor/workspaces)
 - 📦 GitHub Actions for automated builds
+  - Compatible with [act](https://nektosact.com/)
 - ️❄️ Nix flake to provision a dev shell
 
 ## Prerequisites
