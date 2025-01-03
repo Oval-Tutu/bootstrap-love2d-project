@@ -9,8 +9,10 @@ runs:
         if [ "$ACT" == "true" ]; then
           sudo apt-get -y update
           sudo apt-get -y install \
-            desktop-file-utils \
-            libfuse2 \
             p7zip-full \
             rsync
         fi
+        sudo apt-get -y install \
+          desktop-file-utils \
+          libfuse2 \
+          tree
