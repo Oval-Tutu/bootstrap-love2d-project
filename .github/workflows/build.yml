@@ -342,19 +342,14 @@ jobs:
           asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}.exe
           asset_content_type: application/x-msdownload
 
-  # https://love2d.org/wiki/Game_Distribution
-  # https://github.com/love2d/love-android
-  # https://github.com/love2d/love-android/wiki/Game-Packaging
   build-android:
     if: ${{ needs.configure.outputs.target_android == 'true' }}
     runs-on: ubuntu-22.04
     needs: [configure]
     continue-on-error: true
+    permissions:
+      contents: write
     env:
-      ANDROID_CMDLINE_TOOLS_VERSION: ${{ needs.configure.outputs.android_cmdline_tools_version }}
-      ANDROID_JAVA_VERSION: ${{ needs.configure.outputs.android_java_version }}
-      ANDROID_LOVE_VERSION: ${{ needs.configure.outputs.android_love_version }}
-      ANDROID_VERSION_CODE: ${{ needs.configure.outputs.android_version_code }}
       BUILD_NUM: ${{ needs.configure.outputs.build_num }}
     steps:
       - uses: actions/checkout@v4
@@ -363,70 +358,20 @@ jobs:
           submodules: recursive
       - name: Install tools
         uses: ./.github/actions/install-tools
-      - name: Checkout love-android ${{ env.ANDROID_LOVE_VERSION }}
-        uses: actions/checkout@v4
+      - name: Build Android
+        uses: ./.github/actions/build-android
         with:
-          repository: love2d/love-android
-          ref: ${{ env.ANDROID_LOVE_VERSION }}
-          submodules: recursive
-          path: ./tools/love-android
-          fetch-depth: 1
-          token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Copy love assets
-        run: rsync -av --exclude='.gitkeep' ./game/ ./tools/love-android/app/src/embed/assets/
-      - name: Modify gradle.properties
-        run: |
-          # Convert PRODUCT_NAME to bytes and format as comma-separated decimal numbers
-          utf8_byte_array=$(echo -n "${{ env.PRODUCT_NAME}}" | od -An -t u1 | tr '\n' ' ' | sed 's/ \+/ /g' | sed 's/^ *//;s/ *$//' | tr ' ' ',')
-          sed -i "s/^#app.name=.*/#app.name=${{ env.PRODUCT_NAME }}/" ./tools/love-android/gradle.properties
-          sed -i "s/^app.name_byte_array=.*/app.name_byte_array=${utf8_byte_array}/" ./tools/love-android/gradle.properties
-          sed -i "s/^app.application_id=.*/app.application_id=${{ env.PRODUCT_ID}}/" ./tools/love-android/gradle.properties
-          sed -i "s/^app.orientation=.*/app.orientation=${{ env.ANDROID_ORIENTATION }}/" ./tools/love-android/gradle.properties
-          # version_code is an always incrementing integer so app stores can
-          # track versions, but not the actual version number
-          sed -i "s/^app.version_code=.*/app.version_code=${{ env.ANDROID_VERSION_CODE }}/" ./tools/love-android/gradle.properties
-          if [ "${{ needs.configure.outputs.build_type }}" == "release" ]; then
-            sed -i "s/^app.version_name=.*/app.version_name=${{ env.PRODUCT_VERSION }}/" ./tools/love-android/gradle.properties
-          else
-            sed -i "s/^app.version_name=.*/app.version_name=${{ env.BUILD_NUM }}/" ./tools/love-android/gradle.properties
-          fi
-          cat ./tools/love-android/gradle.properties
-      - name: Update android:label in AndroidManifest.xml
-        run: sed -i "s/\${NAME}/${{ env.PRODUCT_NAME }}/" ./tools/love-android/app/src/main/AndroidManifest.xml
-      - name: Replace icons
-        run: |
-          convert ./resources/icon.png -resize 48x48 ./tools/love-android/app/src/main/res/drawable-mdpi/love.png
-          convert ./resources/icon.png -resize 72x72 ./tools/love-android/app/src/main/res/drawable-hdpi/love.png
-          convert ./resources/icon.png -resize 96x96 ./tools/love-android/app/src/main/res/drawable-xhdpi/love.png
-          convert ./resources/icon.png -resize 144x144 ./tools/love-android/app/src/main/res/drawable-xxhdpi/love.png
-          convert ./resources/icon.png -resize 192x192 ./tools/love-android/app/src/main/res/drawable-xxxhdpi/love.png
-          convert ./resources/icon.png -resize 512x512 ./tools/love-android/love_icon_512x512.png
-      - name: Add libs
-        run: |
-          if [ -d ./resources/android ]; then
-            mkdir -p ./tools/love-android/app/libs/
-            cp -r -f ./resources/android/* ./tools/love-android/app/libs/
-          fi
-      - name: Get Java ${{ env.ANDROID_JAVA_VERSION }}
-        uses: actions/setup-java@v4
-        with:
-          cache: gradle
-          distribution: temurin
-          java-version: ${{ env.ANDROID_JAVA_VERSION }}
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          cmdline-tools-version: ${{ env.ANDROID_CMDLINE_TOOLS_VERSION }}
-          log-accepted-android-sdk-licenses: false
-      - name: Build Android .apks
-        if: ${{ needs.configure.outputs.build_type == 'dev' }}
-        run: |
-          pushd ./tools/love-android
-            ./gradlew assembleNormal${{ env.ANDROID_RECORD }}Debug assembleNormal${{ env.ANDROID_RECORD }}Release
-          popd
-          mkdir -p ${{ env.OUTPUT_FOLDER }}/apk/{debug,release}
-          mv -v ./tools/love-android/app/build/outputs/apk/*/debug/app-normal-*-debug.apk ${{ env.OUTPUT_FOLDER }}/apk/debug/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-debug.apk
-          mv -v ./tools/love-android/app/build/outputs/apk/*/release/app-normal-*-release-unsigned.apk ${{ env.OUTPUT_FOLDER }}/apk/release/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-release.apk
+          android_cmdline_tools_version: ${{ needs.configure.outputs.android_cmdline_tools_version }}
+          android_java_version: ${{ needs.configure.outputs.android_java_version }}
+          android_love_version: ${{ needs.configure.outputs.android_love_version }}
+          android_orientation: ${{ env.ANDROID_ORIENTATION }}
+          android_record: ${{ env.ANDROID_RECORD }}
+          android_version_code: ${{ needs.configure.outputs.android_version_code }}
+          build_num: ${{ needs.configure.outputs.build_num }}
+          build_type: ${{ needs.configure.outputs.build_type }}
+          product_name: ${{ env.PRODUCT_NAME }}
+          product_id: ${{ env.PRODUCT_ID }}
+          output_folder: ${{ env.OUTPUT_FOLDER }}
       - name: Sign Android debug .apk
         if: ${{ needs.configure.outputs.build_type == 'dev' }}
         id: sign-apk-debug
@@ -453,14 +398,6 @@ jobs:
           keyStorePassword: ${{ secrets.ANDROID_RELEASE_KEYSTORE_PASSWORD }}
           keyPassword: ${{ secrets.ANDROID_RELEASE_KEY_PASSWORD }}
           zipAlign: true
-      - name: Build Android .aab
-        if: ${{ needs.configure.outputs.build_type == 'release' }}
-        run: |
-          pushd ./tools/love-android
-            ./gradlew bundleEmbed${{ env.ANDROID_RECORD }}Release
-          popd
-          mkdir -p ${{ env.OUTPUT_FOLDER }}/aab/release
-          mv -v ./tools/love-android/app/build/outputs/bundle/*/app-embed-*-release.aab ${{ env.OUTPUT_FOLDER }}/aab/release/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-release.aab
       - name: Sign Android .aab
         if: ${{ needs.configure.outputs.build_type == 'release' }}
         id: sign-aab-release
@@ -469,43 +406,37 @@ jobs:
           BUILD_TOOLS_VERSION: ${{ needs.configure.outputs.android_build_tools_version }}
         with:
           releaseDirectory: ${{ env.OUTPUT_FOLDER }}/aab/release
-          signingKeyBase64: ${{ secrets.ANDROID_RELEASE_KEYSTORE }}
+          signingKeyBase64: ${{ secrets.ANDROID_RELEASE_SIGNINGKEY_BASE64 }}
           alias: ${{ secrets.ANDROID_RELEASE_ALIAS }}
-          keyStorePassword: ${{ secrets.ANDROID_RELEASE_STOREPASS }}
-          keyPassword: ${{ secrets.ANDROID_RELEASE_KEYPASS }}
-      - name: Android build artifacts
-        run: |
-          ls -lh ${{ env.OUTPUT_FOLDER }}/apk/* || true
-          if [ -d ${{ env.OUTPUT_FOLDER }}/aab ]; then
-            ls -lh ${{ env.OUTPUT_FOLDER }}/aab/* || true
-          fi
+          keyStorePassword: ${{ secrets.ANDROID_RELEASE_KEYSTORE_PASSWORD }}
+          keyPassword: ${{ secrets.ANDROID_RELEASE_KEY_PASSWORD }}
+      - name: Android artifact tree
+        run: tree ${{ env.OUTPUT_FOLDER }}
       - name: Upload Android debug .apk artifact
         if: ${{ needs.configure.outputs.build_type == 'dev' }}
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-debug-signed.apk
-          path: ${{steps.sign-apk-debug.outputs.signedReleaseFile}}
+          path: ${{ steps.sign-apk-debug.outputs.signedReleaseFile }}
       - name: Upload Android release .apk artifact
         if: ${{ needs.configure.outputs.build_type == 'dev' }}
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-release-signed.apk
-          path: ${{steps.sign-apk-release.outputs.signedReleaseFile}}
+          path: ${{ steps.sign-apk-release.outputs.signedReleaseFile }}
       - name: Upload Android release .aab artifact
         if: ${{ needs.configure.outputs.build_type == 'release' }}
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-release.aab
-          path: ${{steps.sign-aab-release.outputs.signedReleaseFile}}
+          name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}-release.aab
+          path: ${{ steps.sign-aab-release.outputs.signedReleaseFile }}
       - name: Upload Android release
         if: ${{ needs.configure.outputs.build_type == 'release' }}
         uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.configure.outputs.upload_url }}
-          asset_name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-release.aab
-          asset_path: ${{steps.sign-aab-release.outputs.signedReleaseFile}}
+          asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}-release.aab
+          asset_path: ${{ steps.sign-aab-release.outputs.signedReleaseFile }}
           asset_content_type: application/vnd.android.package-archive
 
   build-macos-portable:
