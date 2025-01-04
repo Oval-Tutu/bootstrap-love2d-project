@@ -381,6 +381,59 @@ jobs:
           asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}.exe
           asset_content_type: application/x-msdownload
 
+  build-web:
+    if: ${{ needs.configure.outputs.target_web == 'true' }}
+    runs-on: ubuntu-22.04
+    needs: [configure]
+    continue-on-error: true
+    env:
+      BUILD_NUM: ${{ needs.configure.outputs.build_num }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+      - name: Get product environment variables
+        uses: ./.github/actions/get-env
+        with:
+          env_file: game/product.env
+      - name: Install tools
+        uses: ./.github/actions/install-tools
+      - name: Build LOVE package
+        uses: ./.github/actions/build-love
+        with:
+          output_folder: ${{ env.OUTPUT_FOLDER }}
+          product_name: ${{ env.PRODUCT_NAME }}
+      - name: Build love.js
+        run: |
+          curl -fsSL --retry 5 --retry-delay 15 --connect-timeout 30 --max-time 300 https://github.com/2dengine/love.js/archive/refs/heads/main.zip -o ./tools/love.js.zip || exit 1
+          unzip -q ./tools/love.js.zip -d ./tools/
+          sed -i "s/<title>löve.js<\/title>/<title>${PRODUCT_NAME}<\/title>/" ./tools/love.js-main/index.html
+          mkdir -p ${OUTPUT_FOLDER}/${PRODUCT_NAME}-${BUILD_NUM}_web
+          rsync -a --exclude='*.git*' --exclude='*.md' --exclude='*.txt' \
+            ./tools/love.js-main/ \
+            ${OUTPUT_FOLDER}/${PRODUCT_NAME}-${BUILD_NUM}_web/
+          cp -v ${OUTPUT_FOLDER}/${PRODUCT_NAME}.love ${OUTPUT_FOLDER}/${PRODUCT_NAME}-${BUILD_NUM}_web/game.love
+          7z a -tzip \
+            "${OUTPUT_FOLDER}/${PRODUCT_NAME}-${PRODUCT_VERSION}_web.zip" \
+            "${OUTPUT_FOLDER}/${PRODUCT_NAME}-${PRODUCT_VERSION}_web"/*
+      - name: Upload Web artifact
+        if: ${{ needs.configure.outputs.build_type == 'dev' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_web
+          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_web
+      - name: Upload Web release
+        if: ${{ needs.configure.outputs.build_type == 'release' }}
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.configure.outputs.upload_url }}
+          asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_web.zip
+          asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_web.zip
+          asset_content_type: application/zip
+
   build-android:
     if: ${{ needs.configure.outputs.target_android == 'true' }}
     runs-on: ubuntu-22.04
