@@ -7,29 +7,7 @@ on:
   workflow_dispatch:
 
 env:
-  # Landscape or Portrait, landscape is the default
-  ANDROID_ORIENTATION: landscape
-  # NoRecord or Record. Does the game need microphone access?
-  ANDROID_RECORD: NoRecord
-  LOVE_VERSION: 11.5
-  OUTPUT_FOLDER: ./builds
-  PRODUCT_NAME: Template
-  PRODUCT_ID: com.ovaltutu.template
-  PRODUCT_DESC: A template game made with LÖVE
   PRODUCT_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || '0.0.0' }}
-  PRODUCT_COPYRIGHT: Copyright (c) 2025 Oval Tutu
-  PRODUCT_COMPANY: Oval Tutu
-  PRODUCT_WEBSITE: https://oval-tutu.com
-  PRODUCT_UUID: 3e64d17c-8797-4382-921f-cf488b22073f
-  TARGET_ANDROID: true
-  TARGET_IOS: false
-  TARGET_LINUX_APPIMAGE: true
-  TARGET_LINUX_TARBALL: true
-  TARGET_MACOS_PORTABLE: false
-  TARGET_MACOS_APPSTORE: false
-  TARGET_WEB: false
-  TARGET_WINDOWS_ZIP: true
-  TARGET_WINDOWS_SFX: true
 
 permissions:
   contents: write
@@ -61,6 +39,14 @@ jobs:
       target_windows_zip: ${{ env.TARGET_WINDOWS_ZIP }}
       target_windows_sfx: ${{ env.TARGET_WINDOWS_SFX }}
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+      - name: Get product environment variables
+        uses: ./.github/actions/get-env
+        with:
+          env_file: game/product.env
       - name: Set build parameters
         id: set_build
         shell: bash
@@ -102,10 +88,6 @@ jobs:
               exit 1
               ;;
           esac
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          submodules: recursive
       - name: Install gh
         if: ${{ env.ACT == 'true' }}
         uses: sersoft-gmbh/setup-gh-cli-action@v2
@@ -207,6 +189,10 @@ jobs:
         with:
           fetch-depth: 1
           submodules: recursive
+      - name: Get product environment variables
+        uses: ./.github/actions/get-env
+        with:
+          env_file: game/product.env
       - name: Install tools
         uses: ./.github/actions/install-tools
       - name: Build LOVE package
@@ -243,6 +229,10 @@ jobs:
         with:
           fetch-depth: 1
           submodules: recursive
+      - name: Get product environment variables
+        uses: ./.github/actions/get-env
+        with:
+          env_file: game/product.env
       - name: Install tools
         uses: ./.github/actions/install-tools
       - name: Build LOVE package
@@ -308,6 +298,10 @@ jobs:
         with:
           fetch-depth: 1
           submodules: recursive
+      - name: Get product environment variables
+        uses: ./.github/actions/get-env
+        with:
+          env_file: game/product.env
       - name: Install tools
         uses: ./.github/actions/install-tools
       - name: Build LOVE package
@@ -401,6 +395,10 @@ jobs:
         with:
           fetch-depth: 1
           submodules: recursive
+      - name: Get product environment variables
+        uses: ./.github/actions/get-env
+        with:
+          env_file: game/product.env
       - name: Install tools
         uses: ./.github/actions/install-tools
       - name: Build Android
@@ -498,6 +496,10 @@ jobs:
         with:
           fetch-depth: 1
           submodules: recursive
+      - name: Get product environment variables
+        uses: ./.github/actions/get-env
+        with:
+          env_file: game/product.env
       - name: Build LOVE package
         uses: ./.github/actions/build-love
         with:
@@ -607,6 +609,10 @@ jobs:
         with:
           fetch-depth: 1
           submodules: recursive
+      - name: Get product environment variables
+        uses: ./.github/actions/get-env
+        with:
+          env_file: game/product.env
       - name: Build LOVE package
         uses: ./.github/actions/build-love
         with:
@@ -686,6 +692,10 @@ jobs:
         with:
           fetch-depth: 1
           submodules: recursive
+      - name: Get product environment variables
+        uses: ./.github/actions/get-env
+        with:
+          env_file: game/product.env
       - name: Build LOVE package
         uses: ./.github/actions/build-love
         with:
