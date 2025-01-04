@@ -10,10 +10,11 @@ Inspired by and adapted from [LOVE VSCode Game Template](https://github.com/Keys
 - 🩷 Intellisense for the LÖVE API via [Love2D Support](https://marketplace.visualstudio.com/items?itemName=pixelbyte-studios.pixelbyte-love2d)
 - 👨‍💻 Consistent coding styles with [Editorconfig](https://github.com/editorconfig/editorconfig-vscode)
 - ️⛱️ [Shader languages support](https://marketplace.visualstudio.com/items?itemName=slevesque.shader)
-- ️👷 Automated builds of the `.love` file from within Visual Studio Code
-- 🗂️ Organized with [Workspaces](https://code.visualstudio.com/docs/editor/workspaces)
+- 🐙 [GitHub Local Actions](https://marketplace.visualstudio.com/items?itemName=SanjulaGanepola.github-local-actions)
 - 📦 GitHub Actions for automated builds
   - Compatible with [act](https://nektosact.com/)
+- ️👷 Automated builds of the `.love` file from within Visual Studio Code
+- 🗂️ Organized with [Workspaces](https://code.visualstudio.com/docs/editor/workspaces)
 - ️❄️ Nix flake to provision a dev shell
 
 ## Prerequisites
