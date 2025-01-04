@@ -7,11 +7,28 @@ if IS_DEBUG then
   end
 end
 
+-- Read product configuration
+-- Shared between the game and CI
+product_config = {}
+for line in love.filesystem.lines("product.env") do
+  -- Skip comment lines and blank lines
+  if line:match("^%s*#") or line:match("^%s*$") then
+    goto continue
+  end
+
+  local key, value = line:match("([^=]+)=(.*)")
+  if key then
+    product_config[key] = value:match('^"?(.-)"?$')
+  end
+
+  ::continue::
+end
+
 -- https://love2d.org/wiki/Config_Files
 function love.conf(t)
-  t.identity              = nil
+  t.identity              = product_config["PRODUCT_ID"]
   t.appendidentity        = false
-  t.version               = "11.5"
+  t.version               = product_config["LOVE_VERSION"]
 
   -- If t.console is set to true, then the debugger won't work.
   t.console               = false
@@ -19,10 +36,10 @@ function love.conf(t)
   t.externalstorage       = false
   t.gammacorrect          = false
 
-  t.audio.mic             = false
-  t.audio.mixwithsystem   = true
+  t.audio.mic             = product_config["AUDIO_MIC"]
+  t.audio.mixwithsystem   = false
 
-  t.window.title          = "Oval Tutu"
+  t.window.title          = product_config["PRODUCT_NAME"]
   t.window.icon           = nil
   t.window.width          = 1920
   t.window.height         = 1080
@@ -37,7 +54,7 @@ function love.conf(t)
   t.window.depth          = nil
   t.window.stencil        = nil
   t.window.display        = 1
-  t.window.highdpi        = false
+  t.window.highdpi        = true
   t.window.usedpiscale    = true
   t.window.x              = nil
   t.window.y              = nil
