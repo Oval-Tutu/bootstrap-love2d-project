@@ -31,6 +31,11 @@ env:
   TARGET_WINDOWS_ZIP: true
   TARGET_WINDOWS_SFX: true
 
+permissions:
+  contents: write
+  pull-requests: read
+  issues: read
+
 jobs:
   configure:
     name: Configure build
@@ -85,41 +90,68 @@ jobs:
               ;;
           esac
       - uses: actions/checkout@v4
-        if: ${{ steps.set_build.outputs.type == 'release' }}
         with:
-          fetch-depth: 1
+          fetch-depth: 0
           submodules: recursive
+      - name: Install gh
+        if: ${{ env.ACT == 'true' }}
+        uses: sersoft-gmbh/setup-gh-cli-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          version: stable
       - name: Get PR and Issue List
         id: get_changes
-        if: ${{ steps.set_build.outputs.type == 'release' }}
         run: |
-          # Get the previous tag or default to first commit
-          git fetch --all --tags
+          # Only configure git/gh when running via act
+          if [ "$ACT" == "true" ]; then
+            # Configure git to use HTTPS instead of SSH
+            git config --global url."https://github.com/".insteadOf "git@github.com:"
+
+            # Unset token temporarily
+            unset GITHUB_TOKEN
+            # Authenticate gh CLI
+            echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+            gh auth status
+            # Restore token
+            export GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}"
+          fi
+
+          # Get repo and date info
           PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || git rev-list --max-parents=0 HEAD)
+          PREV_DATE=$(date -d "$(git log -1 --format=%ai $PREV_TAG)" --iso-8601=seconds)
 
-          # Get merged PRs
-          PRs=$(gh pr list --search "is:merged merged:>${PREV_TAG}" --json number,title,author --template \
-            '{{range .}}* #{{.number}} {{.title}} (@{{.author.login}}){{"\n"}}{{end}}')
+          echo "Repository: ${GITHUB_REPOSITORY}"
+          echo "Previous tag: ${PREV_TAG}"
+          echo "Date filter: ${PREV_DATE}"
 
-          # Get closed issues
-          ISSUES=$(gh issue list --search "is:closed closed:>${PREV_TAG} -is:pr" --json number,title,author --template \
-            '{{range .}}* #{{.number}} {{.title}} (@{{.author.login}}){{"\n"}}{{end}}')
+          PRs=$(gh pr list -R "${GITHUB_REPOSITORY}" \
+            --search "is:merged merged:>${PREV_DATE}" \
+            --limit 128 \
+            --json number,title,author,mergedAt \
+            --template '{{range .}}* #{{.number}} {{.title}} (@{{.author.login}}) [merged: {{.mergedAt}}]{{"\n"}}{{end}}')
+
+          ISSUES=$(gh issue list -R "${GITHUB_REPOSITORY}" \
+            --search "is:closed closed:>${PREV_DATE}" \
+            --limit 128 \
+            --json number,title,author,closedAt \
+            --template '{{range .}}* #{{.number}} {{.title}} (@{{.author.login}}) [closed: {{.closedAt}}]{{"\n"}}{{end}}')
 
           # Handle empty results
-          [ -z "$PRs" ] && PRs="* No pull requests merged in this release"
-          [ -z "$ISSUES" ] && ISSUES="* No issues closed in this release"
+          [ -z "${PRs}" ] && PRs="* No pull requests merged in this release"
+          [ -z "${ISSUES}" ] && ISSUES="* No issues closed in this release"
 
-          # Save outputs
+          # Save outputs with proper EOF markers
           {
             echo "prs<<EOF"
-            echo "$PRs"
+            echo "${PRs}"
             echo "EOF"
             echo "issues<<EOF"
-            echo "$ISSUES"
+            echo "${ISSUES}"
             echo "EOF"
           } >> $GITHUB_OUTPUT
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Create draft release
         if: ${{ steps.set_build.outputs.type == 'release' }}
         id: create_release
