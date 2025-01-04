@@ -41,11 +41,12 @@ jobs:
     name: Configure build
     runs-on: ubuntu-22.04
     outputs:
-      android_build_tools_version: ${{ steps.set_android.outputs.android_build_tools_version }}
-      android_cmdline_tools_version: ${{ steps.set_android.outputs.android_cmdline_tools_version }}
-      android_java_version: ${{ steps.set_android.outputs.android_java_version }}
-      android_love_version: ${{ steps.set_android.outputs.android_love_version }}
-      android_version_code: ${{ steps.set_android.outputs.android_version_code }}
+      android_build_tools_version: ${{ steps.set_build.outputs.android_build_tools_version }}
+      android_cmdline_tools_version: ${{ steps.set_build.outputs.android_cmdline_tools_version }}
+      android_java_version: ${{ steps.set_build.outputs.android_java_version }}
+      android_love_version: ${{ steps.set_build.outputs.android_love_version }}
+      android_version_code: ${{ steps.set_build.outputs.android_version_code }}
+      apple_version_code: ${{ steps.set_build.outputs.apple_version_code }}
       build_num: ${{ steps.set_build.outputs.num }}
       build_type: ${{ steps.set_build.outputs.type }}
       release_id: ${{ steps.create_release.outputs.id || '' }}
@@ -64,18 +65,30 @@ jobs:
         id: set_build
         shell: bash
         run: |
-          echo "num=$(date +%y.%j.%H%M)" >> $GITHUB_OUTPUT
+          # Create always incrementing build number and app store version codes
+          # that are unique to the current date and time amd are always increasing
+          # so that they can be used for versioning in the app stores to handle updates
+          # - Build numbers and version codes are unrelated to the product version number
+          # - Apple and Android release are on a one hour cadence
+          # - Internal builds are on a one minute cadence
+          # - OCD prevented me from creating a Y21K bug while adhering to Android version code rules
+          CENTURY_CODE=$(date +%C | cut -c 2 | sed 's/0//')
+          ANDROID_VERSION_CODE=$(date +${CENTURY_CODE}%y%j%H)
+          APPLE_VERSION_CODE=$(date +${CENTURY_CODE}%y.%j.%H)
+          BUILD_NUM=$(date +${CENTURY_CODE}%y.%j.%H%M)
+
+          echo "android_version_code=${ANDROID_VERSION_CODE}" >> $GITHUB_OUTPUT
+          echo "apple_version_code=${APPLE_VERSION_CODE}" >> $GITHUB_OUTPUT
+          echo "num=${BUILD_NUM}" >> $GITHUB_OUTPUT
+
           echo "type=dev" >> $GITHUB_OUTPUT
           if [[ $ACT == true ]]; then
+            # Build from act are always forced to dev builds
             echo "type=dev" >> $GITHUB_OUTPUT
           elif [[ $GITHUB_REF == refs/tags/* ]]; then
             echo "type=release" >> $GITHUB_OUTPUT
           fi
-      - name: Generate Android parameters
-        id: set_android
-        shell: bash
-        run: |
-          echo "android_version_code=$(date +%s)" >> $GITHUB_OUTPUT
+
           # https://github.com/android-actions/setup-android?tab=readme-ov-file#version-table
           case ${{ env.LOVE_VERSION }} in
             11.5)
@@ -169,8 +182,8 @@ jobs:
             This release of ${{ env.PRODUCT_NAME }} was built via:
             - Build number: ${{ steps.set_build.outputs.num }}
             - GitHub Run: ${{github.run_number}}
-            - Android version code: ${{ steps.set_android.outputs.android_version_code }}
-            - iOS/macOS Store version: 0.0.${{github.run_number}}
+            - Android version code: ${{ steps.set_build.outputs.android_version_code }}
+            - iOS/macOS Store version: ${{ steps.set_build.outputs.apple_version_code }}
 
             ## 🔀 Merged Pull Requests
             ${{ steps.get_changes.outputs.prs }}
@@ -635,9 +648,7 @@ jobs:
           #libs-path: ./ColdClear/universal/
           external-test: ${{ !startsWith(github.ref, 'refs/tags/') }}
           store-release: ${{ startsWith(github.ref, 'refs/tags/') }}
-          # An always incrementing integer so app stores can track versions
-          # But not the actual version number
-          version-string: 0.0.${{ github.run_number }}
+          version-string: ${{ needs.configure.outputs.apple_version_code }}
       - name: Upload macOS appstore logs artifact
         uses: actions/upload-artifact@v4
         with:
@@ -710,9 +721,7 @@ jobs:
           #love-patch: ./.github/build/iOS/love.patch
           external-test: ${{ !startsWith(github.ref, 'refs/tags/') }}
           store-release: ${{ startsWith(github.ref, 'refs/tags/') }}
-          # An always incrementing integer so app stores can track versions
-          # But not the actual version number
-          version-string: 0.0.${{ github.run_number }}
+          version-string: ${{ needs.configure.outputs.apple_version_code }}
       - name: Upload iOS logs artifact
         uses: actions/upload-artifact@v4
         with:
@@ -763,7 +772,7 @@ jobs:
           if [ "${{ needs.configure.outputs.build_type }}" == "release" ]; then
             echo "## Version information" >> $GITHUB_STEP_SUMMARY
             echo "- Android version code: ${{ needs.configure.outputs.android_version_code }}" >> $GITHUB_STEP_SUMMARY
-            echo "- iOS/macOS Store version: 0.0.${{github.run_number}}" >> $GITHUB_STEP_SUMMARY
+            echo "- iOS/macOS Store version: ${{ needs.configure.outputs.apple_version_code }}" >> $GITHUB_STEP_SUMMARY
           elif [ "${{ needs.configure.outputs.build_type }}" == "dev" ]; then
             echo "## Artifact downloads" >> $GITHUB_STEP_SUMMARY
             echo '**️⚠️ NOTE!** All the attached artifacts are **zipped** 🤏 and when downloaded will have a `.zip` file extension and will require extracting before use.' >> $GITHUB_STEP_SUMMARY
