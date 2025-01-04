@@ -15,6 +15,7 @@ Inspired by and adapted from [LOVE VSCode Game Template](https://github.com/Keys
   - Compatible with [act](https://nektosact.com/)
 - ️👷 Automated builds of the `.love` file from within Visual Studio Code
 - 🗂️ Organized with [Workspaces](https://code.visualstudio.com/docs/editor/workspaces)
+- ️⚙️ [Shared product configuration](game/product.env) between the game and the GitHub Actions
 - ️❄️ Nix flake to provision a dev shell
 
 ## Prerequisites
@@ -36,9 +37,9 @@ Inspired by and adapted from [LOVE VSCode Game Template](https://github.com/Keys
     - [Local Lua Debugger](https://marketplace.visualstudio.com/items?itemName=tomblind.local-lua-debugger-vscode)
     - [Love2D Support](https://marketplace.visualstudio.com/items?itemName=pixelbyte-studios.pixelbyte-love2d)
     - [Editorconfig](https://marketplace.visualstudio.com/items?itemName=EditorConfig.EditorConfig)
-    - [Shader languages support](https://marketplace.visualstudio.com/items?itemName=slevesque.shader)
-- Configure the `game/conf.lua` with the settings specific for your game.
-- Configure `.github/workflows/build.yml` with the settings specific for your game.
+    - [GitHub Local Actions](https://marketplace.visualstudio.com/items?itemName=SanjulaGanepola.github-local-actions) (*optional*)
+    - [Shader languages support](https://marketplace.visualstudio.com/items?itemName=slevesque.shader) (*optional*)
+- Configure `.game/product.env` and `game/conf.lua` with the settings specific to your game.
   - **Make sure that `PRODUCT_UUID` is changed using `uuidgen`**.
 - Replace `resources/icon.png` with your game's high-resolution icon.
 
@@ -88,6 +89,7 @@ git push origin 1.0.0
 ├── game
 │   ├── conf.lua              LÖVE configuration file
 │   ├── main.lua              The main entry point of the game
+│   ├── product.env           Settings shared between the game and GitHub Actions
 │   ├── assets                Game assets
 │   ├── lib                   3rd party libraries
 │   └── src                   Source code
