@@ -6,9 +6,6 @@ on:
       - "[0-9]+.[0-9]+.[0-9]+*"
   workflow_dispatch:
 
-env:
-  PRODUCT_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || '0.0.0' }}
-
 permissions:
   contents: write
   pull-requests: read
@@ -27,6 +24,7 @@ jobs:
       apple_version_code: ${{ steps.set_build.outputs.apple_version_code }}
       build_num: ${{ steps.set_build.outputs.num }}
       build_type: ${{ steps.set_build.outputs.type }}
+      previous_tag: ${{ steps.set_build.outputs.previous_tag }}
       release_id: ${{ steps.create_release.outputs.id || '' }}
       upload_url: ${{ steps.create_release.outputs.upload_url || '' }}
       target_android: ${{ env.TARGET_ANDROID }}
@@ -66,6 +64,9 @@ jobs:
           echo "android_version_code=${ANDROID_VERSION_CODE}" >> $GITHUB_OUTPUT
           echo "apple_version_code=${APPLE_VERSION_CODE}" >> $GITHUB_OUTPUT
           echo "num=${BUILD_NUM}" >> $GITHUB_OUTPUT
+          # Get the previous tag (most recent release) if any.
+          previous_tag=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo '0.0.0')
+          echo "previous_tag=${previous_tag}" >> $GITHUB_OUTPUT
 
           echo "type=dev" >> $GITHUB_OUTPUT
           if [[ $ACT == true ]]; then
@@ -184,6 +185,7 @@ jobs:
     needs: [configure]
     env:
       BUILD_NUM: ${{ needs.configure.outputs.build_num }}
+      PRODUCT_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || needs.configure.outputs.previous_tag }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -224,6 +226,7 @@ jobs:
     continue-on-error: true
     env:
       BUILD_NUM: ${{ needs.configure.outputs.build_num }}
+      PRODUCT_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || needs.configure.outputs.previous_tag }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -293,6 +296,7 @@ jobs:
     continue-on-error: true
     env:
       BUILD_NUM: ${{ needs.configure.outputs.build_num }}
+      PRODUCT_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || needs.configure.outputs.previous_tag }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -388,6 +392,7 @@ jobs:
     continue-on-error: true
     env:
       BUILD_NUM: ${{ needs.configure.outputs.build_num }}
+      PRODUCT_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || needs.configure.outputs.previous_tag }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -443,6 +448,7 @@ jobs:
       contents: write
     env:
       BUILD_NUM: ${{ needs.configure.outputs.build_num }}
+      PRODUCT_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || needs.configure.outputs.previous_tag }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -544,6 +550,7 @@ jobs:
     continue-on-error: true
     env:
       BUILD_NUM: ${{ needs.configure.outputs.build_num }}
+      PRODUCT_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || needs.configure.outputs.previous_tag }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -657,6 +664,7 @@ jobs:
     continue-on-error: true
     env:
       BUILD_NUM: ${{ needs.configure.outputs.build_num }}
+      PRODUCT_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || needs.configure.outputs.previous_tag }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -740,6 +748,7 @@ jobs:
     continue-on-error: true
     env:
       BUILD_NUM: ${{ needs.configure.outputs.build_num }}
+      PRODUCT_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || needs.configure.outputs.previous_tag }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -813,7 +822,13 @@ jobs:
     name: Build parameters
     needs: [configure]
     runs-on: ubuntu-22.04
+    env:
+      PRODUCT_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || needs.configure.outputs.previous_tag }}
     steps:
+      - name: Get product environment variables
+        uses: ./.github/actions/get-env
+        with:
+          env_file: game/product.env
       - name: Create summary
         run: |
           echo "## Build summary" >> $GITHUB_STEP_SUMMARY
