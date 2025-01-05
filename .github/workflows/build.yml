@@ -163,9 +163,9 @@ jobs:
 
             This release of ${{ env.PRODUCT_NAME }} was built via:
             - Build number: ${{ steps.set_build.outputs.num }}
-            - GitHub Run: ${{github.run_number}}
             - Android version code: ${{ steps.set_build.outputs.android_version_code }}
             - iOS/macOS Store version: ${{ steps.set_build.outputs.apple_version_code }}
+            - GitHub Run: ${{github.run_number}}
 
             ## 🔀 Merged Pull Requests
             ${{ steps.get_changes.outputs.prs }}
