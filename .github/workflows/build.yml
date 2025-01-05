@@ -117,10 +117,8 @@ jobs:
           # Get repo and date info
           PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || git rev-list --max-parents=0 HEAD)
           PREV_DATE=$(date -d "$(git log -1 --format=%ai $PREV_TAG)" --iso-8601=seconds)
-
-          echo "Repository: ${GITHUB_REPOSITORY}"
-          echo "Previous tag: ${PREV_TAG}"
-          echo "Date filter: ${PREV_DATE}"
+          echo "Previous release tag: ${PREV_TAG}"
+          echo "Previous release date: ${PREV_DATE}"
 
           PRs=$(gh pr list -R "${GITHUB_REPOSITORY}" \
             --search "is:merged merged:>${PREV_DATE}" \
@@ -331,7 +329,6 @@ jobs:
       - name: Upload Windows 32-bit artifact
         if: ${{ needs.configure.outputs.build_type == 'dev' && needs.configure.outputs.target_windows_zip == 'true' }}
         uses: actions/upload-artifact@v4
-        continue-on-error: true
         with:
           if-no-files-found: warn
           include-hidden-files: false
@@ -341,7 +338,6 @@ jobs:
       - name: Upload Windows 64-bit artifact
         if: ${{ needs.configure.outputs.build_type == 'dev' && needs.configure.outputs.target_windows_zip == 'true' }}
         uses: actions/upload-artifact@v4
-        continue-on-error: true
         with:
           if-no-files-found: warn
           include-hidden-files: false
@@ -351,7 +347,6 @@ jobs:
       - name: Upload Windows SFX artifact
         if: ${{ needs.configure.outputs.build_type == 'dev' && needs.configure.outputs.target_windows_sfx == 'true' }}
         uses: actions/upload-artifact@v4
-        continue-on-error: true
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.exe
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.exe
