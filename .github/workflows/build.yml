@@ -823,6 +823,10 @@ jobs:
     env:
       PRODUCT_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || needs.configure.outputs.previous_tag }}
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          submodules: recursive
       - name: Get product environment variables
         uses: ./.github/actions/get-env
         with:
