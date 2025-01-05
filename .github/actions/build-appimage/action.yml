@@ -64,10 +64,9 @@ runs:
 
         echo "Assembling executable..."
         sed -i 's|bin/love|bin/${{ inputs.product_name }}|g' ./tools/squashfs-root/AppRun
-        dd if=./tools/squashfs-root/bin/love of=./tools/squashfs-root/bin/${{ inputs.product_name }}
+        mv -v ./tools/squashfs-root/bin/love ./tools/squashfs-root/bin/${{ inputs.product_name }}
         dd if=${{ inputs.output_folder }}/${{ inputs.product_name }}.love of=./tools/squashfs-root/bin/${{ inputs.product_name }} obs=1M oflag=append conv=notrunc
         chmod +x ./tools/squashfs-root/bin/${{ inputs.product_name }}
-        rm -f ./tools/squashfs-root/bin/love
 
         if [ -f "${{ inputs.output_folder }}/icon.png" ]; then
           echo "Copying icon..."
