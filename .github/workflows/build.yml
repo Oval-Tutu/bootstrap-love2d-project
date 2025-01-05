@@ -97,6 +97,7 @@ jobs:
         with:
           version: stable
       - name: Get PR and Issue List
+        if: ${{ steps.set_build.outputs.type == 'release' }}
         id: get_changes
         run: |
           # Only configure git/gh when running via act
