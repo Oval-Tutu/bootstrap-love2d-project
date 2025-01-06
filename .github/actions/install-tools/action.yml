@@ -12,7 +12,18 @@ runs:
             p7zip-full \
             rsync
         fi
-        sudo apt-get -y install \
-          desktop-file-utils \
-          libfuse2 \
-          tree
+        # Only run this on Linux runners
+        if [ "${RUNNER_OS}" == "Linux" ]; then
+          sudo apt-get -y update
+          sudo apt-get -y install \
+            desktop-file-utils \
+            icnsutils \
+            libfuse2 \
+            tree \
+            xmlstarlet
+        elif [ "${RUNNER_OS}" == "macOS" ]; then
+          brew install \
+            tree \
+            xmlstarlet
+        fi
+

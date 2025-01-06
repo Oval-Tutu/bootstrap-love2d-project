@@ -546,6 +546,8 @@ jobs:
     runs-on: macos-latest
     needs: [configure]
     continue-on-error: true
+    permissions:
+      contents: write
     env:
       BUILD_NUM: ${{ needs.configure.outputs.build_num }}
       PRODUCT_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || needs.configure.outputs.previous_tag }}
@@ -558,102 +560,66 @@ jobs:
         uses: ./.github/actions/get-env
         with:
           env_file: game/product.env
+      - name: Install tools
+        uses: ./.github/actions/install-tools
       - name: Build LOVE package
         uses: ./.github/actions/build-love
         with:
           output_folder: ${{ env.OUTPUT_FOLDER }}
           product_name: ${{ env.PRODUCT_NAME }}
-      - name: Create macOS icon.icns
-        run: |
-          mkdir -p icon.iconset
-          sips -z 16 16     ./resources/icon.png --out icon.iconset/icon_16x16.png
-          sips -z 32 32     ./resources/icon.png --out icon.iconset/icon_16x16@2x.png
-          sips -z 32 32     ./resources/icon.png --out icon.iconset/icon_32x32.png
-          sips -z 64 64     ./resources/icon.png --out icon.iconset/icon_32x32@2x.png
-          sips -z 128 128   ./resources/icon.png --out icon.iconset/icon_128x128.png
-          sips -z 256 256   ./resources/icon.png --out icon.iconset/icon_128x128@2x.png
-          sips -z 256 256   ./resources/icon.png --out icon.iconset/icon_256x256.png
-          sips -z 512 512   ./resources/icon.png --out icon.iconset/icon_256x256@2x.png
-          sips -z 512 512   ./resources/icon.png --out icon.iconset/icon_512x512.png
-          sips -z 1024 1024 ./resources/icon.png --out icon.iconset/icon_512x512@2x.png
-          iconutil -c icns icon.iconset -o ${{ env.OUTPUT_FOLDER }}/icon.icns
-          rm -rf icon.iconset
-      - name: Build macOS packages
-        id: build-packages
-        uses: love-actions/love-actions-macos-portable@v1
+      - name: Build macOS portable
+        uses: ./.github/actions/build-macos-portable
         with:
-          love-package: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love
-          output-folder: ${{ env.OUTPUT_FOLDER }}
-          product-name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-portable
-          #account-username: ${{ secrets.APPLE_ACCOUNT_USERNAME }}
-          #account-password: ${{ secrets.APPLE_ACCOUNT_PASSWORD }}
-          #team-id: "${{ secrets.APPLE_DEVELOPER_TEAM_ID }}"
-          app-name: ${{ env.PRODUCT_NAME }}
-          bundle-id: ${{ env.PRODUCT_ID }}
-          copyright: ${{ env.PRODUCT_COPYRIGHT }}
-          #developer-id-application-base64: ${{ secrets.APPLE_CERT_DEVELOPER_ID_APPLICATION }}
-          #developer-id-application-password: ${{ secrets.APPLE_CERT_DEVELOPER_ID_APPLICATION_PWD }}
-          #developer-id-installer-base64: ${{ secrets.APPLE_CERT_DEVELOPER_ID_INSTALLER }}
-          #developer-id-installer-password: ${{ secrets.APPLE_CERT_DEVELOPER_ID_INSTALLER_PWD }}
-          #dmg-background-path: ./.github/build/macOS/${{ env.BUILD_TYPE }}/dmg.png
-          #dmg-icon-position: "239 203"
-          #dmg-icon-size: "100"
-          #dmg-link-position: "565 203"
-          #dmg-text-size: "12"
-          #dmg-volume-icon-path: ./.github/build/macOS/${{ env.BUILD_TYPE }}/dmg.icns
-          dmg-volume-name: ${{ env.PRODUCT_NAME }}
-          #dmg-window-position: "200 120"
-          #dmg-window-size: "800 500"
-          icon-path: ${{ env.OUTPUT_FOLDER }}/icon.icns
-          version-string: ${{ env.PRODUCT_VERSION }}
-      - name: Upload macOS portable pkg artifact
+          apple_version_code: ${{ needs.configure.outputs.apple_version_code }}
+          build_num: ${{ needs.configure.outputs.build_num }}
+          love_version: ${{ env.LOVE_VERSION }}
+          product_copyright: ${{ env.PRODUCT_COPYRIGHT }}
+          product_id: ${{ env.PRODUCT_ID }}
+          product_name: ${{ env.PRODUCT_NAME }}
+          product_version: ${{ env.PRODUCT_VERSION }}
+          output_folder: ${{ env.OUTPUT_FOLDER }}
+      - name: Upload macOS portable zip artifact
         if: ${{ needs.configure.outputs.build_type == 'dev' }}
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_macOS_portable_pkg
-          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-portable.pkg
+          name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.app
+          path: ${{ env.OUTPUT_FOLDER }}/app
       - name: Upload macOS portable dmg artifact
-        if: ${{ needs.configure.outputs.build_type == 'dev' }}
+        if: ${{ needs.configure.outputs.build_type == 'dev' && runner.os == 'macOS' }}
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_macOS_portable_dmg
-          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-portable.dmg
-      - name: Upload macOS zip artifact
-        if: ${{ needs.configure.outputs.build_type == 'dev' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_macOS_portable_zip
-          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-portable.zip
-      - name: Upload macOS portable pkg release
-        if: ${{ needs.configure.outputs.build_type == 'release' }}
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.configure.outputs.upload_url }}
-          asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-portable.pkg
-          asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}-portable.pkg
-          asset_content_type: application/x-installer
-      - name: Upload macOS portable dmg release
-        if: ${{ needs.configure.outputs.build_type == 'release' }}
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.configure.outputs.upload_url }}
-          asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-portable.dmg
-          asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}-portable.dmg
-          asset_content_type: application/x-apple-diskimage
-      - name: Upload macOS portable zip release
-        if: ${{ needs.configure.outputs.build_type == 'release' }}
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.configure.outputs.upload_url }}
-          asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-portable.zip
-          asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}-portable.zip
-          asset_content_type: application/zip
+          name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.dmg
+          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.dmg
+      # - name: Upload macOS portable pkg release
+      #   if: ${{ needs.configure.outputs.build_type == 'release' }}
+      #   uses: actions/upload-release-asset@v1
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   with:
+      #     upload_url: ${{ needs.configure.outputs.upload_url }}
+      #     asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-portable.pkg
+      #     asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}-portable.pkg
+      #     asset_content_type: application/x-installer
+      # - name: Upload macOS portable dmg release
+      #   if: ${{ needs.configure.outputs.build_type == 'release' }}
+      #   uses: actions/upload-release-asset@v1
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   with:
+      #     upload_url: ${{ needs.configure.outputs.upload_url }}
+      #     asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-portable.dmg
+      #     asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}-portable.dmg
+      #     asset_content_type: application/x-apple-diskimage
+      # - name: Upload macOS portable zip release
+      #   if: ${{ needs.configure.outputs.build_type == 'release' }}
+      #   uses: actions/upload-release-asset@v1
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   with:
+      #     upload_url: ${{ needs.configure.outputs.upload_url }}
+      #     asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-portable.zip
+      #     asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}-portable.zip
+      #     asset_content_type: application/zip
 
   build-macos-appstore:
     if: ${{ needs.configure.outputs.target_macos_appstore == 'true' }}
