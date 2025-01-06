@@ -39,7 +39,7 @@ Inspired by and adapted from [LOVE VSCode Game Template](https://github.com/Keys
     - [Editorconfig](https://marketplace.visualstudio.com/items?itemName=EditorConfig.EditorConfig)
     - [GitHub Local Actions](https://marketplace.visualstudio.com/items?itemName=SanjulaGanepola.github-local-actions) (*optional*)
     - [Shader languages support](https://marketplace.visualstudio.com/items?itemName=slevesque.shader) (*optional*)
-- Configure `.game/product.env` and `game/conf.lua` with the settings specific to your game.
+- Configure `game/product.env` and `game/conf.lua` with the settings specific to your game.
   - **Make sure that `PRODUCT_UUID` is changed using `uuidgen`**.
 - Replace `resources/icon.png` with your game's high-resolution icon.
 
