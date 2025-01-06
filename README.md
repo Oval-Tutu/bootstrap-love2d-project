@@ -117,14 +117,15 @@ The GitHub Actions workflow will automatically build and package the game for al
 - Linux
   - AppImage
   - Tarball
-- macOS (🚧)
-  - portable .dmg
-  - App Store
+- macOS
+  - Portable .app (*notarizing is not yet implemented*)
+  - Portable .dmg (*notarizing is not yet implemented*)
+  - App Store .pkg (🚧)
 - Web (️🚧)
 - Windows
-  - win32
-  - win64
-  - Self-extracting archive (*64-bit only*)
+  - win32 .zip
+  - win64 .zip
+  - win64 .exe (*self-extracting*)
 
 ### Android
 
