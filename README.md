@@ -127,6 +127,26 @@ The GitHub Actions workflow will automatically build and package the game for al
   - win64 .zip
   - win64 .exe (*self-extracting*)
 
+### Local GitHub Action via act
+
+In order to use the GitHub Actions locally, you'll need to install [act](https://nektosact.com/) and Podman or Docker.
+
+This template includes `.actrc` which will source GitHub secrets and enable the artifact server.
+
+#### macOS
+
+- Install Podman Desktop and setup a podman machine or Docker Desktop.
+- Install Xcode: `xcode-select --install`
+- Install additional tools: `brew install act create-dmg tree`
+
+### Running the GitHub Actions locally
+
+- `act` will run all the GitHub Actions locally.
+- `act -l` will list all the available GitHub Actions.
+- `act -j <job>` will run a specific job.
+- To run jobs that runs-on: `macos-latest` on your Mac you'll need to use `act -P macos-latest=-self-hosted` which will run the job on your Mac instead of the GitHub runner. For example:
+  - `act -j build-macos-portable -P macos-latest=-self-hosted`
+
 ### Android
 
 In order to sign the APKs and AABs, the [zipalign & Sign Android Release Action](https://github.com/kevin-david/zipalign-sign-android-release) is used. You'll need to create Debug and Release keystores and set the appropriate secrets in the GitHub repository settings.
