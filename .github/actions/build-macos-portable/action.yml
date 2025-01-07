@@ -38,7 +38,6 @@ runs:
         7z x -o./tools/ ./tools/love-${{ inputs.love_version }}-macos.zip
         mv -v ./tools/love.app ./tools/${{ inputs.product_name }}.app
         rm -rfv ./tools/${{ inputs.product_name }}.app/Contents/Resources/*.icns
-        sed -i '' 's|http://www.apple.com/DTDs/PropertyList-1.0.dtd|https://www.apple.com/DTDs/PropertyList-1.0.dtd|g' "./tools/${{ inputs.product_name }}.app/Contents/Info.plist"
     - name: Remove macOS code signature
       if: runner.os == 'macOS'
       shell: bash
@@ -202,7 +201,18 @@ runs:
         tree ${{ inputs.output_folder }}
     - name: Create macOS .dmg of .app
       if: runner.os == 'macOS'
-      uses: L-Super/create-dmg-actions@v1.0.3
-      with:
-        dmg_name: ${{ inputs.output_folder }}/${{ inputs.product_name }}-${{ inputs.build_num }}
-        src_dir: ${{ inputs.output_folder }}/app/${{ inputs.product_name }}.app
+      shell: bash
+      run: |
+        #--background "./resources/background.png" \
+        #--volicon ./tools/${{ inputs.product_name }}.icns \
+        create-dmg \
+          --volname "${{ inputs.product_name }}" \
+          --window-pos 200 120 \
+          --window-size 800 400 \
+          --icon-size 100 \
+          --icon "${{ inputs.product_name }}.app" 200 190 \
+          --hide-extension "${{ inputs.product_name }}.app" \
+          --app-drop-link 600 185 \
+          --no-internet-enable \
+          ${{ inputs.output_folder }}/${{ inputs.product_name }}-${{ inputs.build_num }}.dmg \
+          ${{ inputs.output_folder }}/app/${{ inputs.product_name }}.app/
