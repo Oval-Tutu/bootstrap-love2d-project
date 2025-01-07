@@ -24,10 +24,11 @@
           packages = with pkgs; [
             act
             curl
-            love
             luajit
             p7zip
             zip
+          ] ++ pkgs.lib.optionals (!pkgs.stdenv.isDarwin) [
+            love
           ];
         };
       });
