@@ -25,7 +25,10 @@
             act
             curl
             luajit
+            nodejs_20
             p7zip
+            tree
+            xmlstarlet
             zip
           ] ++ pkgs.lib.optionals (!pkgs.stdenv.isDarwin) [
             love
