@@ -6,14 +6,15 @@ runs:
     - name: Install dependencies
       shell: bash
       run: |
-        if [ "$ACT" == "true" ]; then
-          sudo apt-get -y update
-          sudo apt-get -y install \
-            p7zip-full \
-            rsync
-        fi
         # Only run this on Linux runners
         if [ "${RUNNER_OS}" == "Linux" ]; then
+          if [ "$ACT" == "true" ]; then
+            sudo apt-get -y update
+            sudo apt-get -y install \
+              p7zip-full \
+              rsync
+          fi
+
           sudo apt-get -y update
           sudo apt-get -y install \
             desktop-file-utils \
@@ -23,6 +24,7 @@ runs:
             xmlstarlet
         elif [ "${RUNNER_OS}" == "macOS" ]; then
           brew install \
+            create-dmg \
             tree \
             xmlstarlet
         fi
