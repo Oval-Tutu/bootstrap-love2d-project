@@ -12,16 +12,12 @@ end
 product_config = {}
 for line in love.filesystem.lines("product.env") do
   -- Skip comment lines and blank lines
-  if line:match("^%s*#") or line:match("^%s*$") then
-    goto continue
+  if not (line:match("^%s*#") or line:match("^%s*$")) then
+    local key, value = line:match("([^=]+)=(.*)")
+    if key then
+      product_config[key] = value:match('^"?(.-)"?$')
+    end
   end
-
-  local key, value = line:match("([^=]+)=(.*)")
-  if key then
-    product_config[key] = value:match('^"?(.-)"?$')
-  end
-
-  ::continue::
 end
 
 -- https://love2d.org/wiki/Config_Files
