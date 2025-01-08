@@ -524,12 +524,6 @@ jobs:
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-release-signed.apk
           path: ${{ steps.sign-apk-release.outputs.signedReleaseFile }}
-      - name: Upload Android release .aab artifact
-        if: ${{ needs.configure.outputs.build_type == 'dev' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-release.aab
-          path: ${{ steps.sign-aab-release.outputs.signedReleaseFile }}
       - name: Upload Android release
         if: ${{ needs.configure.outputs.build_type == 'release' }}
         uses: actions/upload-release-asset@v1
