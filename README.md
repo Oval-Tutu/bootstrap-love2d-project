@@ -118,9 +118,8 @@ The GitHub Actions workflow will automatically build and package the game for al
   - AppImage
   - Tarball
 - macOS
-  - Portable .app (*notarizing is not yet implemented*)
-  - Portable .dmg (*notarizing is not yet implemented*)
-  - App Store .pkg (🚧)
+  - `.app` Bundle (*notarizing is not yet implemented*)
+  - `.dmg` Disk Image (*notarizing is not yet implemented*)
 - Web (️🚧)
 - Windows
   - win32 .zip
@@ -135,7 +134,7 @@ This template includes `.actrc` which will source GitHub secrets and enable the 
 
 #### macOS
 
-- Install Podman Desktop and setup a podman machine or Docker Desktop.
+- Install Podman Desktop or Docker Desktop.
 - Install Xcode: `xcode-select --install`
 - Install additional tools: `brew install act create-dmg tree`
 
@@ -145,7 +144,7 @@ This template includes `.actrc` which will source GitHub secrets and enable the 
 - `act -l` will list all the available GitHub Actions.
 - `act -j <job>` will run a specific job.
 - To run jobs that runs-on: `macos-latest` on your Mac you'll need to use `act -P macos-latest=-self-hosted` which will run the job on your Mac instead of the GitHub runner. For example:
-  - `act -j build-macos-portable -P macos-latest=-self-hosted`
+  - `act -j build-macos -P macos-latest=-self-hosted`
 
 ### Android
 

@@ -1,6 +1,6 @@
 # https://github.com/love2d/love-apple-dependencies
-name: Build macOS Portable
-description: Build a macOS dmg for distribution outside the Mac App Store
+name: Build macOS
+description: Build a macOS app bundle and dmg
 inputs:
   apple_version_code:
     description: The version code of the macOS app
@@ -180,7 +180,7 @@ runs:
           curl -fsSL --retry 5 --retry-delay 15 --connect-timeout 30 --max-time 300 \
             https://www.apple.com/DTDs/PropertyList-1.0.dtd \
             -o ./tools/${{ inputs.product_name }}.app/Contents/PropertyList-1.0.dtd || exit 1
-          sed 's|https://www.apple.com/DTDs/PropertyList-1.0.dtd|PropertyList-1.0.dtd|g' ./tools/${{ inputs.product_name }}.app/Contents/Info.plist > ./tools/${{ inputs.product_name }}.app/Contents/Check.plist
+          sed 's|http://www.apple.com/DTDs/PropertyList-1.0.dtd|PropertyList-1.0.dtd|g' ./tools/${{ inputs.product_name }}.app/Contents/Info.plist > ./tools/${{ inputs.product_name }}.app/Contents/Check.plist
           xmlstarlet val -e -d ./tools/${{ inputs.product_name }}.app/Contents/PropertyList-1.0.dtd --net ./tools/${{ inputs.product_name }}.app/Contents/Check.plist
           rm ./tools/${{ inputs.product_name }}.app/Contents/Check.plist
           rm ./tools/${{ inputs.product_name }}.app/Contents/PropertyList-1.0.dtd
