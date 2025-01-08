@@ -25,7 +25,8 @@ runs:
         elif [ "${RUNNER_OS}" == "macOS" ]; then
           brew install \
             create-dmg \
+            p7zip \
             tree \
-            xmlstarlet
+            zip
         fi
 

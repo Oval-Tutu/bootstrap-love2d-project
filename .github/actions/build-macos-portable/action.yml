@@ -38,11 +38,6 @@ runs:
         7z x -o./tools/ ./tools/love-${{ inputs.love_version }}-macos.zip
         mv -v ./tools/love.app ./tools/${{ inputs.product_name }}.app
         rm -rfv ./tools/${{ inputs.product_name }}.app/Contents/Resources/*.icns
-    - name: Remove macOS code signature
-      if: runner.os == 'macOS'
-      shell: bash
-      run: |
-        codesign --remove-signature --deep ./tools/${{ inputs.product_name }}.app
     - name: Copy .love game
       shell: bash
       run: cp -v ./${{ inputs.output_folder }}/*.love ./tools/${{ inputs.product_name }}.app/Contents/Resources/${{ inputs.product_name }}.love
@@ -195,9 +190,11 @@ runs:
     - name: Create macOS .zip of .app
       shell: bash
       run: |
-        mkdir -p ${{ inputs.output_folder }}/app/${{ inputs.product_name }}.app/
-        rsync -av --delete ./tools/${{ inputs.product_name }}.app/ ${{ inputs.output_folder }}/app/${{ inputs.product_name }}.app/
-        #zip -r -y -X ${{ inputs.output_folder }}/${{ inputs.product_name }}-${{ inputs.build_num }}-macOS.zip ./tools/${{ inputs.product_name }}.app
+        if command -v ditto >/dev/null 2>&1; then
+          ditto -c -k --keepParent ./tools/${{ inputs.product_name }}.app ${{ inputs.output_folder }}/${{ inputs.product_name }}-${{ inputs.build_num }}.app.zip
+        else
+          zip -ry --symlinks ${{ inputs.output_folder }}/${{ inputs.product_name }}-${{ inputs.build_num }}.app.zip ./tools/${{ inputs.product_name }}.app
+        fi
         tree ${{ inputs.output_folder }}
     - name: Create macOS .dmg of .app
       if: runner.os == 'macOS'
@@ -214,5 +211,6 @@ runs:
           --hide-extension "${{ inputs.product_name }}.app" \
           --app-drop-link 600 185 \
           --no-internet-enable \
+          --skip-jenkins \
           ${{ inputs.output_folder }}/${{ inputs.product_name }}-${{ inputs.build_num }}.dmg \
-          ${{ inputs.output_folder }}/app/${{ inputs.product_name }}.app/
+          ./tools/${{ inputs.product_name }}.app/
