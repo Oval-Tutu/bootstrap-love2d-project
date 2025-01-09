@@ -25,6 +25,7 @@ Inspired by and adapted from [LOVE VSCode Game Template](https://github.com/Keys
   - **`love` should be in your `PATH`**
 - `bash`
 - `7z`
+- `miniserve` (*optional ️for local testing of web builds*)
 
 ## Setup
 
@@ -120,7 +121,7 @@ The GitHub Actions workflow will automatically build and package the game for al
 - macOS
   - `.app` Bundle (*notarizing is not yet implemented*)
   - `.dmg` Disk Image (*notarizing is not yet implemented*)
-- Web (️🚧)
+- Web
 - Windows
   - win32 .zip
   - win64 .zip
@@ -203,3 +204,62 @@ Add these secrets to the GitHub repository settings:
 - `ANDROID_RELEASE_ALIAS`
 - `ANDROID_RELEASE_KEYSTORE_PASSWORD`
 - `ANDROID_RELEASE_KEY_PASSWORD`
+
+### Web
+
+The web build uses [love.js player](https://github.com/2dengine/love.js) from [2dengine](https://2dengine.com/).
+
+The love.js player needs to be delivered via a web server, **it will not work if you open `index.html` locally in a browser**.
+You need to set the correct [CORS policy via HTTP headers](https://developer.chrome.com/blog/enabling-shared-array-buffer/) for the game to work in the browser.
+Here are some examples of how to do that.
+
+#### Local Testing
+
+Use [`miniserve`](https://github.com/svenstaro/miniserve) to serve the web build of the game using the correct CORS policy.
+`tools/serve-web.sh` is a convenience script that does that. It take one argument which is the path to the zip file of the web build.
+
+```shell
+./tools/serve-web.sh builds/1/Template-25.009.0930_web/Template-25.009.0930_web.zip
+```
+
+Then open `http://localhost:1337` in your browser.
+
+#### Self-Hosting
+
+**apache**
+
+```apache
+<IfModule mod_headers.c>
+  Header set Cross-Origin-Opener-Policy "same-origin"
+  Header set Cross-Origin-Embedder-Policy "require-corp"
+</IfModule>
+<IfModule mod_mime.c>
+  AddType application/wasm wasm
+</IfModule>
+```
+
+**caddy**
+
+```
+example.com {
+    header {
+        Cross-Origin-Opener-Policy "same-origin"
+        Cross-Origin-Embedder-Policy "require-corp"
+        Set-Cookie "Path=/; HttpOnly; Secure"
+    }
+    # ... rest of your site configuration
+}
+```
+
+**nginx**
+
+```nginx
+add_header Cross-Origin-Opener-Policy "same-origin";
+add_header Cross-Origin-Embedder-Policy "require-corp";
+add_header Set-Cookie "Path=/; HttpOnly; Secure";
+```
+
+#### Itch.io
+
+On [itch.io](https://itch.io/), the required HTTP headers are disabled by default, but they provide experimental support for enabling them.
+Learn how to [enable SharedArrayBuffer support on Itch.io](https://itch.io/t/2025776/experimental-sharedarraybuffer-support).

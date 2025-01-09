@@ -25,9 +25,11 @@
             act
             curl
             luajit
+            miniserve
             nodejs_20
             p7zip
             tree
+            unzip
             xmlstarlet
             zip
           ] ++ pkgs.lib.optionals (!pkgs.stdenv.isDarwin) [
