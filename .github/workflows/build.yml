@@ -409,10 +409,11 @@ jobs:
           curl -fsSL --retry 5 --retry-delay 15 --connect-timeout 30 --max-time 300 https://github.com/2dengine/love.js/archive/refs/heads/main.zip -o ./tools/love.js.zip || exit 1
           unzip -q ./tools/love.js.zip -d ./tools/
           sed -i "s/<title>löve.js<\/title>/<title>${PRODUCT_NAME}<\/title>/" ./tools/love.js-main/index.html
-          sed -i "s/<base href=\"\/play\/\">/<base href=\"\/\">/" ./tools/love.js-main/index.html
-          sed -i "s/player.js/player.js?g=game.love\&c=1/" ./tools/love.js-main/index.html
+          sed -i '/<base href="\/play\/">$/d' ./tools/love.js-main/index.html
+          sed -i "s/player.js/player.js?g=game.love/" ./tools/love.js-main/index.html
+          convert ./resources/icon.png -define icon:auto-resize="256,128,96,64,48,32,24,16" ./tools/love.js-main/favicon.ico
           mkdir -p ${OUTPUT_FOLDER}/${PRODUCT_NAME}-${BUILD_NUM}_web
-          rsync -a --exclude='*.git*' --exclude='*.md' --exclude='*.txt' \
+          rsync -a --exclude='.htaccess' --exclude='*.git*' --exclude='*.md' --exclude='*.txt' \
             ./tools/love.js-main/ \
             ${OUTPUT_FOLDER}/${PRODUCT_NAME}-${BUILD_NUM}_web/
           cp -v ${OUTPUT_FOLDER}/${PRODUCT_NAME}.love ${OUTPUT_FOLDER}/${PRODUCT_NAME}-${BUILD_NUM}_web/game.love
