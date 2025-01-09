@@ -1,5 +1,6 @@
 function love.load()
   love.graphics.setFont(love.graphics.newFont(42))
+  love.mouse.setVisible(false)
   x, y = 0, 0
 end
 
