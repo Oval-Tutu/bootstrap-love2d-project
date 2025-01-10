@@ -641,20 +641,12 @@ jobs:
           product_name: ${{ env.PRODUCT_NAME }}
           product_version: ${{ env.PRODUCT_VERSION }}
           output_folder: ${{ env.OUTPUT_FOLDER }}
-      - name: Upload iOS logs artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_iOS_logs
-          path: |
-            ${{ env.OUTPUT_FOLDER }}/DistributionSummary.plist
-            ${{ env.OUTPUT_FOLDER }}/ExportOptions.plist
-            ${{ env.OUTPUT_FOLDER }}/Packaging.log
       - name: Upload iOS artifact
         if: ${{ needs.configure.outputs.build_type == 'dev' }}
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.xcarchive
-          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.xcarchive
+          name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.ipa
+          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.ipa
       - name: Upload iOS release
         if: ${{ needs.configure.outputs.build_type == 'release' }}
         uses: actions/upload-release-asset@v1
@@ -662,9 +654,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.configure.outputs.upload_url }}
-          asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.xcarchive
-          asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PROJECT_VERSION }}.xcarchive
-          asset_content_type: application/x-xcode-archive
+          asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}.ipa
+          asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.ipa
+          asset_content_type: application/octet-stream
   summary:
     name: Build parameters
     needs: [configure]

@@ -149,6 +149,15 @@ runs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
             OTHER_CFLAGS="-Wno-everything"
+    - name: Export iOS .ipa
+      shell: bash
+      run: |
+        # This is a poor emulation of the Xcode export process
+        cd ${{ inputs.output_folder}}
+        mkdir Payload
+        cp -r ${{ inputs.product_name }}.xcarchive/Products/Applications/${{ inputs.product_name }}.app Payload/
+        zip -r ${{ inputs.product_name }}.ipa Payload
+        rm -rf Payload
     - name: Validate iOS app
       shell: bash
       run: |
