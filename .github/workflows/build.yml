@@ -622,6 +622,8 @@ jobs:
         uses: ./.github/actions/get-env
         with:
           env_file: game/product.env
+      - name: Install tools
+        uses: ./.github/actions/install-tools
       - name: Build LOVE package
         uses: ./.github/actions/build-love
         with:
