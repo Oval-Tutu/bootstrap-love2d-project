@@ -114,7 +114,7 @@ The GitHub Actions workflow will automatically build and package the game for al
 - Android
   - `.apk` debug and release builds for testing
   - `.aab` release build for the Play Store
-- iOS (🚧)
+- iOS (*exporting to .ipa with notarization is not yet implemented*)
 - Linux
   - AppImage
   - Tarball
