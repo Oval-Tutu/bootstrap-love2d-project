@@ -1,0 +1,162 @@
+# https://github.com/love2d/love-apple-dependencies
+name: Build iOS
+description: Build a iOS ipa
+inputs:
+  apple_version_code:
+    description: The version code of the iOS app
+    required: true
+  build_num:
+    description: The build number of the iOS app
+    required: true
+  love_version:
+    description: The version of LÖVE to use
+    required: true
+  product_company:
+    description: The organisation who created the game
+    required: true
+  product_copyright:
+    description: The product copyright of the game
+    required: true
+  product_id:
+    description: The product ID of the game
+    required: true
+  product_name:
+    description: The product name of the game
+    required: true
+  product_version:
+    description: The product version of the game
+    required: true
+  output_folder:
+    description: The folder in which the generated .love file will be placed
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Checkout Love
+      uses: actions/checkout@v4
+      with:
+        path: ./tools/love
+        ref: ${{ inputs.love_version }}
+        repository: love2d/love
+        submodules: recursive
+        fetch-depth: 1
+    - name: Checkout iOS Framework SDK
+      uses: actions/checkout@v4
+      with:
+        path: ./tools/love-apple-dependencies
+        ref: ${{ inputs.love_version }}
+        repository: love2d/love-apple-dependencies
+        submodules: recursive
+        fetch-depth: 1
+    - name: Combine LOVE and iOS Framework SDK
+      shell: bash
+      run: |
+        mv -v ./tools/love-apple-dependencies/iOS/libraries ./tools/love/platform/xcode/ios
+        cp -v ./${{ inputs.output_folder }}/${{ inputs.product_name }}.love ./tools/love/platform/xcode/game.love
+    - name: Create iOS icons
+      shell: bash
+      run: |
+        tree ./tools/love
+        rm -fv ./tools/love/platform/xcode/Images.xcassets/iOS\ AppIcon.appiconset/*.png
+        sips -z 1024 1024 ./resources/icon.png --out ./tools/love/platform/xcode/Images.xcassets/iOS\ AppIcon.appiconset/icon-1024pt@1x.png
+        sips -z 29 29 ./resources/icon.png --out ./tools/love/platform/xcode/Images.xcassets/iOS\ AppIcon.appiconset/icon-29pt@1x.png
+        sips -z 58 58 ./resources/icon.png --out ./tools/love/platform/xcode/Images.xcassets/iOS\ AppIcon.appiconset/icon-29pt@2x.png
+        sips -z 87 87 ./resources/icon.png --out ./tools/love/platform/xcode/Images.xcassets/iOS\ AppIcon.appiconset/icon-29pt@3x.png
+        sips -z 40 ./resources/icon.png --out ./tools/love/platform/xcode/Images.xcassets/iOS\ AppIcon.appiconset/icon-40pt@1x.png
+        sips -z 80 80 ./resources/icon.png --out ./tools/love/platform/xcode/Images.xcassets/iOS\ AppIcon.appiconset/icon-40pt@2x.png
+        sips -z 120 120 ./resources/icon.png --out ./tools/love/platform/xcode/Images.xcassets/iOS\ AppIcon.appiconset/icon-40pt@3x.png
+        sips -z 120 120 ./resources/icon.png --out ./tools/love/platform/xcode/Images.xcassets/iOS\ AppIcon.appiconset/icon-60pt@2x.png
+        sips -z 180 180 ./resources/icon.png --out ./tools/love/platform/xcode/Images.xcassets/iOS\ AppIcon.appiconset/icon-60pt@3x.png
+        sips -z 76 76 ./resources/icon.png --out ./tools/love/platform/xcode/Images.xcassets/iOS\ AppIcon.appiconset/icon-76pt@1x.png
+        sips -z 152 152 ./resources/icon.png --out ./tools/love/platform/xcode/Images.xcassets/iOS\ AppIcon.appiconset/icon-76pt@2x.png
+        sips -z 167 167 ./resources/icon.png --out ./tools/love/platform/xcode/Images.xcassets/iOS\ AppIcon.appiconset/icon-83.5pt@2x.png
+    - name: Update Plist
+      shell: bash
+      run: |
+        PLIST_FILE="./tools/love/platform/xcode/ios/love-ios.plist"
+        plutil -replace CFBundleName -string "${{ inputs.product_name }}" "$PLIST_FILE"
+        plutil -replace CFBundleDisplayName -string "${{ inputs.product_name }}" "$PLIST_FILE"
+        plutil -replace CFBundleIdentifier -string "${{ inputs.product_id }}" "$PLIST_FILE"
+        plutil -replace CFBundleExecutable -string "${{ inputs.product_name }}" "$PLIST_FILE"
+        plutil -replace CFBundleShortVersionString -string "${{ inputs.apple_version_code }}" "$PLIST_FILE"
+        plutil -replace CFBundleVersion -string "${{ inputs.product_version }}" "$PLIST_FILE"
+        plutil -replace ITSAppUsesNonExemptEncryption -bool false "$PLIST_FILE"
+        plutil -replace NSHumanReadableCopyright -string "${{ inputs.product_copyright }}" "$PLIST_FILE"
+        plutil -replace UIRequiresFullScreen -bool true "$PLIST_FILE"
+        plutil -replace UIStatusBarHidden -bool true "$PLIST_FILE"
+        plutil -remove CFBundleDocumentTypes "$PLIST_FILE" || true
+        plutil -remove UTExportedTypeDeclarations "$PLIST_FILE" || true
+        cat "$PLIST_FILE"
+    - name: Update Project
+      shell: bash
+      run: |
+        PROJECT_FILE="./tools/love/platform/xcode/love.xcodeproj/project.pbxproj"
+        sed -i.bak 's/PRODUCT_BUNDLE_IDENTIFIER = org\.love2d\.love/PRODUCT_BUNDLE_IDENTIFIER = ${{ inputs.product_id }}/g' "$PROJECT_FILE"
+        sed -i.bak 's/PRODUCT_NAME = love/PRODUCT_NAME = ${{ inputs.product_name }}/g' "$PROJECT_FILE"
+        sed -i.bak 's/path = love\.app/path = ${{ inputs.product_name }}\.app/g' "$PROJECT_FILE"
+        sed -i.bak 's/productName = love/productName = ${{ inputs.product_name }}/g' "$PROJECT_FILE"
+        sed -i.bak 's/name = love/name = ${{ inputs.product_name }}/g' "$PROJECT_FILE"
+        sed -i.bak 's/MARKETING_VERSION = ${{ inputs.love_version}}/MARKETING_VERSION = ${{ inputs.product_version }}/g' "$PROJECT_FILE"
+        cat "$PROJECT_FILE"
+    - name: Update Resources to include game.love
+      shell: bash
+      run: |
+        npm i xcode
+
+        cat <<EOT >> update.js
+        const fs = require('fs');
+        const xcode = require('xcode');
+        const lovePbxprojPath = './tools/love/platform/xcode/love.xcodeproj/project.pbxproj';
+        const loveProject = xcode.project(lovePbxprojPath).parseSync();
+        const loveTarget = 'love-ios'
+        loveProject.addResourceFile(
+            './game.love',
+            {target: loveProject.findTargetKey('"' + loveTarget + '"')},
+            loveProject.findPBXGroupKey({name: 'Resources'})
+        );
+        fs.writeFileSync(lovePbxprojPath, loveProject.writeSync());
+        console.info('Project info updated.');
+        EOT
+        node update.js
+    - name: Build iOS app
+      shell: bash
+      run: |
+        if [ ! -d "/Applications/Xcode.app/Contents/Developer" ]; then
+          echo "ERROR! Xcode not found"
+          echo "  sudo xcode-select --install"
+          echo "  sudo xcodebuild -runFirstLaunch"
+          echo "  sudo xcode-select --switch /Applications/Xcode.app"
+          echo "  sudo xcodebuild -downloadPlatform iOS"
+          exit 1
+        fi
+        export DEVELOPER_DIR="/Applications/Xcode.app/Contents/Developer"
+        export PATH="${DEVELOPER_DIR}/usr/bin:$PATH"
+
+        # Clear the environment to avoid any potential conflicts
+        # Mostly to make sure things work via act
+        env -i \
+          DEVELOPER_DIR="/Applications/Xcode.app/Contents/Developer" \
+          PATH="${DEVELOPER_DIR}/usr/bin" \
+          xcodebuild clean archive \
+            -project ./tools/love/platform/xcode/love.xcodeproj \
+            -scheme love-ios \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "${{ inputs.output_folder }}/${{ inputs.product_name }}.xcarchive" \
+            IPHONEOS_DEPLOYMENT_TARGET=12.0 \
+            PRODUCT_BUNDLE_IDENTIFIER="${{ inputs.product_id }}" \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            OTHER_CFLAGS="-Wno-everything"
+    - name: Validate iOS app
+      shell: bash
+      run: |
+        md5sum ${{ inputs.output_folder}}/${{ inputs.product_name }}.love
+        md5sum ${{ inputs.output_folder}}//${{ inputs.product_name }}.xcarchive/Products/Applications/${{ inputs.product_name }}.app/game.love
+        plutil -lint ${{ inputs.output_folder}}/${{ inputs.product_name }}.xcarchive/Info.plist
+        plutil -p ${{ inputs.output_folder}}/${{ inputs.product_name }}.xcarchive/Info.plist
+        plutil -lint ${{ inputs.output_folder}}/${{ inputs.product_name }}.xcarchive/Products/Applications/${{ inputs.product_name }}.app/Info.plist
+        plutil -p ${{ inputs.output_folder}}/${{ inputs.product_name }}.xcarchive/Products/Applications/${{ inputs.product_name }}.app/Info.plist
+        # Summary
+        tree ${{ inputs.output_folder}}

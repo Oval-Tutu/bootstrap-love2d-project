@@ -627,37 +627,18 @@ jobs:
         with:
           output_folder: ${{ env.OUTPUT_FOLDER }}
           product_name: ${{ env.PRODUCT_NAME }}
-      - name: Convert iOS icns
-        run: |
-          mkdir -p ${{ env.OUTPUT_FOLDER }}/icns
-          sips -z 180 180   ./resources/icon.png --out ${{ env.OUTPUT_FOLDER }}/icns/icon-60@3x.png
-          sips -z 120 120   ./resources/icon.png --out ${{ env.OUTPUT_FOLDER }}/icns/icon-60@2x.png
-          sips -z 167 167   ./resources/icon.png --out ${{ env.OUTPUT_FOLDER }}/icns/icon-83.5@2x.png
-          sips -z 152 152   ./resources/icon.png --out ${{ env.OUTPUT_FOLDER }}/icns/icon-76@2x.png
-          sips -z 1024 1024 ./resources/icon.png --out ${{ env.OUTPUT_FOLDER }}/icns/icon-1024.png
-      - name: Build iOS packages
-        id: build-packages
-        uses: love-actions/love-actions-ios@v1
+      - name: Build iOS
+        uses: ./.github/actions/build-ios
         with:
-          love-package: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love
-          output-folder: ${{ env.OUTPUT_FOLDER }}
-          product-name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}
-          app-name: ${{ env.PRODUCT_NAME }}
-          #apple-development-base64: ${{ secrets.APPLE_CERT_APPLE_DEVELOPMENT_BASE64 }}
-          #apple-development-password: ${{ secrets.APPLE_CERT_APPLE_DEVELOPMENT_PWD }}
-          #api-key: ${{ secrets.APPLE_API_KEY }}
-          #api-key-id: ${{ secrets.APPLE_API_KEY_ID }}
-          #api-issuer-id: ${{ secrets.APPLE_API_ISSUER_ID }}
-          #team-id: ${{ secrets.APPLE_DEVELOPER_TEAM_ID }}
-          #apple-id: ${{ secrets.APPLE_APPLE_ID }}
-          bundle-id: ${{ env.PRODUCT_ID }}
-          copyright: ${{ env.PRODUCT_COPYRIGHT }}
-          icon-path: ${{ env.OUTPUT_FOLDER }}/icns
-          #libs-path: ./ColdClear/arm64/
-          #love-patch: ./.github/build/iOS/love.patch
-          external-test: ${{ !startsWith(github.ref, 'refs/tags/') }}
-          store-release: ${{ startsWith(github.ref, 'refs/tags/') }}
-          version-string: ${{ needs.configure.outputs.apple_version_code }}
+          apple_version_code: ${{ needs.configure.outputs.apple_version_code }}
+          build_num: ${{ needs.configure.outputs.build_num }}
+          love_version: ${{ env.LOVE_VERSION }}
+          product_company: ${{ env.PRODUCT_COMPANY }}
+          product_copyright: ${{ env.PRODUCT_COPYRIGHT }}
+          product_id: ${{ env.PRODUCT_ID }}
+          product_name: ${{ env.PRODUCT_NAME }}
+          product_version: ${{ env.PRODUCT_VERSION }}
+          output_folder: ${{ env.OUTPUT_FOLDER }}
       - name: Upload iOS logs artifact
         uses: actions/upload-artifact@v4
         with:
@@ -670,8 +651,8 @@ jobs:
         if: ${{ needs.configure.outputs.build_type == 'dev' }}
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_iOS_ipa
-          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.ipa
+          name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.xcarchive
+          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.xcarchive
       - name: Upload iOS release
         if: ${{ needs.configure.outputs.build_type == 'release' }}
         uses: actions/upload-release-asset@v1
@@ -679,9 +660,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.configure.outputs.upload_url }}
-          asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.ipa
-          asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}.ipa
-          asset_content_type: application/octet-stream
+          asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.xcarchive
+          asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PROJECT_VERSION }}.xcarchive
+          asset_content_type: application/x-xcode-archive
   summary:
     name: Build parameters
     needs: [configure]
