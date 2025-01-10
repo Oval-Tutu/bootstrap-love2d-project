@@ -25,6 +25,7 @@ runs:
         elif [ "${RUNNER_OS}" == "macOS" ]; then
           brew install \
             create-dmg \
+            md5sha1sum \
             p7zip \
             tree \
             zip
