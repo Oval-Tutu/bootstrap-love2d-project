@@ -20,6 +20,42 @@ function love.load()
   x, y = 0, 0
 end
 
+function drawButtons(windowWidth, windowHeight, font)
+  -- Button settings
+  local buttonWidth = 200
+  local buttonHeight = 60
+  local buttonSpacing = 20
+  local bottomPadding = 50
+  local textPadding = 10
+
+  -- Calculate positions
+  local spanishX = (windowWidth / 2) - buttonWidth - (buttonSpacing / 2)
+  local englishX = (windowWidth / 2) + (buttonSpacing / 2)
+  local buttonY = windowHeight - bottomPadding - buttonHeight
+
+  -- Draw Spanish button
+  love.graphics.setColor(1, 1, 1)
+  love.graphics.rectangle('fill', spanishX, buttonY, buttonWidth, buttonHeight)
+  love.graphics.setColor(0, 0, 0)
+  love.graphics.rectangle('line', spanishX, buttonY, buttonWidth, buttonHeight)
+  local spanishText = "Spanish"
+  local textWidth = font:getWidth(spanishText)
+  love.graphics.print(spanishText,
+    spanishX + (buttonWidth - textWidth)/2,
+    buttonY + textPadding)
+
+  -- Draw English button
+  love.graphics.setColor(1, 1, 1)
+  love.graphics.rectangle('fill', englishX, buttonY, buttonWidth, buttonHeight)
+  love.graphics.setColor(0, 0, 0)
+  love.graphics.rectangle('line', englishX, buttonY, buttonWidth, buttonHeight)
+  local englishText = "English"
+  textWidth = font:getWidth(englishText)
+  love.graphics.print(englishText,
+    englishX + (buttonWidth - textWidth)/2,
+    buttonY + textPadding)
+end
+
 function love.draw()
   function drawEye(eyeX, eyeY, isWinking)
     local eyeSize = 128
@@ -93,6 +129,7 @@ function love.draw()
   -- Draw eyes
   drawEye(leftEyeX, centerY, leftEyeWinking)
   drawEye(rightEyeX, centerY, rightEyeWinking)
+  --drawButtons(windowWidth, windowHeight, font)
 
   if (shakeX + shakeY) ~= 0 then
     love.graphics.setColor(1, 0.5, 0) -- Orange color
