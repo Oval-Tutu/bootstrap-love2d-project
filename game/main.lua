@@ -1,3 +1,5 @@
+local i18n = require 'lib.smiti18n'
+i18n.loadFile('i18n/en.lua')
 function love.load()
   love.graphics.setFont(love.graphics.newFont(42))
   love.mouse.setVisible(false)
