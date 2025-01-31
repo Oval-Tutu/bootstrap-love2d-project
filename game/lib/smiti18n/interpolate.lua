@@ -55,13 +55,7 @@ local function escapePercentages(string)
 end
 
 local function unescapePercentages(string)
-  return string:gsub("(%%%%)(.?)", function(_, char)
-    if FORMAT_CHARS[char] then
-      return "%" .. char
-    else
-      return "%%" .. char
-    end
-  end)
+  return string:gsub("(%%%%)(.?)", "%%")
 end
 
 local function interpolateString(pattern, variables)
