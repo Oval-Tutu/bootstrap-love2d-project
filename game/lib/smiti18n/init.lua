@@ -2,7 +2,8 @@
 local unpack = unpack or table.unpack -- lua 5.2 compat
 local i18n = {}
 
-local store
+local store = {} -- translations
+local formatConfigs = {} -- format configurations
 local locale
 local customPluralizeFunction
 local defaultLocale = 'en'
@@ -10,22 +11,29 @@ local fallbackLocale = defaultLocale
 
 local currentFilePath = (...):gsub("%.init$","")
 
+local format      = require(currentFilePath .. '.format')
 local plural      = require(currentFilePath .. '.plural')
 local interpolate = require(currentFilePath .. '.interpolate')
 local variants    = require(currentFilePath .. '.variants')
 local version     = require(currentFilePath .. '.version')
 
-i18n.plural, i18n.interpolate, i18n.variants, i18n.version, i18n._VERSION =
-  plural, interpolate, variants, version, version
+i18n.format = format
+i18n.plural = plural
+i18n.interpolate = interpolate
+i18n.variants = variants
+i18n.version = version
+i18n._VERSION = version
 
 -- private stuff
 
+-- Pre-compile frequently used patterns
+local DOTPLIT_PATTERN = "[^%.]+"
 local function dotSplit(str)
-  local fields, length = {},0
-    str:gsub("[^%.]+", function(c)
+  local fields, length = {}, 0
+  for part in str:gmatch(DOTPLIT_PATTERN) do
     length = length + 1
-    fields[length] = c
-  end)
+    fields[length] = part
+  end
   return fields, length
 end
 
@@ -75,12 +83,6 @@ local function assertFunctionOrNil(functionName, paramName, value)
 end
 
 local function defaultPluralizeFunction(loc, count)
-  if not loc then
-    loc = i18n.getLocale()
-    if type(loc) == "table" then
-      loc = loc[1]
-    end
-  end
   return plural.get(variants.root(loc), count)
 end
 
@@ -115,15 +117,9 @@ local function treatNode(node, loc, data)
     return interpolate(node, data)
   elseif isPluralTable(node) then
     -- Make sure that count has a default of 1
-    local newdata
+    local newdata = data
     if data.count == nil then
-        newdata = {}
-        for key, value in pairs(data) do
-            newdata[key] = value
-        end
-        newdata.count = 1
-    else
-        newdata = data
+      newdata = {count = 1}  -- Simplified - no need to copy other values
     end
     return interpolate(pluralize(node, loc, newdata), newdata)
   end
@@ -131,6 +127,16 @@ local function treatNode(node, loc, data)
 end
 
 local function recursiveLoad(currentContext, data)
+  -- Extract _formats before processing translations
+  if data._formats then
+    if currentContext then
+      formatConfigs[currentContext] = data._formats
+      format.configure(data._formats)  -- Configure format module immediately
+    end
+    data._formats = nil
+  end
+
+  -- Process translations
   local composedKey
   for k,v in pairs(data) do
     composedKey = (currentContext and (currentContext .. '.') or "") .. tostring(k)
@@ -156,11 +162,35 @@ local function localizedTranslate(key, loc, data)
   return treatNode(node, loc, data)
 end
 
-local function concat(arr1, arr2)
-  for i = 1, #arr2 do
-    arr1[#arr1 + i] = arr2[i]
+local function appendLocales(primaryLocales, fallbackLocales)
+  local primaryLen = #primaryLocales
+  local fallbackLen = #fallbackLocales
+  -- If both tables are empty, return am empty table
+  if primaryLen == 0 and fallbackLen == 0 then
+    return {}
   end
-  return arr1
+
+  -- If primary is empty, return fallback
+  if primaryLen == 0 then
+    return fallbackLocales
+  end
+
+  -- If fallback is empty, return primary
+  if fallbackLen == 0 then
+    return primaryLocales
+  end
+
+  local result = {}
+
+  for i = 1, primaryLen do
+      result[i] = primaryLocales[i]
+  end
+
+  for i = 1, fallbackLen do
+      result[primaryLen + i] = fallbackLocales[i]
+  end
+
+  return result
 end
 
 -- public interface
@@ -192,9 +222,9 @@ function i18n.translate(key, data)
     locales = {locale}
   end
   if isPresent(data.locale) then
-    usedLocales = concat({data.locale}, locales)
+    usedLocales = appendLocales({data.locale}, locales)
   else
-    usedLocales = concat({}, locales)
+    usedLocales = appendLocales({}, locales)
   end
 
   table.insert(usedLocales, fallbackLocale)
@@ -214,6 +244,10 @@ function i18n.setLocale(newLocale, newPluralizeFunction)
   assertFunctionOrNil('setLocale', 'newPluralizeFunction', newPluralizeFunction)
   locale = newLocale
   customPluralizeFunction = newPluralizeFunction
+
+  -- Only use format config if it exists for exact locale
+  local loc = type(newLocale) == 'table' and newLocale[1] or newLocale
+  format.configure(formatConfigs[loc])  -- Will use ISO defaults if nil
 end
 
 function i18n.setFallbackLocale(newFallbackLocale)
@@ -227,13 +261,6 @@ end
 
 function i18n.getLocale()
   return locale
-end
-
-function i18n.reset()
-  store = {}
-  plural.reset()
-  i18n.setLocale(defaultLocale)
-  i18n.setFallbackLocale(defaultLocale)
 end
 
 function i18n.load(data)
@@ -269,10 +296,52 @@ function i18n.loadFile(path)
   end
 
   i18n.load(data)
- end
+end
+
+-- format configuration setters
+local function getFormatConfig()
+  local loc = locale
+  if type(loc) == 'table' then
+    loc = loc[1]
+  end
+
+  -- Only return exact match, no fallback to other locales
+  return formatConfigs[loc]
+end
 
 setmetatable(i18n, {__call = function(_, ...) return i18n.translate(...) end})
 
-i18n.reset()
+function i18n.reset()
+  store = {}
+  formatConfigs = {}
+  plural.reset()
+  format.configure(nil)  -- Reset to defaults
+  i18n.setLocale(defaultLocale)
+  i18n.setFallbackLocale(defaultLocale)
+end
+
+-- Format function delegations
+function i18n.formatNumber(number)
+  local cfg = getFormatConfig() or {}
+  return format.number(number, cfg.number)
+end
+
+function i18n.formatPrice(amount)
+  local cfg = getFormatConfig() or {}
+  return format.price(amount, cfg.currency)
+end
+
+function i18n.formatDate(pattern, date)
+  local cfg = getFormatConfig() or {}
+  return format.dateTime(pattern, date, cfg.date_time)
+end
+
+function i18n.configure(formats)
+  format.configure(formats)
+end
+
+function i18n.getConfig()
+  return format.get_config()
+end
 
 return i18n
