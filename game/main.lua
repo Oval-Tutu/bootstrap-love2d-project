@@ -1,5 +1,6 @@
 local i18n = require 'lib.smiti18n'
-i18n.loadFile('i18n/en.lua')
+i18n.loadFile('locales/en.lua')
+i18n.setLocale('en')
 
 -- Add at top of file after require
 local shakeX, shakeY = 0, 0
