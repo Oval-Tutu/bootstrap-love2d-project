@@ -1,4 +1,8 @@
 local i18n = require 'lib.smiti18n'
+local Benchmark = require('src.benchmark')
+local benchmark
+
+
 i18n.loadFile('locales/en.lua')
 i18n.setLocale('en')
 
@@ -16,6 +20,8 @@ function isMouseOverEye(eyeX, eyeY)
 end
 
 function love.load()
+  -- Initialize benchmark system
+  benchmark = Benchmark:new()
   love.graphics.setFont(love.graphics.newFont(42))
   love.mouse.setVisible(false)
   x, y = 0, 0
@@ -182,12 +188,21 @@ function love.draw()
   love.graphics.print(message, centerX, 32)
 
   love.graphics.pop() -- Remove shake translation
-  -- Display FPS in the top left corner
-  love.graphics.setColor(0, 1, 0)
-  love.graphics.print(love.timer.getFPS(), 8, 8)
+  -- Draw benchmark overlay last
+  benchmark:draw()
 end
 
 function love.update(dt)
+  benchmark:handleController(player)
+  benchmark:sample()
   -- Gets the x- and y-position of the mouse.
   x, y = love.mouse.getPosition()
+end
+
+function love.keypressed(key)
+  if key == 'escape' then
+    love.event.quit()
+  else
+    benchmark:handleKeyboard(key)
+  end
 end
