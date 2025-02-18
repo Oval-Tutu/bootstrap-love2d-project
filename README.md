@@ -1,6 +1,6 @@
-# LÖVE Template for Visual Studio Code
+# Bootstrap LÖVE Projects
 
-A pre-configured Visual Studio Code template for [LÖVE](https://love2d.org/) including GitHub Actions for automated builds.
+A pre-configured template for [LÖVE](https://love2d.org/) including GitHub Actions for automated builds.
 Inspired by and adapted from [LOVE VSCode Game Template](https://github.com/Keyslam/LOVE-VSCode-Game-Template) and [LÖVE Actions](https://github.com/love-actions).
 
 ## Features
@@ -30,7 +30,7 @@ Inspired by and adapted from [LOVE VSCode Game Template](https://github.com/Keys
 ## Setup
 
 - Use this template to [create a new repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-repository-from-a-template) for your game, then clone that repository locally.
-- Open the `Workspace.code-workspace` file with Visual Studio Code.
+- Open the `Workspace.code-workspace` file with [Visual Studio Code](https://code.visualstudio.com/) or [VSCodium](https://vscodium.com/)
   - You will be prompted that there are recommended extensions.
     - Click 'Install'
   - If this does not happen, install:
@@ -41,12 +41,23 @@ Inspired by and adapted from [LOVE VSCode Game Template](https://github.com/Keys
     - [GitHub Local Actions](https://marketplace.visualstudio.com/items?itemName=SanjulaGanepola.github-local-actions) (*optional*)
     - [Shader languages support](https://marketplace.visualstudio.com/items?itemName=slevesque.shader) (*optional*)
 - Configure `game/product.env` and `game/conf.lua` with the settings specific to your game.
-  - **Make sure that `PRODUCT_UUID` is changed using `uuidgen`**.
+  - **Make sure that `PRODUCT_UUID` is changed using `uuidgen`** or the [UUID Generator](https://www.uuidgenerator.net/)
 - Replace `resources/icon.png` with your game's high-resolution icon.
+- Add the following secrets to your GitHub repository if you [build for Android](https://github.com/Oval-Tutu/bootstrap-love2d-project?tab=readme-ov-file#android):
+  - `ANDROID_DEBUG_SIGNINGKEY_BASE64`
+  - `ANDROID_DEBUG_ALIAS`
+  - `ANDROID_DEBUG_KEYSTORE_PASSWORD`
+  - `ANDROID_DEBUG_KEY_PASSWORD`
+  - `ANDROID_RELEASE_SIGNINGKEY_BASE64`
+  - `ANDROID_RELEASE_ALIAS`
+  - `ANDROID_RELEASE_KEYSTORE_PASSWORD`
+  - `ANDROID_RELEASE_KEY_PASSWORD`
+- Add the following secret to your GitHub repository if you want to publish to Itch.io:
+  - `BUTLER_API_KEY`
 
 ## Running
 
-- Press <kbd>Alt</kbd> + <kbd>L</kbd> or <kbd>Ctrl</kbd> + <kbd>F5</kbd> to **Run** the game.
+- Press <kbd>Ctrl</kbd> + <kbd>F5</kbd> to **Run** the game.
 - Press <kbd>F5</kbd> to **Debug** the game.
   - In debug mode you can use breakpoints and inspect variables.
   - This does have some performance impact though.
@@ -59,7 +70,60 @@ Doubles up as a poor man's backup system.
 
 - Press <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>B</kbd> to **Build** the game.
 
-# Releasing
+## Configuring
+
+The game and build settings are configured using `game/product.env`.
+The most important settings to change for your game:
+
+- `PRODUCT_NAME` - The name of your game
+- `PRODUCT_ID` - Unique identifier in reverse domain notation. **Can not contain spaces or hyphens**.
+- `PRODUCT_UUID` - Generate new UUID using `uuidgen` command or the [UUID Generator](https://www.uuidgenerator.net/)
+- `PRODUCT_DESC` - Short description of your game
+- `PRODUCT_COPYRIGHT` - Copyright notice
+- `PRODUCT_COMPANY` - Your company/organization name
+- `PRODUCT_WEBSITE` - Your game or company website
+
+### Build Targets
+
+You can disable build targets by setting them to `"false"` if you don't need builds for certain platforms.
+
+```shell
+# LÖVE version to target (only 11.5 is supported)
+LOVE_VERSION="11.5"
+
+# Enable/disable microphone access
+AUDIO_MIC="false"
+
+# Android screen orientation (landscape/portrait)
+ANDROID_ORIENTATION="landscape"
+
+# Itch.io username for publishing
+ITCH_USER="ovaltutu"
+
+# Build output directory
+OUTPUT_FOLDER="./builds"
+
+# Game metadata
+PRODUCT_NAME="Template"
+PRODUCT_ID="com.ovaltutu.template"
+PRODUCT_DESC="A template game made with LÖVE"
+PRODUCT_COPYRIGHT="Copyright (c) 2025 Oval Tutu"
+PRODUCT_COMPANY="Oval Tutu"
+PRODUCT_WEBSITE="https://oval-tutu.com"
+PRODUCT_UUID="3e64d17c-8797-4382-921f-cf488b22073f"
+
+# Enable/disable build targets
+TARGET_ANDROID="true"
+TARGET_IOS="true"
+TARGET_LINUX_APPIMAGE="true"
+TARGET_LINUX_TARBALL="true"
+TARGET_MACOS="true"
+TARGET_WEB="true"
+TARGET_WINDOWS_ZIP="true"
+TARGET_WINDOWS_SFX="true"
+```
+
+## Releasing
 
 Make a new release by creating a version number git tag **without the `v` prefix**.
 
@@ -75,6 +139,29 @@ git push origin 1.0.0
 ```
 
 - **GitHub Actions**: The GitHub workflow will automatically create a release and upload packages for all the supported platforms as an assets.
+
+### Publishing
+
+On a full release (a tagged version), the GitHub Actions workflow will automatically publish the game artifacts for the enabled platforms to the GitHub releases page.
+You can download the artifacts from the releases page and manually upload them to the appropriate stores.
+But you can also automate this process for the following platforms:
+
+#### Itch.io
+
+The GitHub Actions workflow will automatically publish the game artifacts for *enabled platforms* to Itch.io if `BUTLER_API_KEY` secret and `ITCH_USER` are set.
+Get your API key from [Itch.io account](https://itch.io/user/settings/api-keys).
+`ITCH_USER` from `game/product.env` will be used as the username, and `PRODUCT_NAME` from `game/product.env` (converted to lowercase with spaces replaced with hyphens `-`) will be used as the game name.
+
+For example this template project would attempt to publish to `ovaltutu/Template`.
+
+Not every artifact will be published to Itch.io, as some platforms are not supported, and some artifacts are unsuitable for distribution on Itch.io:
+
+- Android .apk files will be published to Itch.io if `TARGET_ANDROID` is enabled.
+- Linux AppImage files will be published to Itch.io if `TARGET_LINUX_APPIMAGE` is enabled.
+- macOS .dmg files will be published to Itch.io if `TARGET_MACOS` is enabled.
+- Windows win64 self-extracting .exe files will be published to Itch.io if `TARGET_WINDOWS_SFX` is enabled.
+- Web artifacts will be published to Itch.io if `TARGET_WEB` is enabled.
+- Itch.io does not support iOS artifacts.
 
 ## Structure
 ```
@@ -109,12 +196,12 @@ The `.vscode` folder contains project specific configuration.
 
 ## GitHub Actions
 
-The GitHub Actions workflow will automatically build and package the game for all the supported platforms.
+The GitHub Actions workflow will automatically build and package the game for all the supported platforms that are enabled in `game/product.env` and upload them as assets to the GitHub releases page.
 
 - Android
   - `.apk` debug and release builds for testing
   - `.aab` release build for the Play Store
-- iOS (*exporting to .ipa with notarization is not yet implemented*)
+- iOS (*notarization is not yet implemented*)
 - Linux
   - AppImage
   - Tarball
@@ -129,15 +216,40 @@ The GitHub Actions workflow will automatically build and package the game for al
 
 ### Local GitHub Action via act
 
-In order to use the GitHub Actions locally, you'll need to install [act](https://nektosact.com/) and Podman or Docker.
+In order to use the GitHub Actions locally, you'll need to install [act](https://nektosact.com/) and [Podman](https://podman.io/) or [Docker](https://www.docker.com/).
 
-This template includes `.actrc` which will source GitHub secrets and enable the artifact server.
+This template includes `.actrc` which will source local secrets and expose as GiutHub secrets to `act`.
+
+The `.actrc` file configures how `act` runs GitHub Actions locally:
+
+```plaintext
+# Load GitHub secrets from this file
+--secret-file=$HOME/.config/act/secrets
+
+# Store build artifacts in the ./builds directory
+--artifact-server-path=./builds
+
+# Force container architecture to linux/amd64
+--container-architecture=linux/amd64
+
+# Disable automatic pulling of container images
+--pull=false
+```
+
+Key configuration explained:
+
+- `--secret-file` - Path to file containing GitHub secrets (API keys, signing keys etc.)
+- `--artifact-server-path` - Local directory where build artifacts will be stored
+- `--container-architecture` - Forces x86_64 container architecture for compatibility
+- `--pull` - Prevents automatic downloading of container images on each run
+
+Create the secrets file at `~/.config/act/secrets` with your GitHub repository secrets before running act.
 
 #### macOS
 
-- Install Podman Desktop or Docker Desktop.
-- Install Xcode: `xcode-select --install`
-- Install additional tools: `brew install act create-dmg tree`
+- Install [Podman Desktop](https://podman-desktop.io/) or [Docker Desktop](https://www.docker.com/products/docker-desktop/).
+- Install [Xcode](https://developer.apple.com/xcode/): `xcode-select --install`
+- Install additional tools via [Homebrew](https://brew.sh/): `brew install act create-dmg tree`
 
 ### Running the GitHub Actions locally
 
@@ -259,7 +371,7 @@ add_header Cross-Origin-Embedder-Policy "require-corp";
 add_header Set-Cookie "Path=/; HttpOnly; Secure";
 ```
 
-#### Itch.io
+#### Itch.io Web Player
 
 On [itch.io](https://itch.io/), the required HTTP headers are disabled by default, but they provide experimental support for enabling them.
 Learn how to [enable SharedArrayBuffer support on Itch.io](https://itch.io/t/2025776/experimental-sharedarraybuffer-support).
