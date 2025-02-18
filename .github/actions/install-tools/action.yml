@@ -26,8 +26,11 @@ runs:
           brew install \
             create-dmg \
             md5sha1sum \
-            p7zip \
             tree \
             zip
+          if [ "$ACT" == "true" ]; then
+            brew install \
+              p7zip
+          fi
         fi
 
