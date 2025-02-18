@@ -488,7 +488,6 @@ jobs:
           keyPassword: ${{ secrets.ANDROID_DEBUG_KEY_PASSWORD }}
           zipAlign: true
       - name: Sign Android release .apk
-        if: ${{ needs.configure.outputs.build_type == 'dev' }}
         id: sign-apk-release
         uses: kevin-david/zipalign-sign-android-release@v2
         env:
