@@ -14,11 +14,19 @@ runs:
           # Remove leading/trailing quotes if present
           cleaned_line=${line//\"/}
           echo "${cleaned_line}" >> $GITHUB_ENV
+          if [ "${cleaned_line}" == "AUDIO_MIC=true" ]; then
+            echo "ANDROID_RECORD=Record" >> $GITHUB_ENV
+          fi
+          if [ "${cleaned_line}" == "AUDIO_MIC=false" ]; then
+            echo "ANDROID_RECORD=NoRecord" >> $GITHUB_ENV
+          fi
+
+          # Convert PRODUCT_NAME to ITCH_GAME format only when processing PRODUCT_NAME
+          if [[ "${cleaned_line}" =~ ^PRODUCT_NAME= ]]; then
+            product_value=${cleaned_line#PRODUCT_NAME=}
+            echo "ITCH_GAME=$(echo ${product_value} | tr ' ' '-' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+          fi
         done < ${{ inputs.env_file }}
-        case ${AUDIO_MIC} in
-          "true") echo "ANDROID_RECORD=Record" >> $GITHUB_ENV;;
-          *) echo "ANDROID_RECORD=NoRecord" >> $GITHUB_ENV;;
-        esac
 inputs:
   env_file:
     description: The environment variables file

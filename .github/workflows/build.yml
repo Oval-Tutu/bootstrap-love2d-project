@@ -27,6 +27,8 @@ jobs:
       previous_tag: ${{ steps.set_build.outputs.previous_tag }}
       release_id: ${{ steps.create_release.outputs.id || '' }}
       upload_url: ${{ steps.create_release.outputs.upload_url || '' }}
+      itch_game: ${{ env.ITCH_GAME }}
+      itch_user: ${{ env.ITCH_USER }}
       target_android: ${{ env.TARGET_ANDROID }}
       target_ios: ${{ env.TARGET_IOS }}
       target_linux_appimage: ${{ env.TARGET_LINUX_APPIMAGE }}
