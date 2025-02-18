@@ -107,17 +107,23 @@ runs:
       with:
         cmdline-tools-version: ${{ inputs.android_cmdline_tools_version }}
         log-accepted-android-sdk-licenses: false
-    - name: Build Android .apks
+    - name: Build Android debug .apk
       if: ${{ inputs.build_type == 'dev' }}
       shell: bash
       run: |
         pushd ./tools/love-android
-          ./gradlew assembleNormal${{ inputs.android_record }}Debug assembleNormal${{ inputs.android_record }}Release
+          ./gradlew assembleNormal${{ inputs.android_record }}Debug
         popd
-        mkdir -p ${{ inputs.output_folder }}/apk/{debug,release}
+        mkdir -p ${{ inputs.output_folder }}/apk/debug
         mv -v ./tools/love-android/app/build/outputs/apk/*/debug/app-normal-*-debug.apk ${{ inputs.output_folder }}/apk/debug/${{ inputs.product_name }}-${{ inputs.build_num }}-debug.apk
+    - name: Build Android release .apk
+      shell: bash
+      run: |
+        pushd ./tools/love-android
+          ./gradlew assembleNormal${{ inputs.android_record }}Release
+        popd
+        mkdir -p ${{ inputs.output_folder }}/apk/release
         mv -v ./tools/love-android/app/build/outputs/apk/*/release/app-normal-*-release-unsigned.apk ${{ inputs.output_folder }}/apk/release/${{ inputs.product_name }}-${{ inputs.build_num }}-release.apk
-        tree ${{ inputs.output_folder }}
     - name: Build Android .aab
       if: ${{ inputs.build_type == 'release' }}
       shell: bash
