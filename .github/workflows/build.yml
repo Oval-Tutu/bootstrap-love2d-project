@@ -291,17 +291,17 @@ jobs:
       - name: Create unversioned AppImage for itch.io
         if: ${{ needs.configure.outputs.build_type == 'release' && needs.configure.outputs.itch_user != '' }}
         run: |
-          cp -v ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.AppImage ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.AppImage
+          cp -v "${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.AppImage" "${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.AppImage"
       - name: Upload AppImage to itch.io
-        if: ${{ needs.configure.outputs.build_type == 'release' && needs.configure.outputs.itch_user != '' }}
-        uses: manleydev/butler-publish-itchio-action@master
-        env:
-          BUTLER_CREDENTIALS: ${{ secrets.BUTLER_API_KEY }}
-          CHANNEL: linux_appimage
-          ITCH_GAME: ${{ needs.configure.outputs.itch_game }}
-          ITCH_USER: ${{ needs.configure.outputs.itch_user }}
-          PACKAGE: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.AppImage
-          VERSION: ${{ env.PRODUCT_VERSION }}
+        if: ${{ needs.configure.outputs.build_type == 'release' }}
+        uses: ./.github/actions/publish-itch
+        with:
+          api-key: ${{ secrets.BUTLER_API_KEY }}
+          channel: linux_appimage
+          itch_game: ${{ needs.configure.outputs.itch_game }}
+          itch_user: ${{ needs.configure.outputs.itch_user }}
+          package: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.AppImage
+          version: ${{ env.PRODUCT_VERSION }}
 
   build-windows:
     if: ${{ needs.configure.outputs.target_windows_zip == 'true' || needs.configure.outputs.target_windows_sfx == 'true' }}
@@ -396,19 +396,19 @@ jobs:
           asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}.exe
           asset_content_type: application/x-msdownload
       - name: Create unversioned Windows SFX for itch.io
-        if: ${{ needs.configure.outputs.build_type == 'release' && needs.configure.outputs.itch_user != '' }}
+        if: ${{ needs.configure.outputs.build_type == 'release' }}
         run: |
-          cp -v ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.exe ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.exe
+          cp -v "${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.exe" "${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.exe"
       - name: Upload Windows SFX to itch.io
-        if: ${{ needs.configure.outputs.build_type == 'release' && needs.configure.outputs.target_windows_sfx == 'true' && needs.configure.outputs.itch_user != '' }}
-        uses: manleydev/butler-publish-itchio-action@master
-        env:
-          BUTLER_CREDENTIALS: ${{ secrets.BUTLER_API_KEY }}
-          CHANNEL: windows
-          ITCH_GAME: ${{ needs.configure.outputs.itch_game }}
-          ITCH_USER: ${{ needs.configure.outputs.itch_user }}
-          PACKAGE: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.exe
-          VERSION: ${{ env.PRODUCT_VERSION }}
+        if: ${{ needs.configure.outputs.build_type == 'release' && needs.configure.outputs.target_windows_sfx == 'true' }}
+        uses: ./.github/actions/publish-itch
+        with:
+          api-key: ${{ secrets.BUTLER_API_KEY }}
+          channel: windows
+          itch_game: ${{ needs.configure.outputs.itch_game }}
+          itch_user: ${{ needs.configure.outputs.itch_user }}
+          package: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.exe
+          version: ${{ env.PRODUCT_VERSION }}
 
   build-web:
     if: ${{ needs.configure.outputs.target_web == 'true' }}
@@ -442,20 +442,20 @@ jobs:
           sed -i '/<base href="\/play\/">$/d' ./tools/love.js-main/index.html
           sed -i "s/player.js/player.js?g=game.love/" ./tools/love.js-main/index.html
           convert ./resources/icon.png -define icon:auto-resize="256,128,96,64,48,32,24,16" ./tools/love.js-main/favicon.ico
-          mkdir -p ${OUTPUT_FOLDER}/${PRODUCT_NAME}-${BUILD_NUM}_web
+          mkdir -p ${OUTPUT_FOLDER}/${PRODUCT_NAME}-${BUILD_NUM}_html
           rsync -a --exclude='.htaccess' --exclude='*.git*' --exclude='*.md' --exclude='*.txt' \
             ./tools/love.js-main/ \
-            ${OUTPUT_FOLDER}/${PRODUCT_NAME}-${BUILD_NUM}_web/
-          cp -v ${OUTPUT_FOLDER}/${PRODUCT_NAME}.love ${OUTPUT_FOLDER}/${PRODUCT_NAME}-${BUILD_NUM}_web/game.love
+            ${OUTPUT_FOLDER}/${PRODUCT_NAME}-${BUILD_NUM}_html/
+          cp -v ${OUTPUT_FOLDER}/${PRODUCT_NAME}.love ${OUTPUT_FOLDER}/${PRODUCT_NAME}-${BUILD_NUM}_html/game.love
           7z a -tzip \
-            "${OUTPUT_FOLDER}/${PRODUCT_NAME}-${BUILD_NUM}_web.zip" \
-            "${OUTPUT_FOLDER}/${PRODUCT_NAME}-${BUILD_NUM}_web"/*
+            "${OUTPUT_FOLDER}/${PRODUCT_NAME}-${BUILD_NUM}_html.zip" \
+            "${OUTPUT_FOLDER}/${PRODUCT_NAME}-${BUILD_NUM}_html"/*
       - name: Upload Web artifact
         if: ${{ needs.configure.outputs.build_type == 'dev' }}
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_web
-          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_web
+          name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_html
+          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_html
       - name: Upload Web release
         if: ${{ needs.configure.outputs.build_type == 'release' }}
         uses: actions/upload-release-asset@v1
@@ -463,23 +463,19 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.configure.outputs.upload_url }}
-          asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_web.zip
-          asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_web.zip
+          asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_html.zip
+          asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_html.zip
           asset_content_type: application/zip
-      - name: Create unversioned Web release for itch.io
-        if: ${{ needs.configure.outputs.build_type == 'release' && needs.configure.outputs.itch_user != '' }}
-        run: |
-          cp -v ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_web.zip ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}_web.zip
       - name: Upload Web release to itch.io
-        if: ${{ needs.configure.outputs.build_type == 'release' && needs.configure.outputs.itch_user != '' }}
-        uses: manleydev/butler-publish-itchio-action@master
-        env:
-          BUTLER_CREDENTIALS: ${{ secrets.BUTLER_API_KEY }}
-          CHANNEL: html
-          ITCH_GAME: ${{ needs.configure.outputs.itch_game }}
-          ITCH_USER: ${{ needs.configure.outputs.itch_user }}
-          PACKAGE: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}_web.zip
-          VERSION: ${{ env.PRODUCT_VERSION }}
+        if: ${{ needs.configure.outputs.build_type == 'release' }}
+        uses: ./.github/actions/publish-itch
+        with:
+          api-key: ${{ secrets.BUTLER_API_KEY }}
+          channel: html
+          itch_game: ${{ needs.configure.outputs.itch_game }}
+          itch_user: ${{ needs.configure.outputs.itch_user }}
+          package: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_html
+          version: ${{ env.PRODUCT_VERSION }}
 
   build-android:
     if: ${{ needs.configure.outputs.target_android == 'true' }}
@@ -578,19 +574,19 @@ jobs:
           asset_path: ${{ steps.sign-aab-release.outputs.signedReleaseFile }}
           asset_content_type: application/vnd.android.package-archive
       - name: Create unversioned Android .apk for itch.io
-        if: ${{ needs.configure.outputs.build_type == 'release' && needs.configure.outputs.itch_user != '' }}
+        if: ${{ needs.configure.outputs.build_type == 'release' }}
         run: |
-          cp -v ${{ steps.sign-apk-release.outputs.signedReleaseFile }} ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.apk
+          cp -v "${{ steps.sign-apk-release.outputs.signedReleaseFile }}" "${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.apk"
       - name: Upload Android .apk to itch.io
-        if: ${{ needs.configure.outputs.build_type == 'release' && needs.configure.outputs.itch_user != '' }}
-        uses: manleydev/butler-publish-itchio-action@master
-        env:
-          BUTLER_CREDENTIALS: ${{ secrets.BUTLER_API_KEY }}
-          CHANNEL: android
-          ITCH_GAME: ${{ needs.configure.outputs.itch_game }}
-          ITCH_USER: ${{ needs.configure.outputs.itch_user }}
-          PACKAGE: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.apk
-          VERSION: ${{ env.PRODUCT_VERSION }}
+        if: ${{ needs.configure.outputs.build_type == 'release' }}
+        uses: ./.github/actions/publish-itch
+        with:
+          api-key: ${{ secrets.BUTLER_API_KEY }}
+          channel: android
+          itch_game: ${{ needs.configure.outputs.itch_game }}
+          itch_user: ${{ needs.configure.outputs.itch_user }}
+          package: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.apk
+          version: ${{ env.PRODUCT_VERSION }}
 
   build-macos:
     if: ${{ needs.configure.outputs.target_macos == 'true' }}
@@ -662,19 +658,19 @@ jobs:
           asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME  }}-${{ env.BUILD_NUM }}.dmg
           asset_content_type: application/x-apple-diskimage
       - name: Create unversioned macOS .dmg for itch.io
-        if: ${{ needs.configure.outputs.build_type == 'release' && needs.configure.outputs.itch_user != '' }}
+        if: ${{ needs.configure.outputs.build_type == 'release' }}
         run: |
-          cp -v ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME  }}-${{ env.BUILD_NUM }}.dmg ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME  }}.dmg
+          cp -v "${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.dmg" "${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.dmg"
       - name: Upload macOS .dmg to itch.io
-        if: ${{ needs.configure.outputs.build_type == 'release' && needs.configure.outputs.itch_user != '' }}
-        uses: manleydev/butler-publish-itchio-action@master
-        env:
-          BUTLER_CREDENTIALS: ${{ secrets.BUTLER_API_KEY }}
-          CHANNEL: osx
-          ITCH_GAME: ${{ needs.configure.outputs.itch_game }}
-          ITCH_USER: ${{ needs.configure.outputs.itch_user }}
-          PACKAGE: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME  }}.dmg
-          VERSION: ${{ env.PRODUCT_VERSION }}
+        if: ${{ needs.configure.outputs.build_type == 'release' }}
+        uses: ./.github/actions/publish-itch
+        with:
+          api-key: ${{ secrets.BUTLER_API_KEY }}
+          channel: osx
+          itch_game: ${{ needs.configure.outputs.itch_game }}
+          itch_user: ${{ needs.configure.outputs.itch_user }}
+          package: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME  }}.dmg
+          version: ${{ env.PRODUCT_VERSION }}
 
   build-ios:
     if: ${{ needs.configure.outputs.target_ios == 'true' }}
