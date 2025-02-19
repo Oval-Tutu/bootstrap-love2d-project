@@ -1,0 +1,66 @@
+name: 'Publish to itch.io'
+description: 'Use butler to upload game artifacts to itch.io'
+inputs:
+  api-key:
+    description: 'Butler API key'
+    required: true
+  channel:
+    description: 'itch.io channel name. For example: android, html, linux-appimage, osx or windows'
+    required: true
+  itch_user:
+    description: 'itch.io user name'
+    required: true
+  itch_game:
+    description: 'itch.io game name'
+    required: true
+  package:
+    description: 'The directory or file to upload'
+    required: true
+  version:
+    description: 'game version'
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: Download butler
+      if: ${{ inputs.itch_user != '' }}
+      env:
+        BUTLER_API_KEY: ${{ inputs.api-key }}
+      shell: bash
+      run: |
+        # Set butler platform based on runner OS
+        BUTLER_PLATFORM="linux-amd64"
+        BUTLER_EXEC="butler"
+        if [ "${{ runner.os }}" = "Windows" ]; then
+          BUTLER_PLATFORM="windows-amd64"
+          BUTLER_EXEC="butler.exe"
+        elif [ "${{ runner.os }}" = "macOS" ]; then
+          BUTLER_PLATFORM="darwin-amd64"
+        fi
+        mkdir ./tools 2>/dev/null || true
+        pushd tools
+          curl -L -o ./butler.zip "https://broth.itch.ovh/butler/${BUTLER_PLATFORM}/LATEST/archive/default"
+          unzip butler.zip
+          chmod +x ./${BUTLER_EXEC}
+        popd
+        ./tools/${BUTLER_EXEC} -V
+    - name: Upload to itch.io
+      if: ${{ inputs.itch_user != '' }}
+      env:
+        BUTLER_API_KEY: ${{ inputs.api-key }}
+      shell: bash
+      run: |
+        # Set butler executable name based on runner OS
+        BUTLER_EXEC="butler"
+        if [ "${{ runner.os }}" = "Windows" ]; then
+          BUTLER_EXEC="butler.exe"
+        fi
+        versionArgument=""
+        if [ -n "${{ inputs.version }}" ]; then
+          versionArgument="--userversion ${{ inputs.version }}"
+        fi
+        ./tools/${BUTLER_EXEC} push \
+          "${{ inputs.package }}" \
+          ${{ inputs.itch_user }}/${{ inputs.itch_game }}:${{ inputs.channel }} ${versionArgument}
