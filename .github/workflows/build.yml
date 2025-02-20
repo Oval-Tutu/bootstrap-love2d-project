@@ -558,7 +558,6 @@ jobs:
           name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-debug-signed.apk
           path: ${{ steps.sign-apk-debug.outputs.signedReleaseFile }}
       - name: Upload Android release .apk artifact
-        if: ${{ needs.configure.outputs.build_type == 'dev' }}
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-release-signed.apk
