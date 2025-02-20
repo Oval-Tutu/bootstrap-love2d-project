@@ -218,6 +218,20 @@ jobs:
           asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.love
           asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}.love
           asset_content_type: application/x-love-game
+      - name: Create unversioned .love for itch.io
+        #if: ${{ needs.configure.outputs.build_type == 'release' && needs.configure.outputs.itch_user != '' }}
+        run: |
+          cp -v "${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.love" "${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love"
+      - name: Upload .love to itch.io
+        #if: ${{ needs.configure.outputs.build_type == 'release' }}
+        uses: ./.github/actions/publish-itch
+        with:
+          api-key: ${{ secrets.BUTLER_API_KEY }}
+          channel: love
+          itch_game: ${{ needs.configure.outputs.itch_game }}
+          itch_user: ${{ needs.configure.outputs.itch_user }}
+          package: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love
+          version: ${{ env.PRODUCT_VERSION }}
 
   build-linux:
     if: ${{ needs.configure.outputs.target_linux_appimage == 'true' || needs.configure.outputs.target_linux_tarball == 'true' }}

@@ -174,6 +174,7 @@ For example this template project would attempt to publish to `ovaltutu/template
 
 Not every artifact will be published to Itch.io, as some platforms are not supported, and some artifacts are unsuitable for distribution on Itch.io:
 
+- `.love` files will be published to Itch.io as it is a requirement for LÖVE jams, is a convenient format for testing and can be hidden if required.
 - Android .apk files will be published to Itch.io if `TARGET_ANDROID` is enabled.
 - Linux AppImage files will be published to Itch.io if `TARGET_LINUX_APPIMAGE` is enabled.
 - macOS .dmg files will be published to Itch.io if `TARGET_MACOS` is enabled.
