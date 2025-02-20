@@ -58,7 +58,7 @@ runs:
         fetch-depth: 1
     - name: Copy love assets
       shell: bash
-      run: rsync -av --exclude='.gitkeep' ./game/ ./tools/love-android/app/src/embed/assets/
+      run: rsync -av --exclude='.gitkeep' ./game/* ./tools/love-android/app/src/embed/assets/
     - name: Modify gradle.properties
       shell: bash
       run: |
@@ -112,18 +112,18 @@ runs:
       shell: bash
       run: |
         pushd ./tools/love-android
-          ./gradlew assembleNormal${{ inputs.android_record }}Debug
+          ./gradlew assembleEmbed${{ inputs.android_record }}Debug
         popd
         mkdir -p ${{ inputs.output_folder }}/apk/debug
-        mv -v ./tools/love-android/app/build/outputs/apk/*/debug/app-normal-*-debug.apk ${{ inputs.output_folder }}/apk/debug/${{ inputs.product_name }}-${{ inputs.build_num }}-debug.apk
+        mv -v ./tools/love-android/app/build/outputs/apk/*/debug/app-embed-*-debug.apk ${{ inputs.output_folder }}/apk/debug/${{ inputs.product_name }}-${{ inputs.build_num }}-debug.apk
     - name: Build Android release .apk
       shell: bash
       run: |
         pushd ./tools/love-android
-          ./gradlew assembleNormal${{ inputs.android_record }}Release
+          ./gradlew assembleEmbed${{ inputs.android_record }}Release
         popd
         mkdir -p ${{ inputs.output_folder }}/apk/release
-        mv -v ./tools/love-android/app/build/outputs/apk/*/release/app-normal-*-release-unsigned.apk ${{ inputs.output_folder }}/apk/release/${{ inputs.product_name }}-${{ inputs.build_num }}-release.apk
+        mv -v ./tools/love-android/app/build/outputs/apk/*/release/app-embed-*-release-unsigned.apk ${{ inputs.output_folder }}/apk/release/${{ inputs.product_name }}-${{ inputs.build_num }}-release.apk
     - name: Build Android .aab
       if: ${{ inputs.build_type == 'release' }}
       shell: bash
