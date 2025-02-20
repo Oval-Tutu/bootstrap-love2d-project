@@ -572,11 +572,22 @@ jobs:
           name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-debug-signed.apk
           path: ${{ steps.sign-apk-debug.outputs.signedReleaseFile }}
       - name: Upload Android release .apk artifact
+        if: ${{ needs.configure.outputs.build_type == 'dev' }}
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-release-signed.apk
           path: ${{ steps.sign-apk-release.outputs.signedReleaseFile }}
-      - name: Upload Android release
+      - name: Upload Android release .apk
+        if: ${{ needs.configure.outputs.build_type == 'release' }}
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.configure.outputs.upload_url }}
+          asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}-release.apk
+          asset_path: ${{ steps.sign-apk-release.outputs.signedReleaseFile }}
+          asset_content_type: application/vnd.android.package-archive
+      - name: Upload Android release .aab
         if: ${{ needs.configure.outputs.build_type == 'release' }}
         uses: actions/upload-release-asset@v1
         env:
