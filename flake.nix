@@ -25,6 +25,7 @@
             act
             curl
             luajit
+            lua-language-server
             miniserve
             nodejs_20
             p7zip

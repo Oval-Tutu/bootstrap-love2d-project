@@ -7,7 +7,7 @@ Turn your [LÖVE](https://love2d.org/) game ideas into polished multi-platform r
 - 🗂️ Organized with [Workspaces](https://code.visualstudio.com/docs/editor/workspaces)
   - 🌕 Rich Lua language features with [Lua Language Server](https://marketplace.visualstudio.com/items?itemName=sumneko.lua)
   - 🐛 Debugging with [Local Lua Debugger](https://marketplace.visualstudio.com/items?itemName=tomblind.local-lua-debugger-vscode)
-  - 🩷 Intellisense for the LÖVE API via [Love2D Support](https://marketplace.visualstudio.com/items?itemName=pixelbyte-studios.pixelbyte-love2d)
+  - 🩷 Intellisense for the LÖVE API
   - 👨‍💻 Consistent coding styles with [Editorconfig](https://marketplace.visualstudio.com/items?itemName=EditorConfig.EditorConfig)
   - ️⛱️ [Shader languages support](https://marketplace.visualstudio.com/items?itemName=slevesque.shader)
   - 🐙 [GitHub Local Actions](https://marketplace.visualstudio.com/items?itemName=SanjulaGanepola.github-local-actions)
