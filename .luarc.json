@@ -1,0 +1,25 @@
+{
+  "$schema": "https://raw.githubusercontent.com/LuaLS/vscode-lua/master/setting/schema.json",
+  "runtime.version": "LuaJIT",
+
+  "diagnostics.disable": [
+      // LuaCATS ---@module annotation conflicts with luadoc
+      "luadoc-miss-module-name"
+  ],
+  "diagnostics.globals": [
+      "love",
+      "jit"
+  ],
+
+  "workspace.checkThirdParty": false,
+  "workspace.ignoreDir": [
+      ".vscode",
+      "builds",
+      "resources",
+      "tools"
+  ],
+  "workspace.library": [
+      "${3rd}/love2d/library",
+      "game/lib"
+  ]
+}
