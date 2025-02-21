@@ -13,7 +13,6 @@ Overview of the key files and directories in the template. The main components a
 ├── .vscode                   Visual Studio Code configuration
 │   ├── extensions.json
 │   ├── launch.json
-│   ├── settings.json
 │   └── tasks.json
 ├── builds                    Game builds
 ├── game
@@ -33,8 +32,9 @@ The `.vscode` folder contains project specific configuration.
 
 - `extensions.json`: Contains the list of recommended extensions
 - `launch.json`: Contains the settings for running the game or launching the debugger
-- `settings.json`: Contains the settings for the Lua extension
 - `tasks.json`: Contains the settings for building the game
+
+You can configure additional settings and individual preferences via your own `.vscode/settings.json` that is excluded version control.
 
 ## Configuring
 
