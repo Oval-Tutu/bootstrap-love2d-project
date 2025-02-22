@@ -44,7 +44,7 @@ Use this template to [create a new repository](https://docs.github.com/en/reposi
   - Disable any platforms you do not want to target.
   - Full details on configuration can be found in the [**USAGE.md**](USAGE.md) file.
 - Replace `resources/icon.png` with your game's high-resolution icon.
-- If you are targetting Android, you need to create a keystore for signing your game; full details are in the [**USAGE.md**](USAGE.md) file.
+- If you are targeting Android, you need to create a keystore for signing your game; full details are in the [**USAGE.md**](USAGE.md) file.
 - If you want to publish your game to [itch.io](https://itch.io/), you need to add [`BUTLER_API_KEY`](https://itch.io/user/settings/api-keys) to your GitHub repository; full details are in the [**USAGE.md**](USAGE.md) file.
 
 ### Running
