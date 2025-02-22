@@ -3,17 +3,33 @@
 # top-most EditorConfig file
 root = true
 
-# Unix-style newlines with a newline ending every file
+# Default settings for all files
 [*]
 charset = utf-8
 end_of_line = lf
 insert_final_newline = true
-
-[*]
-indent_size = 2
 indent_style = space
+indent_size = 4
 tab_width = 4
+trim_trailing_whitespace = true
 
-# Tab indentation (no size specified)
+# Lua specific settings
+[*.{lua,rockspec}]
+indent_style = space
+# Lua community often prefers 2 spaces
+indent_size = 2
+max_line_length = 120
+
+# Tab indentation for Makefiles
 [Makefile]
 indent_style = tab
+
+# Configuration files
+[*.{json,yml,yaml}]
+indent_style = space
+indent_size = 2
+
+# Documentation files
+[*.{md,txt}]
+trim_trailing_whitespace = false
+max_line_length = off
