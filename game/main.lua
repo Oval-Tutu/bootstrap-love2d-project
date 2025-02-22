@@ -2,16 +2,13 @@ local i18n = require 'lib.smiti18n'
 local Benchmark = require('src.benchmark')
 local benchmark
 
-
 i18n.loadFile('locales/en.lua')
 i18n.setLocale('en')
 
--- Add at top of file after require
 local shakeX, shakeY = 0, 0
 local shakeAmount = 5
 local eyeSize = 128
 
--- Add helper function before love.draw
 function isMouseOverEye(eyeX, eyeY)
   local mouseX = love.mouse.getX()
   local mouseY = love.mouse.getY()
@@ -40,6 +37,7 @@ function drawButtons(windowWidth, windowHeight, font)
   local englishX = (windowWidth / 2) + (buttonSpacing / 2)
   local buttonY = windowHeight - bottomPadding - buttonHeight
 
+  -- TODO: Actually draw the buttons and implement the language change
   -- Draw Spanish button
   love.graphics.setColor(1, 1, 1)
   love.graphics.rectangle('fill', spanishX, buttonY, buttonWidth, buttonHeight)
@@ -136,6 +134,7 @@ function love.draw()
   -- Draw eyes
   drawEye(leftEyeX, centerY, leftEyeWinking)
   drawEye(rightEyeX, centerY, rightEyeWinking)
+  -- TODO: Implement this
   --drawButtons(windowWidth, windowHeight, font)
 
   if (shakeX + shakeY) ~= 0 then
