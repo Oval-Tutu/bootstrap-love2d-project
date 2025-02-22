@@ -12,7 +12,7 @@ local eyeSize = 128
 function isMouseOverEye(eyeX, eyeY)
   local mouseX = love.mouse.getX()
   local mouseY = love.mouse.getY()
-  local distance = math.sqrt((mouseX - eyeX)^2 + (mouseY - eyeY)^2)
+  local distance = math.sqrt((mouseX - eyeX) ^ 2 + (mouseY - eyeY) ^ 2)
   return distance < eyeSize
 end
 
@@ -45,9 +45,7 @@ function drawButtons(windowWidth, windowHeight, font)
   love.graphics.rectangle('line', spanishX, buttonY, buttonWidth, buttonHeight)
   local spanishText = "Spanish"
   local textWidth = font:getWidth(spanishText)
-  love.graphics.print(spanishText,
-    spanishX + (buttonWidth - textWidth)/2,
-    buttonY + textPadding)
+  love.graphics.print(spanishText, spanishX + (buttonWidth - textWidth) / 2, buttonY + textPadding)
 
   -- Draw English button
   love.graphics.setColor(1, 1, 1)
@@ -56,9 +54,7 @@ function drawButtons(windowWidth, windowHeight, font)
   love.graphics.rectangle('line', englishX, buttonY, buttonWidth, buttonHeight)
   local englishText = "English"
   textWidth = font:getWidth(englishText)
-  love.graphics.print(englishText,
-    englishX + (buttonWidth - textWidth)/2,
-    buttonY + textPadding)
+  love.graphics.print(englishText, englishX + (buttonWidth - textWidth) / 2, buttonY + textPadding)
 end
 
 function love.draw()
@@ -70,17 +66,12 @@ function love.draw()
       -- Draw line through center of circle
       love.graphics.setColor(0, 0, .4)
       love.graphics.setLineWidth(8)
-      love.graphics.line(
-        eyeX - eyeSize,
-        eyeY,
-        eyeX + eyeSize,
-        eyeY
-      )
+      love.graphics.line(eyeX - eyeSize, eyeY, eyeX + eyeSize, eyeY)
     else
       -- Normal eye drawing logic
       local distanceX = love.mouse.getX() - eyeX
       local distanceY = love.mouse.getY() - eyeY
-      local distance = math.min(math.sqrt(distanceX^2 + distanceY^2), eyeSize / 2)
+      local distance = math.min(math.sqrt(distanceX ^ 2 + distanceY ^ 2), eyeSize / 2)
       local angle = math.atan2(distanceY, distanceX)
 
       local pupilX = eyeX + (math.cos(angle) * distance)
@@ -102,7 +93,7 @@ function love.draw()
 
   -- Calculate center positions
   local centerY = windowHeight / 2
-  local eyeSpacing = 320  -- Distance between eyes
+  local eyeSpacing = 320 -- Distance between eyes
   -- Calculate shake effect
   local leftEyeX = (windowWidth / 2) - (eyeSpacing / 2)
   local rightEyeX = (windowWidth / 2) + (eyeSpacing / 2)
@@ -135,21 +126,19 @@ function love.draw()
   drawEye(leftEyeX, centerY, leftEyeWinking)
   drawEye(rightEyeX, centerY, rightEyeWinking)
   -- TODO: Implement this
-  --drawButtons(windowWidth, windowHeight, font)
+  -- drawButtons(windowWidth, windowHeight, font)
 
   if (shakeX + shakeY) ~= 0 then
     love.graphics.setColor(1, 0.5, 0) -- Orange color
     local text = i18n('Ouch')
     local textWidth = font:getWidth(text)
     local bottomPadding = 256 -- Distance from bottom of screen
-    love.graphics.print(
-      text,
-      (windowWidth - textWidth) / 2,  -- Center horizontally
-      windowHeight - bottomPadding    -- Position near bottom
+    love.graphics.print(text, (windowWidth - textWidth) / 2, -- Center horizontally
+    windowHeight - bottomPadding -- Position near bottom
     )
   end
 
-  local padding = 128  -- Padding from screen edges
+  local padding = 128 -- Padding from screen edges
   if bothBlinking then
     love.graphics.setColor(1, 0, 1)
     -- Show centered "Both Eyes Blinking" text
@@ -157,7 +146,7 @@ function love.draw()
     local textWidth = font:getWidth(text)
     love.graphics.print(text, (windowWidth - textWidth) / 2, padding)
   else
-    love.graphics.setColor(1, 1, 0)  -- Yellow for individual winks
+    love.graphics.setColor(1, 1, 0) -- Yellow for individual winks
     -- Left eye status
     if leftEyeWinking then
       local text = i18n('Left Eye') .. " " .. i18n('Wink')
@@ -172,7 +161,7 @@ function love.draw()
     end
   end
 
-  love.graphics.setColor(1, 1, 1)  -- Reset color for other drawing
+  love.graphics.setColor(1, 1, 1) -- Reset color for other drawing
   local message = i18n('Mouse') .. " (" .. x .. "," .. y .. ")"
 
   -- Center the text on the screen
