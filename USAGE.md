@@ -49,6 +49,31 @@ The most important settings to change for your game:
 
 - `PRODUCT_NAME` - The name of your game
 - `PRODUCT_ID` - Unique identifier in reverse domain notation. **Can not contain spaces or hyphens**.
+
+### Save directory
+
+**`PRODUCT_ID` is always used by `t.identity` in `game/conf.lua` to determine the save directory for the game.** This is important to consider when changing the `PRODUCT_ID` after the game has been released.
+
+### Platform-Specific Product IDs
+
+You can override the `PRODUCT_ID` for specific platforms.
+If a platform-specific ID is empty or not set, the base `PRODUCT_ID` will be used instead. This is useful for:
+
+- Different bundle IDs per platform
+- App store requirements
+
+```shell
+# Base product ID (used as fallback)
+PRODUCT_ID="com.oval-tutu.game"
+
+# Optional platform-specific overrides
+PRODUCT_ID_ANDROID="com.mygame.android"
+PRODUCT_ID_IOS="com.mygame.ios"
+PRODUCT_ID_LINUX="com.mygame.linux"
+PRODUCT_ID_MACOS="com.mygame.osx"
+PRODUCT_ID_WINDOWS="com.mygame.windows"
+```
+
 - `PRODUCT_UUID` - **Generate new UUID** using `uuidgen` command or the [UUID Generator](https://www.uuidgenerator.net/)
 - `PRODUCT_DESC` - Short description of your game
 - `PRODUCT_COPYRIGHT` - Copyright notice

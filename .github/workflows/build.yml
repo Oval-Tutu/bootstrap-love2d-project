@@ -29,6 +29,12 @@ jobs:
       upload_url: ${{ steps.create_release.outputs.upload_url || '' }}
       itch_game: ${{ env.ITCH_GAME }}
       itch_user: ${{ env.ITCH_USER }}
+      product_id: ${{ env.PRODUCT_ID }}
+      product_id_android: ${{ env.PRODUCT_ID_ANDROID || env.PRODUCT_ID }}
+      product_id_ios: ${{ env.PRODUCT_ID_IOS || env.PRODUCT_ID }}
+      product_id_linux: ${{ env.PRODUCT_ID_LINUX || env.PRODUCT_ID }}
+      product_id_macos: ${{ env.PRODUCT_ID_MACOS || env.PRODUCT_ID }}
+      product_id_windows: ${{ env.PRODUCT_ID_WINDOWS || env.PRODUCT_ID }}
       target_android: ${{ env.TARGET_ANDROID }}
       target_ios: ${{ env.TARGET_IOS }}
       target_linux_appimage: ${{ env.TARGET_LINUX_APPIMAGE }}
@@ -524,7 +530,7 @@ jobs:
           build_num: ${{ needs.configure.outputs.build_num }}
           build_type: ${{ needs.configure.outputs.build_type }}
           product_name: ${{ env.PRODUCT_NAME }}
-          product_id: ${{ env.PRODUCT_ID }}
+          product_id: ${{ needs.configure.outputs.product_id_android }}
           output_folder: ${{ env.OUTPUT_FOLDER }}
       - name: Sign Android debug .apk
         if: ${{ needs.configure.outputs.build_type == 'dev' }}
@@ -645,7 +651,7 @@ jobs:
           build_num: ${{ needs.configure.outputs.build_num }}
           love_version: ${{ env.LOVE_VERSION }}
           product_copyright: ${{ env.PRODUCT_COPYRIGHT }}
-          product_id: ${{ env.PRODUCT_ID }}
+          product_id: ${{ needs.configure.outputs.product_id_macos }}
           product_name: ${{ env.PRODUCT_NAME }}
           product_version: ${{ env.PRODUCT_VERSION }}
           output_folder: ${{ env.OUTPUT_FOLDER }}
@@ -728,7 +734,7 @@ jobs:
           love_version: ${{ env.LOVE_VERSION }}
           product_company: ${{ env.PRODUCT_COMPANY }}
           product_copyright: ${{ env.PRODUCT_COPYRIGHT }}
-          product_id: ${{ env.PRODUCT_ID }}
+          product_id: ${{ needs.configure.outputs.product_id_ios }}
           product_name: ${{ env.PRODUCT_NAME }}
           product_version: ${{ env.PRODUCT_VERSION }}
           output_folder: ${{ env.OUTPUT_FOLDER }}
