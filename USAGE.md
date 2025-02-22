@@ -36,6 +36,12 @@ The `.vscode` folder contains project specific configuration.
 
 You can configure additional settings and individual preferences via your own `.vscode/settings.json` that is excluded version control.
 
+## Secrets
+
+Secrets are stored in the GitHub repository settings and accessed by the GitHub Actions workflow.
+
+- `https://github.com/{username}/{repository}/settings/secrets/actions`
+
 ## Configuring
 
 The game and build settings are configured using `game/product.env`.
