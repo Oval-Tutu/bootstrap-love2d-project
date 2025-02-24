@@ -1,3 +1,5 @@
 .direnv/
 .vscode/settings.json
 game/log.txt
+game/https.so
+game/https.dll

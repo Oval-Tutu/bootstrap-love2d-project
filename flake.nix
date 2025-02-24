@@ -20,10 +20,13 @@
       # Development environments
       devShells = forEachSupportedSystem ({ pkgs }: {
         default = pkgs.mkShell {
+          buildInputs = with pkgs; [
+            stdenv.cc.cc.lib
+            curl
+          ];
           # Pinned packages available in the environment
           packages = with pkgs; [
             act
-            curl
             luajit
             lua-language-server
             miniserve
@@ -36,6 +39,28 @@
           ] ++ pkgs.lib.optionals (!pkgs.stdenv.isDarwin) [
             love
           ];
+          shellHook = ''
+            #Coerce LD_LIBRARY_PATH for lua-https
+            export LD_LIBRARY_PATH=${pkgs.lib.makeLibraryPath [
+              pkgs.stdenv.cc.cc.lib
+              pkgs.curl
+            ]}:$LD_LIBRARY_PATH
+
+            # Link appropriate https.so if on Linux/Darwin
+            PLATFORM=$(uname | tr '[:upper:]' '[:lower:]')
+            if [[ "$PLATFORM" == "linux" || "$PLATFORM" == "darwin" ]]; then
+              LOVE_VERSION=$(grep LOVE_VERSION game/product.env | cut -d'"' -f2)
+              if [[ "$LOVE_VERSION" == "11.5" ]]; then
+                SOURCE="resources/https/$LOVE_VERSION/$PLATFORM/https.so"
+                TARGET="game/https.so"
+                # Remove existing link, an recreate if source exists
+                rm -f "$TARGET"
+                if [ -f "$SOURCE" ]; then
+                  ln -s "../$SOURCE" "$TARGET"
+                fi
+              fi
+            fi
+          '';
         };
       });
     };
