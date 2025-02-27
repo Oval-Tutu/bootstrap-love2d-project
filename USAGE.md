@@ -381,3 +381,66 @@ In order to run the macOS jobs you'll need to install the following:
 - Install [Podman Desktop](https://podman-desktop.io/) or [Docker Desktop](https://www.docker.com/products/docker-desktop/).
 - Install [Xcode](https://developer.apple.com/xcode/): `xcode-select --install`
 - Install additional tools via [Homebrew](https://brew.sh/): `brew install act create-dmg tree`
+
+## HTTPS Support
+
+This project includes HTTPS support for LÖVE 11.5 via the [lua-https](https://github.com/love2d/lua-https) library, and also included an native library loader for easily enabling HTTPS support on supported platforms.
+
+- For LÖVE 12.0+: Uses the built-in `https` module
+- For LÖVE 11.5: Loads platform-specific native libraries
+- For Web builds: No HTTPS support is available.
+
+### Native Libraries
+
+The runtime loader (`game/runtime/loader.lua`) handles loading the appropriate platform-specific native library:
+
+```lua
+local https = require('runtime.loader').loadHTTPS()
+if https then
+  -- HTTPS is available
+  local code, body, headers = https.request("https://oval-tutu.com")
+else
+  -- HTTPS not available (Web platform or missing library)
+end
+```
+
+For more information on the `https` module, see the [lua-https documentation](https://www.love2d.org/wiki/lua-https).
+
+The loader expects native libraries to be organized in the following structure:
+
+```
+game/runtime/https/
+├── android/
+│   ├── arm64-v8a/
+│   │   └── https.so
+│   └── armeabi-v7a/
+│       └── https.so
+├── linux/
+│   └── x86_64/
+│       └── https.so
+├── osx/
+│   └── https.so
+└── windows/
+    ├── win32/
+    │   └── https.dll
+    └── win64/
+        └── https.dll
+```
+
+The template includes pre-built libraries for:
+- Windows (32/64-bit)
+- Linux (x86_64)
+- macOS (Universal)
+- Android (arm64-v8a, armeabi-v7a)
+
+**💡NOTE:** HTTPS is not available on iOS builds, *yet...*
+
+#### Requirements
+
+The native libraries have the following dependencies that must be available on the target system:
+
+- Linux: cURL or OpenSSL
+- Windows: No additional dependencies (libraries are statically linked)
+- macOS: No additional dependencies (uses native Security framework)
+- Android: No additional dependencies (included in Android system)
+  - *But does require your Android game is built with build system provided by this project.*

@@ -1,4 +1,7 @@
 local i18n = require 'lib.smiti18n'
+local runtimeLoader = require 'runtime.loader'
+local https = nil
+local code, body, headers = nil, nil, nil
 local Benchmark = require('src.benchmark')
 local benchmark
 
@@ -8,6 +11,8 @@ i18n.setLocale('en')
 local shakeX, shakeY = 0, 0
 local shakeAmount = 5
 local eyeSize = 128
+local online_color = {1, 0, 0}
+local online_message = "Offline"
 
 function isMouseOverEye(eyeX, eyeY)
   local mouseX = love.mouse.getX()
@@ -17,6 +22,17 @@ function isMouseOverEye(eyeX, eyeY)
 end
 
 function love.load()
+  https = runtimeLoader.loadHTTPS()
+  if https then
+    code, body, headers = https.request("https://oval-tutu.com")
+    if code < 400 then
+      online_color = {0, 1, 0}
+      online_message = "Online"
+    end
+  else
+    code, body, headers = nil, nil, nil
+  end
+
   -- Initialize benchmark system
   benchmark = Benchmark:new()
   love.graphics.setFont(love.graphics.newFont(42))
@@ -175,6 +191,11 @@ function love.draw()
   love.graphics.setColor(1, 1, 1)
   love.graphics.print(message, centerX, 32)
 
+  love.graphics.setColor(online_color)
+  textWidth = font:getWidth(online_message)
+  centerX = (windowWidth / 2) - (textWidth / 2)
+  love.graphics.print(online_message, centerX, 76)
+
   love.graphics.pop() -- Remove shake translation
   -- Draw benchmark overlay last
   benchmark:draw()
@@ -185,6 +206,8 @@ function love.update(dt)
   benchmark:sample()
   -- Gets the x- and y-position of the mouse.
   x, y = love.mouse.getPosition()
+  x = math.floor(x)
+  y = math.floor(y)
 end
 
 function love.keypressed(key)

@@ -103,9 +103,6 @@ runs:
           cp ./tools/love-$ARCH/* ./tools/build/$ARCH/
           mv -v ./tools/build/$ARCH/love.exe ./tools/build/$ARCH/${{ inputs.product_name }}.exe
           dd if=${{ inputs.output_folder }}/${{ inputs.product_name }}.love of=./tools/build/$ARCH/${{ inputs.product_name }}.exe obs=1M oflag=append conv=notrunc
-          if [ -d ./resources/windows/$ARCH ]; then
-            cp -r -f ./resources/windows/$ARCH ./tools/build/$ARCH/
-          fi
         done
     - name: Create Windows .zip files
       if: ${{ inputs.build_type == 'release' && inputs.target_windows_zip == 'true' }}
