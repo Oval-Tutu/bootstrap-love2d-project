@@ -19,9 +19,7 @@ Overview of the key files and directories in the template. The main components a
 │   ├── conf.lua              LÖVE configuration file
 │   ├── main.lua              The main entry point of the game
 │   ├── product.env           Settings shared between the game and GitHub Actions
-│   ├── assets                Game assets
-│   ├── lib                   3rd party libraries
-│   └── src                   Source code
+│   └── lib                   Libraries
 ├── resources                 Resources use when building the game. Icons, shared libraries, etc.
 └── tools                     Tools for building and packaging the game
 ```
