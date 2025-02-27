@@ -5,7 +5,7 @@ i18n.setLocale('en')
 
 local overlayStats = require('lib.overlayStats')
 local runtimeLoader = require('runtime.loader')
-local eyes = require('game.eyes')
+local eyes = require('eyes')
 
 function love.load()
   https = runtimeLoader.loadHTTPS()
