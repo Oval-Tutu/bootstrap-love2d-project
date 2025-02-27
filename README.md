@@ -22,6 +22,7 @@ Turn your [LÖVE](https://love2d.org/) game ideas into polished multi-platform r
   - 🔐 [lua-https](https://github.com/love2d/lua-https) built-in to LÖVE 11.5
   - 🎮 Automatic publishing to [itch.io](https://itch.io/)
 - ️⚙️ [Shared product configuration](game/product.env) between the game and the GitHub Actions
+- 📊 Integrated performance metrics overlay
 - ️❄️ Nix flake to provision a dev shell
 
 ### Prerequisites
@@ -84,6 +85,20 @@ Builds a date stamped `.love` file and puts it in the `builds` folder.
 This doubles up as a simple backup system.
 
 - Press <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>B</kbd> to **Build** the game.
+
+### Performance Metrics
+
+When the game is running you can access the performance metrics overlay by pressing <kbd>F3</kbd>.
+
+#### Keyboard Controls
+
+- <kbd>F3</kbd>: Toggle Overlay
+- <kbd>F5</kbd>: Toggle VSync (only when benchmark is active)
+
+#### Controller Controls
+
+- Select + A: Toggle Overlay
+- Select + B: Toggle VSync
 
 ## Detailed Documentation
 
