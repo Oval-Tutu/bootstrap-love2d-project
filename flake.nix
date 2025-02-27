@@ -20,10 +20,13 @@
       # Development environments
       devShells = forEachSupportedSystem ({ pkgs }: {
         default = pkgs.mkShell {
+          buildInputs = with pkgs; [
+            stdenv.cc.cc.lib
+            curl
+          ];
           # Pinned packages available in the environment
           packages = with pkgs; [
             act
-            curl
             luajit
             lua-language-server
             miniserve
@@ -36,6 +39,13 @@
           ] ++ pkgs.lib.optionals (!pkgs.stdenv.isDarwin) [
             love
           ];
+          shellHook = ''
+            #Coerce LD_LIBRARY_PATH for lua-https
+            export LD_LIBRARY_PATH=${pkgs.lib.makeLibraryPath [
+              pkgs.stdenv.cc.cc.lib
+              pkgs.curl
+            ]}:$LD_LIBRARY_PATH
+          '';
         };
       });
     };

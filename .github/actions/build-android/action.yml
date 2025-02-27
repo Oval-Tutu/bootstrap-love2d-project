@@ -56,6 +56,14 @@ runs:
         submodules: recursive
         path: ./tools/love-android
         fetch-depth: 1
+    - name: Checkout lua-https
+      uses: actions/checkout@v4
+      with:
+        repository: oval-tutu/lua-https
+        submodules: recursive
+        path: ./tools/love-android/love/src/jni/lua-modules/lua-https
+        ref: android
+        fetch-depth: 1
     - name: Copy love assets
       shell: bash
       run: rsync -av --exclude='.gitkeep' ./game/* ./tools/love-android/app/src/embed/assets/
@@ -89,13 +97,6 @@ runs:
         convert ./resources/icon.png -resize 144x144 ./tools/love-android/app/src/main/res/drawable-xxhdpi/love.png
         convert ./resources/icon.png -resize 192x192 ./tools/love-android/app/src/main/res/drawable-xxxhdpi/love.png
         convert ./resources/icon.png -resize 512x512 ./tools/love-android/love_icon_512x512.png
-    - name: Add libs
-      shell: bash
-      run: |
-        if [ -d ./resources/android ]; then
-          mkdir -p ./tools/love-android/app/libs/
-          cp -r -f ./resources/android/* ./tools/love-android/app/libs/
-        fi
     - name: Get Java ${{ inputs.android_java_version }}
       uses: actions/setup-java@v4
       with:
@@ -103,9 +104,15 @@ runs:
         distribution: temurin
         java-version: ${{ inputs.android_java_version }}
     - name: Setup Android SDK
-      uses: android-actions/setup-android@v3
+      uses: android-actions/setup-android@v3.2.2
       with:
         cmdline-tools-version: ${{ inputs.android_cmdline_tools_version }}
+        packages: >-
+          tools
+          platform-tools
+          platforms;android-34
+          build-tools;33.0.1
+          ndk;25.2.9519653
         log-accepted-android-sdk-licenses: false
     - name: Build Android debug .apk
       if: ${{ inputs.build_type == 'dev' }}
@@ -114,6 +121,7 @@ runs:
         pushd ./tools/love-android
           ./gradlew assembleEmbed${{ inputs.android_record }}Debug
         popd
+        unzip -l ./tools/love-android/app/build/outputs/apk/*/debug/app-embed-*-debug.apk | grep -i '.so'
         mkdir -p ${{ inputs.output_folder }}/apk/debug
         mv -v ./tools/love-android/app/build/outputs/apk/*/debug/app-embed-*-debug.apk ${{ inputs.output_folder }}/apk/debug/${{ inputs.product_name }}-${{ inputs.build_num }}-debug.apk
     - name: Build Android release .apk
@@ -122,6 +130,7 @@ runs:
         pushd ./tools/love-android
           ./gradlew assembleEmbed${{ inputs.android_record }}Release
         popd
+        unzip -l ./tools/love-android/app/build/outputs/apk/*/release/app-embed-*-release-unsigned.apk | grep -i '.so'
         mkdir -p ${{ inputs.output_folder }}/apk/release
         mv -v ./tools/love-android/app/build/outputs/apk/*/release/app-embed-*-release-unsigned.apk ${{ inputs.output_folder }}/apk/release/${{ inputs.product_name }}-${{ inputs.build_num }}-release.apk
     - name: Build Android .aab
@@ -131,5 +140,6 @@ runs:
         pushd ./tools/love-android
           ./gradlew bundleEmbed${{ inputs.android_record }}Release
         popd
+        unzip -l ./tools/love-android/app/build/outputs/bundle/*/app-embed-*-release.aab | grep -i '.so'
         mkdir -p ${{ inputs.output_folder }}/aab/release
         mv -v ./tools/love-android/app/build/outputs/bundle/*/app-embed-*-release.aab ${{ inputs.output_folder }}/aab/release/${{ inputs.product_name }}-${{ inputs.build_num }}-release.aab

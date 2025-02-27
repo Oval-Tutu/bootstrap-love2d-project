@@ -77,20 +77,6 @@ runs:
           cp ${{ inputs.output_folder }}/icon.png ./tools/squashfs-root/.DirIcon
         fi
 
-        # Copy any required shared libraries
-        if [ -d ./resources/linux/lib ]; then
-          echo "Copying lib..."
-          mkdir -p ./tools/squashfs-root/lib
-          cp -r -f ./resources/linux/lib/* ./tools/squashfs-root/lib
-        fi
-
-        # Copy any required shared resources
-        if [ -d ./resources/linux/share ]; then
-          echo "Copying share..."
-          mkdir -p ./tools/squashfs-root/share
-          cp -r -f ./resources/linux/share/* ./tools/squashfs-root/share
-        fi
-
         if [ "$ACT" == "true" ]; then
           ./tools/appimagetool.AppImage --appimage-extract-and-run ./tools/squashfs-root ${{ inputs.output_folder }}/${{ inputs.product_name }}-${{ inputs.build_num }}.AppImage
         else

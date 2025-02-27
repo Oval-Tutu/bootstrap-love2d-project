@@ -18,7 +18,8 @@ Turn your [LÖVE](https://love2d.org/) game ideas into polished multi-platform r
   - 🌐 HTML5
   - 🐧 Linux (.AppImage and tarball)
   - 🍏 macOS (App bundle and .dmg Disk Image)
-  - 🪟 Windows (.exe and .zip)
+  - 🪟 Windows (Installer, SFX .exe and .zip)
+  - 🔐 [lua-https](https://github.com/love2d/lua-https) built-in to LÖVE 11.5
   - 🎮 Automatic publishing to [itch.io](https://itch.io/)
 - ️⚙️ [Shared product configuration](game/product.env) between the game and the GitHub Actions
 - ️❄️ Nix flake to provision a dev shell
@@ -31,6 +32,28 @@ Turn your [LÖVE](https://love2d.org/) game ideas into polished multi-platform r
 - `bash`
 - `7z`
 - [`miniserve`](https://github.com/svenstaro/miniserve) (*optional ️for local testing of web builds*)
+
+## Platform Support
+
+| Platform | Artifact Type  |     File     |    Store   | lua-https |
+|----------|----------------|--------------|------------|-----------|
+| Android  | App Bundle     | `.aab`       | Play Store | ✅        |
+| Android  | Package        | `.apk`       | Itch.io    | ✅        |
+| iOS      | App Archive    | `.ipa`       | App Store  | ️🚧        |
+| Linux    | AppImage       | `.AppImage`  | Itch.io    | ✅        |
+| Linux    | Tarball        | `.tar.gz`    | Steam      | ✅        |
+| macOS    | App Bundle     | `.app.zip`   | Steam      | ✅        |
+| macOS    | Disk Image     | `.dmg`       | Itch.io    | ✅        |
+| Web      | HTML5          | `_web.zip`   | Itch.io    | ❌        |
+| Windows  | Setup (64-bit) | `-setup.exe` | Itch.io    | ✅        |
+| Windows  | SFX   (64-bit) | `.exe`       | Itch.io    | ✅        |
+| Windows  | ZIP   (64-bit) | `_win64.zip` | Steam      | ✅        |
+| Windows  | ZIP   (32-bit) | `_win32.zip` | Steam      | ✅        |
+| LÖVE     | Game           | `.love`      | -          | ️️✔️        |
+
+- The Store column indicates which store front the artifact is best suited for.
+- The lua-https column indicates if supplemental HTTPS support is included with LÖVE 11.5 builds
+  - The `.love` file includes https native libraries for all platforms, see [**USAGE.md**](USAGE.md) for more details.
 
 ## Quick Start
 
