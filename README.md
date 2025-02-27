@@ -62,7 +62,7 @@ Use this template to [create a new repository](https://docs.github.com/en/reposi
 - Open the `Workspace.code-workspace` file with [Visual Studio Code](https://code.visualstudio.com/) or [VSCodium](https://vscodium.com/)
   - You will be prompted that there are recommended extensions.
     - Click *'Install'*
-- Replace [`game/main.lua`](game/main.lua) with your game's code.
+- Remove `eyes` from [`game/main.lua`](game/main.lua) and add your game code.
 - Configure [`game/product.env`](game/product.env) and [`game/conf.lua`](game/conf.lua) with the settings specific to your game.
   - Disable any platforms you do not want to target.
   - Full details on configuration can be found in the [**USAGE.md**](USAGE.md) file.
