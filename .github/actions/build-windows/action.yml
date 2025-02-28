@@ -24,19 +24,29 @@ inputs:
   product_name:
     description: Product name
     required: true
+  product_uuid:
+    description: Product UUID (GUID) used for uninstaller
+    required: true
   product_version:
     description: Product version
+    required: true
+  product_website:
+    description: Product website
     required: true
   output_folder:
     description: Output folder path
     required: true
+  target_windows_install:
+    description: Create Windows installer
+    required: false
+    default: 'true'
+  target_windows_sfx:
+    description: Create Windows SFX .exe
+    required: false
+    default: 'false'
   target_windows_zip:
     description: Create Windows ZIP files
     required: true
-  target_windows_sfx:
-    description: Create Windows SFX installer
-    required: false
-    default: 'true'
 runs:
   using: composite
   steps:
@@ -111,6 +121,129 @@ runs:
         for ARCH in win32 win64; do
           7z a -tzip -mx=9 -mfb=273 -mpass=15 -mtc=off ${{ inputs.output_folder }}/${{ inputs.product_name }}-${{ inputs.build_num }}_$ARCH.zip ./tools/build/$ARCH/*
         done
+    # https://gist.github.com/drewchapin/246de6d0c404a79ee66a5ead35b480bc
+    # https://github.com/AnonymerNiklasistanonym/NsiWindowsInstallerExamples/blob/main/example_02_license_uninstaller_components/windows_installer.nsi
+    - name: Create Windows installer
+      if: ${{ inputs.target_windows_install == 'true' }}
+      env:
+        BUILD_NUM: ${{ inputs.build_num }}
+      shell: bash
+      run: |
+        sudo apt-get -y install nsis
+        # Calculate the size of the game in KB
+        GAME_SIZE=$(du -sk ./tools/build/win64/* | awk '{s+=$1} END {print s}')
+        cat << EOF > installer.nsi
+        !define ESTIMATED_SIZE "${GAME_SIZE}"
+        EOF
+        cat << 'EOF' >> installer.nsi
+        ;-------------------------------------------------------------------------------
+        ; Includes
+        !include "MUI2.nsh"
+        !include "LogicLib.nsh"
+        !include "WinVer.nsh"
+        !include "x64.nsh"
+        ;-------------------------------------------------------------------------------
+        ; Constants
+        !define PRODUCT_NAME "${{ inputs.product_name }}"
+        !define PRODUCT_COMPANY "${{ inputs.product_company }}"
+        !define PRODUCT_COPYRIGHT "${{ inputs.product_copyright }}"
+        !define PRODUCT_DESCRIPTION "${{ inputs.product_desc }}"
+        !define PRODUCT_DIR "$LocalAppData\${{ inputs.product_company }}\${{ inputs.product_name }}"
+        !define PRODUCT_PUBLISHER "${{ inputs.product_company }}"
+        !define PRODUCT_UUID "${{ inputs.product_uuid }}"
+        !define PRODUCT_WEBSITE "${{ inputs.product_website }}"
+        !define PRODUCT_VERSION "${{ inputs.product_version }}.0"
+        !define BUILD_VERSION "${{ inputs.build_num }}.0"
+        ;-------------------------------------------------------------------------------
+        ; Attributes
+        Name "${PRODUCT_NAME}"
+        OutFile "${{ inputs.output_folder }}/${PRODUCT_NAME}-${{ inputs.build_num }}-installer.exe"
+        InstallDir "${PRODUCT_DIR}"
+        InstallDirRegKey HKCU "Software\${PRODUCT_COMPANY}\${PRODUCT_NAME}" ""
+        RequestExecutionLevel user ; user|highest|admin
+        ;-------------------------------------------------------------------------------
+        ; Version Info
+        VIAddVersionKey "ProductName" "${PRODUCT_NAME}"
+        VIAddVersionKey "ProductVersion" "${PRODUCT_VERSION}"
+        VIAddVersionKey "CompanyName" "${PRODUCT_COMPANY}"
+        VIAddVersionKey "FileDescription" "${PRODUCT_DESCRIPTION}"
+        VIAddVersionKey "FileVersion" "${PRODUCT_VERSION}"
+        VIAddVersionKey "PrivateBuild" "${BUILD_VERSION}"
+        VIAddVersionKey "LegalCopyright" "${PRODUCT_COPYRIGHT}"
+        VIFileVersion "${BUILD_VERSION}"
+        VIProductVersion "${PRODUCT_VERSION}"
+        ;-------------------------------------------------------------------------------
+        ; Modern UI Appearance
+        !define MUI_WELCOMEPAGE_TITLE "${PRODUCT_NAME}"
+        !define MUI_WELCOMEPAGE_TEXT "${PRODUCT_COMPANY} presents ${PRODUCT_NAME}. ${PRODUCT_DESCRIPTION}. ${PRODUCT_COPYRIGHT}."
+        !define MUI_PAGE_HEADER_TEXT "Install ${PRODUCT_NAME} by ${PRODUCT_COMPANY}"
+        !define MUI_PAGE_HEADER_SUBTEXT "${PRODUCT_NAME} v${PRODUCT_VERSION} (${BUILD_VERSION})"
+        !define MUI_ICON "${{ inputs.output_folder }}/icon.ico"
+        !define MUI_UNICON "${{ inputs.output_folder }}/icon.ico"
+        !define MUI_UNWELCOMEPAGE_TITLE "${PRODUCT_NAME} Uninstall"
+        !define MUI_UNWELCOMEPAGE_TEXT "This wizard will guide you through the uninstallation of ${PRODUCT_NAME}. Click Next to continue."
+        ;-------------------------------------------------------------------------------
+        ; Installer Pages
+        !insertmacro MUI_PAGE_WELCOME
+        !insertmacro MUI_PAGE_COMPONENTS
+        !insertmacro MUI_PAGE_DIRECTORY
+        !insertmacro MUI_PAGE_INSTFILES
+        !insertmacro MUI_PAGE_FINISH
+        LangString DESC_Section1 ${LANG_ENGLISH} "Runtime and game data for ${PRODUCT_NAME} v${PRODUCT_VERSION} (${BUILD_VERSION})"
+        !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
+          !insertmacro MUI_DESCRIPTION_TEXT ${Section1} $(DESC_Section1)
+        !insertmacro MUI_FUNCTION_DESCRIPTION_END
+        ;-------------------------------------------------------------------------------
+        ; Uninstaller Pages
+        !insertmacro MUI_UNPAGE_WELCOME
+        !insertmacro MUI_UNPAGE_CONFIRM
+        !insertmacro MUI_UNPAGE_INSTFILES
+        !insertmacro MUI_UNPAGE_FINISH
+        ;-------------------------------------------------------------------------------
+        ; Languages
+        !insertmacro MUI_LANGUAGE "English"
+
+        Section "${PRODUCT_NAME}" Section1
+          ;Make this component mandatory so the user is not able to disable it
+          SectionIn RO
+          SetOutPath "$INSTDIR"
+          File /r "./tools/build/win64/*"
+          ; Add icon to the uninstaller executable
+          CreateShortcut "$SMPROGRAMS\${PRODUCT_NAME}.lnk" "$INSTDIR\${PRODUCT_NAME}.exe"
+          ;Create an uninstaller that will also be recognized by Windows:
+          WriteRegStr   HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_UUID}" "DisplayName"          "${PRODUCT_NAME}"
+          WriteRegStr   HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_UUID}" "DisplayIcon"          "$\"$INSTDIR\${PRODUCT_NAME}.exe$\""
+          WriteRegStr   HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_UUID}" "Publisher"            "${PRODUCT_COMPANY}"
+          WriteRegStr   HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_UUID}" "Comments"             "${PRODUCT_DESCRIPTION}"
+          WriteRegStr   HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_UUID}" "DisplayVersion"       "${PRODUCT_VERSION}"
+          WriteRegStr   HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_UUID}" "UrlInfoAbout"         "${PRODUCT_WEBSITE}"
+          WriteRegStr   HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_UUID}" "InstallLocation"      "$\"$INSTDIR$\""
+          WriteRegStr   HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_UUID}" "InstallSource"        "$\"$EXEDIR$\""
+          WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_UUID}" "EstimatedSize"        "${ESTIMATED_SIZE}"
+          WriteRegStr   HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_UUID}" "UninstallString"      "$\"$INSTDIR\uninstall.exe$\""
+          WriteRegStr   HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_UUID}" "QuietUninstallString" "$\"$INSTDIR\uninstall.exe$\" /S"
+          WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_UUID}" "NoModify"        1
+          WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_UUID}" "NoRepair"        1
+          WriteUninstaller "$INSTDIR\uninstall.exe"
+        SectionEnd
+
+        Section "Uninstall"
+          ;Remove registry keys that were set by the installer
+          DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_UUID}"
+          DeleteRegKey HKCU "Software\${PRODUCT_COMPANY}\${PRODUCT_NAME}"
+          ;Remove files that were installed by the installer and the created uninstaller
+          Delete "$INSTDIR\uninstall.exe"
+          ;Remove shortcut
+          Delete "$SMPROGRAMS\${PRODUCT_NAME}.lnk"
+          ;Remove directories that were created by the installer
+          RMDir "$SMPROGRAMS\${PRODUCT_NAME}"
+          ;Remove the installed files
+          Delete "$INSTDIR\*.*"
+          RMDir "$INSTDIR"
+        SectionEnd
+        EOF
+        makensis installer.nsi
+
     - name: Create Windows SFX file
       if: ${{ inputs.target_windows_sfx == 'true' }}
       env:

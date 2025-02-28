@@ -114,8 +114,9 @@ TARGET_LINUX_APPIMAGE="true"
 TARGET_LINUX_TARBALL="true"
 TARGET_MACOS="true"
 TARGET_WEB="true"
+TARGET_WINDOWS_INSTALL="true"
+TARGET_WINDOWS_SFX="false"
 TARGET_WINDOWS_ZIP="true"
-TARGET_WINDOWS_SFX="true"
 ```
 
 ## GitHub Actions
@@ -134,9 +135,10 @@ The GitHub Actions workflow will automatically build and package the game for al
   - `.dmg` Disk Image (*notarizing is not yet implemented*)
 - Web
 - Windows
+  - win64 Installer (*NSIS installer, notarizing is not implemented*)
+  - win64 .exe (*self-extracting, notarizing is not implemented*)
   - win32 .zip
   - win64 .zip
-  - win64 .exe (*self-extracting, notarizing is not implemented*)
 
 ### Development Builds
 
