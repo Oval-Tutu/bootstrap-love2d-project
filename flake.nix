@@ -32,6 +32,7 @@
             miniserve
             nodejs_20
             p7zip
+            steamos-devkit
             tree
             unzip
             xmlstarlet
