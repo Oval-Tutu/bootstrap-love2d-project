@@ -63,7 +63,7 @@ runs:
     - name: Download Windows tools
       shell: bash
       run: |
-        for ARCH in win32 win64; do
+        for ARCH in win64; do
           [ "$ARCH" == "win32" ] && SHORT_ARCH="x86" || SHORT_ARCH="x64"
           curl -fsSL --retry 5 --retry-delay 15 --connect-timeout 30 --max-time 300 https://github.com/electron/rcedit/releases/download/v2.0.0/rcedit-${SHORT_ARCH}.exe -o ./tools/rcedit-${ARCH}.exe || exit 1
           curl -fsSL --retry 5 --retry-delay 15 --connect-timeout 30 --max-time 300 https://github.com/love2d/love/releases/download/${{ inputs.love_version }}/love-${{ inputs.love_version }}-${ARCH}.zip -o ./tools/love-${{ inputs.love_version }}-${ARCH}.zip || exit 1
@@ -90,7 +90,7 @@ runs:
       shell: bash
       run: |
         # Remove the default icon and version info then add the new icon and version info
-        for ARCH in win32 win64; do
+        for ARCH in win64; do
           env WINEARCH=${ARCH} WINEPREFIX="$HOME/.wine-${ARCH}" wineboot --init
           env WINEARCH=${ARCH} WINEPREFIX="$HOME/.wine-${ARCH}" wine ./tools/rcedit-${ARCH}.exe \
             ./tools/love-${ARCH}/love.exe \
@@ -108,7 +108,7 @@ runs:
     - name: Create fused executables
       shell: bash
       run: |
-        for ARCH in win32 win64; do
+        for ARCH in win64; do
           mkdir -p ./tools/build/$ARCH/
           cp ./tools/love-$ARCH/* ./tools/build/$ARCH/
           mv -v ./tools/build/$ARCH/love.exe ./tools/build/$ARCH/${{ inputs.product_name }}.exe
@@ -118,8 +118,8 @@ runs:
       if: ${{ inputs.build_type == 'release' && inputs.target_windows_zip == 'true' }}
       shell: bash
       run: |
-        for ARCH in win32 win64; do
-          7z a -tzip -mx=9 -mfb=273 -mpass=15 -mtc=off ${{ inputs.output_folder }}/${{ inputs.product_name }}-${{ inputs.build_num }}_$ARCH.zip ./tools/build/$ARCH/*
+        for ARCH in win64; do
+          7z a -tzip -mx=9 -mfb=273 -mpass=15 -mtc=off ${{ inputs.output_folder }}/${{ inputs.product_name }}.zip ./tools/build/$ARCH/*
         done
     # https://gist.github.com/drewchapin/246de6d0c404a79ee66a5ead35b480bc
     # https://github.com/AnonymerNiklasistanonym/NsiWindowsInstallerExamples/blob/main/example_02_license_uninstaller_components/windows_installer.nsi
@@ -157,7 +157,7 @@ runs:
         ;-------------------------------------------------------------------------------
         ; Attributes
         Name "${PRODUCT_NAME}"
-        OutFile "${{ inputs.output_folder }}/${PRODUCT_NAME}-${{ inputs.build_num }}-installer.exe"
+        OutFile "${{ inputs.output_folder }}/${PRODUCT_NAME}-installer.exe"
         InstallDir "${PRODUCT_DIR}"
         InstallDirRegKey HKCU "Software\${PRODUCT_COMPANY}\${PRODUCT_NAME}" ""
         RequestExecutionLevel user ; user|highest|admin
@@ -252,7 +252,7 @@ runs:
         WINEDEBUG: "-all"  # Disable WINE debug output
       shell: bash
       run: |
-        SFX_EXE="${{ inputs.output_folder }}/${{ inputs.product_name }}-${{ inputs.build_num }}.exe"
+        SFX_EXE="${{ inputs.output_folder }}/${{ inputs.product_name }}.exe"
         # Create 7z archive of the game
         mkdir -p ./tools/build/sfx
         7z a -mx=5 -m0=BCJ -m1=LZMA2 ./tools/build/sfx/${{ inputs.product_name }}.7z ./tools/build/win64/*
