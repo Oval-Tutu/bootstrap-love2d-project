@@ -806,20 +806,21 @@ jobs:
       - name: Create summary
         run: |
           echo "## Build summary" >> $GITHUB_STEP_SUMMARY
-          echo "- Build Number: ${{ needs.configure.outputs.build_num }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Build Type:   ${{ needs.configure.outputs.build_type }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Build CI:     $([ "$ACT" = "true" ] && echo "act" || echo "GitHub")" >> $GITHUB_STEP_SUMMARY
-          echo "- GitHub Run:   ${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Game Version: ${{ env.PRODUCT_VERSION }}" >> $GITHUB_STEP_SUMMARY
-          echo "- LÖVE Version: ${{ env.LOVE_VERSION }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Android:      ${{ env.TARGET_ANDROID == 'true' && '✅' || '❌' }}" >> $GITHUB_STEP_SUMMARY
-          echo "- AppImage:     ${{ env.TARGET_LINUX_APPIMAGE == 'true' && '✅' || '❌' }}" >> $GITHUB_STEP_SUMMARY
-          echo "- iOS:          ${{ env.TARGET_IOS == 'true' && '✅' || '❌' }}" >> $GITHUB_STEP_SUMMARY
-          echo "- macOS:        ${{ env.TARGET_MACOS == 'true' && '✅' || '❌' }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Tarball:      ${{ env.TARGET_LINUX_TARBALL == 'true' && '✅' || '❌' }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Web:          ${{ env.TARGET_WEB == 'true' && '✅' || '❌' }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Windows:      ${{ env.TARGET_WINDOWS_ZIP == 'true' && '✅' || '❌' }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Windows SFX   ${{ env.TARGET_WINDOWS_SFX == 'true' && '✅' || '❌' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Build Number:     ${{ needs.configure.outputs.build_num }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Build Type:       ${{ needs.configure.outputs.build_type }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Build CI:         $([ "$ACT" = "true" ] && echo "act" || echo "GitHub")" >> $GITHUB_STEP_SUMMARY
+          echo "- GitHub Run:       ${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Game Version:     ${{ env.PRODUCT_VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "- LÖVE Version:     ${{ env.LOVE_VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Android:          ${{ env.TARGET_ANDROID == 'true' && '✅' || '❌' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- AppImage:         ${{ env.TARGET_LINUX_APPIMAGE == 'true' && '✅' || '❌' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- iOS:              ${{ env.TARGET_IOS == 'true' && '✅' || '❌' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- macOS:            ${{ env.TARGET_MACOS == 'true' && '✅' || '❌' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Tarball:          ${{ env.TARGET_LINUX_TARBALL == 'true' && '✅' || '❌' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Web:              ${{ env.TARGET_WEB == 'true' && '✅' || '❌' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Windows Installer ${{ env.TARGET_WINDOWS_INSTALL == 'true' && '✅' || '❌' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Windows SFX       ${{ env.TARGET_WINDOWS_SFX == 'true' && '✅' || '❌' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Windows:          ${{ env.TARGET_WINDOWS_ZIP == 'true' && '✅' || '❌' }}" >> $GITHUB_STEP_SUMMARY
           if [ "${{ needs.configure.outputs.build_type }}" == "release" ]; then
             echo "## Version information" >> $GITHUB_STEP_SUMMARY
             echo "- Android version code: ${{ needs.configure.outputs.android_version_code }}" >> $GITHUB_STEP_SUMMARY
