@@ -41,8 +41,9 @@ jobs:
       target_linux_tarball: ${{ env.TARGET_LINUX_TARBALL }}
       target_macos: ${{ env.TARGET_MACOS }}
       target_web: ${{ env.TARGET_WEB }}
-      target_windows_zip: ${{ env.TARGET_WINDOWS_ZIP }}
+      target_windows_install: ${{ env.TARGET_WINDOWS_INSTALL }}
       target_windows_sfx: ${{ env.TARGET_WINDOWS_SFX }}
+      target_windows_zip: ${{ env.TARGET_WINDOWS_ZIP }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -225,11 +226,11 @@ jobs:
           asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}.love
           asset_content_type: application/x-love-game
       - name: Create unversioned .love for itch.io
-        #if: ${{ needs.configure.outputs.build_type == 'release' && needs.configure.outputs.itch_user != '' }}
+        if: ${{ needs.configure.outputs.build_type == 'release' && needs.configure.outputs.itch_user != '' }}
         run: |
           cp -v "${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.love" "${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love"
       - name: Upload .love to itch.io
-        #if: ${{ needs.configure.outputs.build_type == 'release' }}
+        if: ${{ needs.configure.outputs.build_type == 'release' }}
         uses: ./.github/actions/publish-itch
         with:
           api-key: ${{ secrets.BUTLER_API_KEY }}
@@ -324,7 +325,7 @@ jobs:
           version: ${{ env.PRODUCT_VERSION }}
 
   build-windows:
-    if: ${{ needs.configure.outputs.target_windows_zip == 'true' || needs.configure.outputs.target_windows_sfx == 'true' }}
+    if: ${{ needs.configure.outputs.target_windows_zip == 'true' || needs.configure.outputs.target_windows_setup == 'true' || needs.configure.outputs.target_windows_sfx == 'true' }}
     runs-on: ubuntu-22.04
     needs: [configure]
     continue-on-error: true
@@ -357,10 +358,13 @@ jobs:
           product_name: ${{ env.PRODUCT_NAME }}
           product_company: ${{ env.PRODUCT_COMPANY }}
           product_copyright: ${{ env.PRODUCT_COPYRIGHT }}
+          product_uuid: ${{ env.PRODUCT_UUID }}
           product_version: ${{ env.PRODUCT_VERSION }}
+          product_website: ${{ env.PRODUCT_WEBSITE }}
           output_folder: ${{ env.OUTPUT_FOLDER }}
-          target_windows_zip: ${{ needs.configure.outputs.target_windows_zip }}
+          target_windows_install: ${{ needs.configure.outputs.target_windows_install }}
           target_windows_sfx: ${{ needs.configure.outputs.target_windows_sfx }}
+          target_windows_zip: ${{ needs.configure.outputs.target_windows_zip }}
       - name: Upload Windows 32-bit artifact
         if: ${{ needs.configure.outputs.build_type == 'dev' && needs.configure.outputs.target_windows_zip == 'true' }}
         uses: actions/upload-artifact@v4
@@ -385,6 +389,12 @@ jobs:
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.exe
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.exe
+      - name: Upload Windows Install artifact
+        if: ${{ needs.configure.outputs.build_type == 'dev' && needs.configure.outputs.target_windows_install == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-installer.exe
+          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-installer.exe
       - name: Upload Windows 32-bit release
         if: ${{ needs.configure.outputs.build_type == 'release' && needs.configure.outputs.target_windows_zip == 'true' }}
         uses: actions/upload-release-asset@v1
@@ -405,6 +415,16 @@ jobs:
           asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}_win64.zip
           asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}_win64.zip
           asset_content_type: application/zip
+      - name: Upload Windows Install release
+        if: ${{ needs.configure.outputs.build_type == 'release' && needs.configure.outputs.target_windows_install == 'true' }}
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.configure.outputs.upload_url }}
+          asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-installer.exe
+          asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}-installer.exe
+          asset_content_type: application/x-msdownload
       - name: Upload Windows SFX release
         if: ${{ needs.configure.outputs.build_type == 'release' && needs.configure.outputs.target_windows_sfx == 'true' }}
         uses: actions/upload-release-asset@v1
@@ -415,8 +435,22 @@ jobs:
           asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.exe
           asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}.exe
           asset_content_type: application/x-msdownload
+      - name: Create unversioned Windows Install for itch.io
+        if: ${{ needs.configure.outputs.build_type == 'release' && needs.configure.outputs.target_windows_install == 'true' }}
+        run: |
+          cp -v "${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}-installer.exe" "${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-installer.exe"
+      - name: Upload Windows Install to itch.io
+        if: ${{ needs.configure.outputs.build_type == 'release' && needs.configure.outputs.target_windows_install == 'true' }}
+        uses: ./.github/actions/publish-itch
+        with:
+          api-key: ${{ secrets.BUTLER_API_KEY }}
+          channel: windows
+          itch_game: ${{ needs.configure.outputs.itch_game }}
+          itch_user: ${{ needs.configure.outputs.itch_user }}
+          package: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-installer.exe
+          version: ${{ env.PRODUCT_VERSION }}
       - name: Create unversioned Windows SFX for itch.io
-        if: ${{ needs.configure.outputs.build_type == 'release' }}
+        if: ${{ needs.configure.outputs.build_type == 'release' && needs.configure.outputs.target_windows_sfx == 'true' }}
         run: |
           cp -v "${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.exe" "${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.exe"
       - name: Upload Windows SFX to itch.io
