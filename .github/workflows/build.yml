@@ -277,12 +277,22 @@ jobs:
         run: |
           mv -v ./tools/squashfs-root/AppRun ./tools/squashfs-root/${{ env.PRODUCT_NAME }}
           tar -czf ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.tar.gz -C ./tools/squashfs-root .
+      - name: Create unversioned AppImage
+        if: ${{ needs.configure.outputs.target_linux_appimage == 'true' }}
+        run: |
+          cp -v "${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.AppImage" "${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.AppImage"
       - name: Upload AppImage artifact
         if: ${{ needs.configure.outputs.build_type == 'dev' && env.TARGET_LINUX_APPIMAGE == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.AppImage
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.AppImage
+      - name: Upload AppImage artifact for SteamOS Devkit Client
+        if: ${{ env.TARGET_LINUX_APPIMAGE == 'true' && env.ACT == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PRODUCT_NAME }}.AppImage
+          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.AppImage
       - name: Upload Tarball artifact
         if: ${{ needs.configure.outputs.build_type == 'dev' && env.TARGET_LINUX_TARBALL == 'true' }}
         uses: actions/upload-artifact@v4
@@ -309,10 +319,6 @@ jobs:
           asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.tar.gz
           asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}.tar.gz
           asset_content_type: application/gzip
-      - name: Create unversioned AppImage for itch.io
-        if: ${{ needs.configure.outputs.build_type == 'release' && needs.configure.outputs.itch_user != '' }}
-        run: |
-          cp -v "${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-${{ env.BUILD_NUM }}.AppImage" "${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.AppImage"
       - name: Upload AppImage to itch.io
         if: ${{ needs.configure.outputs.build_type == 'release' }}
         uses: ./.github/actions/publish-itch
