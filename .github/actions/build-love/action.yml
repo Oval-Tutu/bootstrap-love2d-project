@@ -1,5 +1,12 @@
 name: Build LOVE Package
 description: Archives game folder into a .love file
+inputs:
+  output_folder:
+    description: The folder in which the generated .love file will be placed
+    required: true
+  product_name:
+    description: The name of the .love file
+    required: true
 runs:
   using: composite
   steps:
@@ -9,10 +16,3 @@ runs:
         7z a -tzip -mx=6 -mpass=15 -mtc=off \
         "${{ inputs.output_folder }}/${{ inputs.product_name }}.love" \
         ./game/* -xr!.gitkeep
-inputs:
-  output_folder:
-    description: The folder in which the generated .love file will be placed
-    required: true
-  product_name:
-    description: The name of the .love file
-    required: true

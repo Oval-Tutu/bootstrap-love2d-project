@@ -3,7 +3,7 @@
 # Wrapper around act to build and extract game packages
 
 case ${1} in
-  android|linux|love|windows)
+  android|html|linux|love|windows)
     echo "Building for ${1}...";;
   *)
     echo "Usage: $0 android|linux|love|windows"
@@ -22,18 +22,12 @@ if command -v act &>/dev/null; then
 
   act -j build-${1}
 
-  if [ "${1}" = "linux" ]; then
-    # Check if the AppImage zip exists
-    if [ -f "builds/1/${PRODUCT_NAME}.AppImage/${PRODUCT_NAME}.AppImage.zip" ]; then
-        # Extract the AppImage zip
-        unzip -o "builds/1/${PRODUCT_NAME}.AppImage/${PRODUCT_NAME}.AppImage.zip" -d "builds/1/${PRODUCT_NAME}.AppImage/"
-        rm "builds/1/${PRODUCT_NAME}.AppImage/${PRODUCT_NAME}.AppImage.zip"
-        echo "Successfully extracted ${PRODUCT_NAME}.AppImage.zip"
-    else
-        echo "Error: Could not find builds/1/${PRODUCT_NAME}.AppImage/${PRODUCT_NAME}.AppImage.zip"
-        exit 1
+  for EXT in .AppImage -debug-signed.apk -release-signed.aab -release-signed.apk .love .tar.gz -installer.exe .exe; do
+    if [ -f "builds/1/${PRODUCT_NAME}${EXT}/${PRODUCT_NAME}${EXT}.zip" ]; then
+      unzip -o "builds/1/${PRODUCT_NAME}${EXT}/${PRODUCT_NAME}${EXT}.zip" -d "builds/1/${PRODUCT_NAME}${EXT}/"
+      rm "builds/1/${PRODUCT_NAME}${EXT}/${PRODUCT_NAME}${EXT}.zip"
     fi
-  fi
+  done
 else
   echo 'ERROR! Command not find `act` to build the package.'
   exit 1

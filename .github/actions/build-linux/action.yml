@@ -3,9 +3,6 @@
 name: Build AppImage
 description: Creates an AppImage for Linux distribution
 inputs:
-  build_num:
-    description: Build number
-    required: true
   love_version:
     description: LÖVE version to use
     required: true
@@ -78,8 +75,12 @@ runs:
         fi
 
         if [ "$ACT" == "true" ]; then
-          ./tools/appimagetool.AppImage --appimage-extract-and-run ./tools/squashfs-root ${{ inputs.output_folder }}/${{ inputs.product_name }}-${{ inputs.build_num }}.AppImage
+          ./tools/appimagetool.AppImage --appimage-extract-and-run ./tools/squashfs-root ${{ inputs.output_folder }}/${{ inputs.product_name }}.AppImage
         else
-          ./tools/appimagetool.AppImage ./tools/squashfs-root ${{ inputs.output_folder }}/${{ inputs.product_name }}-${{ inputs.build_num }}.AppImage
+          ./tools/appimagetool.AppImage ./tools/squashfs-root ${{ inputs.output_folder }}/${{ inputs.product_name }}.AppImage
         fi
-        chmod a+x ${{ inputs.output_folder }}/${{ inputs.product_name }}-${{ inputs.build_num }}.AppImage
+        chmod a+x ${{ inputs.output_folder }}/${{ inputs.product_name }}.AppImage
+
+        # Create tarball
+        mv -v ./tools/squashfs-root/AppRun ./tools/squashfs-root/${{ inputs.product_name }}
+        tar -czf ${{ inputs.output_folder }}/${{ inputs.product_name }}.tar.gz -C ./tools/squashfs-root .

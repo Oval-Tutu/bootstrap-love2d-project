@@ -5,9 +5,6 @@ inputs:
   apple_version_code:
     description: The version code of the macOS app
     required: true
-  build_num:
-    description: The build number of the macOS app
-    required: true
   love_version:
     description: The version of LÖVE to use
     required: true
@@ -191,9 +188,9 @@ runs:
       shell: bash
       run: |
         if command -v ditto >/dev/null 2>&1; then
-          ditto -c -k --keepParent ./tools/${{ inputs.product_name }}.app ${{ inputs.output_folder }}/${{ inputs.product_name }}-${{ inputs.build_num }}.app.zip
+          ditto -c -k --keepParent ./tools/${{ inputs.product_name }}.app ${{ inputs.output_folder }}/${{ inputs.product_name }}.app.zip
         else
-          zip -ry --symlinks ${{ inputs.output_folder }}/${{ inputs.product_name }}-${{ inputs.build_num }}.app.zip ./tools/${{ inputs.product_name }}.app
+          zip -ry --symlinks ${{ inputs.output_folder }}/${{ inputs.product_name }}.app.zip ./tools/${{ inputs.product_name }}.app
         fi
         tree ${{ inputs.output_folder }}
     - name: Create macOS .dmg of .app
@@ -212,5 +209,5 @@ runs:
           --app-drop-link 600 185 \
           --no-internet-enable \
           --skip-jenkins \
-          ${{ inputs.output_folder }}/${{ inputs.product_name }}-${{ inputs.build_num }}.dmg \
+          ${{ inputs.output_folder }}/${{ inputs.product_name }}.dmg \
           ./tools/${{ inputs.product_name }}.app/

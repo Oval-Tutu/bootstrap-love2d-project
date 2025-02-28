@@ -123,7 +123,7 @@ runs:
         popd
         unzip -l ./tools/love-android/app/build/outputs/apk/*/debug/app-embed-*-debug.apk | grep -i '.so'
         mkdir -p ${{ inputs.output_folder }}/apk/debug
-        mv -v ./tools/love-android/app/build/outputs/apk/*/debug/app-embed-*-debug.apk ${{ inputs.output_folder }}/apk/debug/${{ inputs.product_name }}-${{ inputs.build_num }}-debug.apk
+        mv -v ./tools/love-android/app/build/outputs/apk/*/debug/app-embed-*-debug.apk ${{ inputs.output_folder }}/apk/debug/${{ inputs.product_name }}-debug.apk
     - name: Build Android release .apk
       shell: bash
       run: |
@@ -132,7 +132,7 @@ runs:
         popd
         unzip -l ./tools/love-android/app/build/outputs/apk/*/release/app-embed-*-release-unsigned.apk | grep -i '.so'
         mkdir -p ${{ inputs.output_folder }}/apk/release
-        mv -v ./tools/love-android/app/build/outputs/apk/*/release/app-embed-*-release-unsigned.apk ${{ inputs.output_folder }}/apk/release/${{ inputs.product_name }}-${{ inputs.build_num }}-release.apk
+        mv -v ./tools/love-android/app/build/outputs/apk/*/release/app-embed-*-release-unsigned.apk ${{ inputs.output_folder }}/apk/release/${{ inputs.product_name }}-release.apk
     - name: Build Android .aab
       if: ${{ inputs.build_type == 'release' }}
       shell: bash
@@ -142,4 +142,4 @@ runs:
         popd
         unzip -l ./tools/love-android/app/build/outputs/bundle/*/app-embed-*-release.aab | grep -i '.so'
         mkdir -p ${{ inputs.output_folder }}/aab/release
-        mv -v ./tools/love-android/app/build/outputs/bundle/*/app-embed-*-release.aab ${{ inputs.output_folder }}/aab/release/${{ inputs.product_name }}-${{ inputs.build_num }}-release.aab
+        mv -v ./tools/love-android/app/build/outputs/bundle/*/app-embed-*-release.aab ${{ inputs.output_folder }}/aab/release/${{ inputs.product_name }}-release.aab

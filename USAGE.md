@@ -126,6 +126,7 @@ The GitHub Actions workflow will automatically build and package the game for al
 - Android
   - `.apk` debug builds for testing and release builds for publishing to Itch.io
   - `.aab` release build for publishing to the Play Store
+- HTML
 - iOS (*notarization is not yet implemented*)
 - Linux
   - AppImage
@@ -133,12 +134,10 @@ The GitHub Actions workflow will automatically build and package the game for al
 - macOS
   - `.app` Bundle (*notarizing is not yet implemented*)
   - `.dmg` Disk Image (*notarizing is not yet implemented*)
-- Web
-- Windows
-  - win64 Installer (*NSIS installer, notarizing is not implemented*)
-  - win64 .exe (*self-extracting, notarizing is not implemented*)
-  - win32 .zip
-  - win64 .zip
+- Windows (64-bit)
+  - Installer (*NSIS installer, notarizing is not implemented*)
+  - .exe (*self-extracting, notarizing is not implemented*)
+  - .zip
 
 ### Development Builds
 
@@ -153,16 +152,16 @@ The build process:
 3. Uploads artifacts to GitHub Actions
 
 Artifacts produced (if enabled in `game/product.env`):
-- `{PRODUCT_NAME}-{BUILD_NUM}.love` - Base LÖVE game package
-- `{PRODUCT_NAME}-{BUILD_NUM}-debug-signed.apk` - Android debug build
-- `{PRODUCT_NAME}-{BUILD_NUM}-release-signed.apk` - Android release build
-- `{PRODUCT_NAME}-{BUILD_NUM}_win32` - Windows 32-bit build
-- `{PRODUCT_NAME}-{BUILD_NUM}_win64` - Windows 64-bit build
-- `{PRODUCT_NAME}-{BUILD_NUM}.exe` - Windows self-extracting executable
-- `{PRODUCT_NAME}-{BUILD_NUM}_html` - Web build
-- `{PRODUCT_NAME}-{BUILD_NUM}.app` - macOS application bundle
-- `{PRODUCT_NAME}-{BUILD_NUM}.dmg` - macOS disk image
-- `{PRODUCT_NAME}-{BUILD_NUM}.ipa` - iOS package
+- `{PRODUCT_NAME}.love` - Base LÖVE game package
+- `{PRODUCT_NAME}-debug-signed.apk` - Android debug build
+- `{PRODUCT_NAME}-release-signed.apk` - Android release build
+- `{PRODUCT_NAME}-installer.exe` - Windows installer
+- `{PRODUCT_NAME}.exe` - Windows self-extracting executable
+- `{PRODUCT_NAME}.zip` - Windows build
+- `{PRODUCT_NAME}-html` - HTML build
+- `{PRODUCT_NAME}.app` - macOS application bundle
+- `{PRODUCT_NAME}.dmg` - macOS disk image
+- `{PRODUCT_NAME}.ipa` - iOS package
 
 Access the builds:
 1. Go to your repository's Actions tab
@@ -210,7 +209,7 @@ Not every artifact will be published to Itch.io, as some platforms are not suppo
 - Linux AppImage files will be published to Itch.io if `TARGET_LINUX_APPIMAGE` is enabled.
 - macOS .dmg files will be published to Itch.io if `TARGET_MACOS` is enabled.
 - Windows win64 self-extracting .exe files will be published (in a .zip) to Itch.io if `TARGET_WINDOWS_SFX` is enabled.
-- Web artifacts will be published to Itch.io if `TARGET_WEB` is enabled.
+- HTML artifacts will be published to Itch.io if `TARGET_HTML` is enabled.
 - Itch.io does not support iOS artifacts.
 
 ## Android
@@ -271,9 +270,9 @@ Add these secrets to the GitHub repository settings:
 - `ANDROID_RELEASE_KEYSTORE_PASSWORD`
 - `ANDROID_RELEASE_KEY_PASSWORD`
 
-## Web
+## HTML
 
-The web build uses [love.js player](https://github.com/2dengine/love.js) from [2dengine](https://2dengine.com/).
+The HTML build use [love.js player](https://github.com/2dengine/love.js) from [2dengine](https://2dengine.com/).
 
 The love.js player needs to be delivered via a web server, **it will not work if you open `index.html` locally in a browser**.
 You need to set the correct [CORS policy via HTTP headers](https://developer.chrome.com/blog/enabling-shared-array-buffer/) for the game to work in the browser.
@@ -281,11 +280,11 @@ Here are some examples of how to do that.
 
 ### Local Testing
 
-Use [`miniserve`](https://github.com/svenstaro/miniserve) to serve the web build of the game using the correct CORS policy.
-`tools/serve-web.sh` is a convenience script that does that. It take one argument which is the path to the zip file of the web build.
+Use [`miniserve`](https://github.com/svenstaro/miniserve) to serve the HTML build of the game using the correct CORS policy.
+`tools/serve-web.sh` is a convenience script that does that. It takes one argument which is the path to the zip file of the HTML build.
 
 ```shell
-./tools/serve-web.sh builds/1/Template-25.009.0930_web/Template-25.009.0930_web.zip
+./tools/serve-web.sh builds/1/Template_html/Template_html.zip
 ```
 
 Then open `http://localhost:1337` in your browser.
@@ -388,7 +387,7 @@ This project includes HTTPS support for LÖVE 11.5 via the [lua-https](https://g
 
 - For LÖVE 12.0+: Uses the built-in `https` module
 - For LÖVE 11.5: Loads platform-specific native libraries
-- For Web builds: No HTTPS support is available.
+- For HTML builds: No lua-https support is available.
 
 ### Native Libraries
 
@@ -421,14 +420,12 @@ game/runtime/https/
 ├── osx/
 │   └── https.so
 └── windows/
-    ├── win32/
-    │   └── https.dll
     └── win64/
         └── https.dll
 ```
 
 The template includes pre-built libraries for:
-- Windows (32/64-bit)
+- Windows (64-bit)
 - Linux (x86_64)
 - macOS (Universal)
 - Android (arm64-v8a, armeabi-v7a)
