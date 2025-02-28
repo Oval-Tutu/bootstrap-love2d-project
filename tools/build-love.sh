@@ -4,24 +4,21 @@
 if command -v act &>/dev/null; then
   act -j build-love
 elif command -v 7z &>/dev/null; then
-  # Fall back to 7z if act is not available
-  PACKAGE_NAME="Game";
-  # If $1 is set use it as the package name
-  if [ -n "${1}" ]; then
-    PACKAGE_NAME="${1}"
+  # Get the PRODUCT_NAME from product.env
+  PRODUCT_NAME=$(grep -E "^PRODUCT_NAME=" ./game/product.env | cut -d'"' -f2)
+
+  # Check if PRODUCT_NAME was found
+  if [ -z "${PRODUCT_NAME}" ]; then
+    echo "Error: Could not find PRODUCT_NAME in game/product.env"
+    exit 1
   fi
 
-  # If $2 is set use it as the package name suffix
-  if [ -n "${2}" ]; then
-    PACKAGE_NAME="${PACKAGE_NAME}-${2}"
-  else
-    PACKAGE_NAME="${PACKAGE_NAME}-$(date +%y.%j.%H%M)"
-  fi
+  mkdir -p "./builds/1"
   7z a -tzip -mx=6 -mpass=15 -mtc=off \
-  "./builds/${PACKAGE_NAME}.love" \
+  "./builds/1/${PRODUCT_NAME}.love" \
   ./game/* \
   -xr!.gitkeep
 else
-  echo 'ERROR! Command not finf `act` or `7z` to build the package.'
+  echo 'ERROR! Command not find `act` or `7z` to build the package.'
   exit 1
 fi

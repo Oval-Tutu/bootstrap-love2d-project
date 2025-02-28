@@ -81,7 +81,6 @@ Use this template to [create a new repository](https://docs.github.com/en/reposi
 ### Building
 
 Builds a date stamped `.love` file and puts it in the `builds` folder.
-This doubles up as a simple backup system.
 
 - Press <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>B</kbd> to **Build** the game.
 
