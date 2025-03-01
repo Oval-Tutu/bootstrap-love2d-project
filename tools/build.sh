@@ -26,6 +26,11 @@ if command -v act &>/dev/null; then
     if [ -f "builds/1/${PRODUCT_NAME}${EXT}/${PRODUCT_NAME}${EXT}.zip" ]; then
       unzip -o "builds/1/${PRODUCT_NAME}${EXT}/${PRODUCT_NAME}${EXT}.zip" -d "builds/1/${PRODUCT_NAME}${EXT}/"
       rm "builds/1/${PRODUCT_NAME}${EXT}/${PRODUCT_NAME}${EXT}.zip"
+      # Extract .tar.gz for SteamOS DevKit integration
+      if [ -f "builds/1/${PRODUCT_NAME}${EXT}/${PRODUCT_NAME}.tar.gz" ]; then
+        tar -xzf "builds/1/${PRODUCT_NAME}${EXT}/${PRODUCT_NAME}.tar.gz" -C "builds/1/${PRODUCT_NAME}${EXT}/"
+        rm "builds/1/${PRODUCT_NAME}${EXT}/${PRODUCT_NAME}.tar.gz"
+      fi
     fi
   done
 else
