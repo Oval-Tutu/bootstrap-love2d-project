@@ -30,6 +30,17 @@ if command -v act &>/dev/null; then
       if [ -f "builds/1/${PRODUCT_NAME}${EXT}/${PRODUCT_NAME}.tar.gz" ]; then
         tar -xzf "builds/1/${PRODUCT_NAME}${EXT}/${PRODUCT_NAME}.tar.gz" -C "builds/1/${PRODUCT_NAME}${EXT}/"
         rm "builds/1/${PRODUCT_NAME}${EXT}/${PRODUCT_NAME}.tar.gz"
+        # Create JSON notify for SteamOS DevKit
+        cat <<EOF > notify.json
+{
+    "type": "build",
+    "status": "success",
+    "name": "${PRODUCT_NAME}"
+}
+EOF
+        curl --header "Content-Type: application/json" \
+             --request POST http://localhost:32010/post_event \
+             -d @notify.json
       fi
     fi
   done
