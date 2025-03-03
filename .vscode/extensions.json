@@ -1,9 +1,11 @@
 {
   "recommendations": [
     "editorconfig.editorconfig",
-    "slevesque.shader",
-    "sumneko.lua",
+    "ismoh-games.second-local-lua-debugger-vscode",
+    "JohnnyMorganz.stylua",
+    "pixelbyte-studios.pixelbyte-love2d",
     "sanjulaganepola.github-local-actions",
-    "tomblind.local-lua-debugger-vscode"
+    "slevesque.shader",
+    "yinfei.luahelper"
   ]
 }

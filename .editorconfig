@@ -7,18 +7,11 @@ root = true
 [*]
 charset = utf-8
 end_of_line = lf
-insert_final_newline = true
 indent_style = space
-indent_size = 4
-tab_width = 4
-trim_trailing_whitespace = true
-
-# Lua specific settings
-[*.{lua,rockspec}]
-indent_style = space
-# Lua community often prefers 2 spaces
 indent_size = 2
-max_line_length = 120
+insert_final_newline = true
+tab_width = 2
+trim_trailing_whitespace = true
 
 # Tab indentation for Makefiles
 [Makefile]
@@ -29,7 +22,25 @@ indent_style = tab
 indent_style = space
 indent_size = 2
 
+# Lua specific settings
+[*.{lua,luau,rockspec}]
+indent_style = space
+indent_size = 2
+max_line_length = 120
+
 # Documentation files
-[*.{md,txt}]
+[*.{md,rst,txt}]
 trim_trailing_whitespace = false
 max_line_length = off
+
+[*.sh]
+indent_style = space
+indent_size = 2
+# --language-variant
+shell_variant      = auto
+binary_next_line   = true
+# --case-indent
+switch_case_indent = true
+space_redirects    = false
+# --func-next-line
+function_next_line = false

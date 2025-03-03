@@ -27,12 +27,14 @@
           # Pinned packages available in the environment
           packages = with pkgs; [
             act
+            luaformatter
             luajit
             lua-language-server
             miniserve
             nodejs_20
             p7zip
             steamos-devkit
+            stylua
             tree
             unzip
             xmlstarlet

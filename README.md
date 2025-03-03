@@ -2,12 +2,19 @@
 
 Turn your [LÖVE](https://love2d.org/) game ideas into polished multi-platform releases with this powerful template! Featuring professional IDE integration, automated builds, and everything you need to go from prototype to published game. Built for LÖVE 💕
 
+🛑 **Don't fork this repository directly!**
+🟢 [**Create a new repository from this template**](https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-repository-from-a-template) for your game.
+
 ## Features
 
 - 🗂️ Organized with [Workspaces](https://code.visualstudio.com/docs/editor/workspaces)
-  - 🌕 Rich Lua language features with [Lua Language Server](https://marketplace.visualstudio.com/items?itemName=sumneko.lua)
-  - 🐛 Debugging with [Local Lua Debugger](https://marketplace.visualstudio.com/items?itemName=tomblind.local-lua-debugger-vscode)
-  - 🩷 Intellisense for the LÖVE API
+  - 🌕 Rich Lua language features with [Lua Helper](https://marketplace.visualstudio.com/items?itemName=yinfei.luahelper)
+    - <small>Superior, high-performance, cross-platform compatible Language Server Protocol for Lua. And so much more.</small>
+    - <small>`.luarc.json` is included for people wanting to use [Lua Language Server](https://marketplace.visualstudio.com/items?itemName=sumneko.lua)</small>
+  - 🩷 [Intellisense for the LÖVE API](https://marketplace.visualstudio.com/items?itemName=pixelbyte-studios.pixelbyte-love2d)
+  - 🐛 Debugging with [*Second* Local Lua Debugger](https://marketplace.visualstudio.com/items?itemName=ismoh-games.second-local-lua-debugger-vscode)
+    - <small>A maintained fork of the original [Local Lua Debugger](https://marketplace.visualstudio.com/items?itemName=tomblind.local-lua-debugger-vscode)</small>
+  - 🎑 Deterministic Lua code formatting with [StyLua](https://marketplace.visualstudio.com/items?itemName=JohnnyMorganz.stylua)
   - 👨‍💻 Consistent coding styles with [Editorconfig](https://marketplace.visualstudio.com/items?itemName=EditorConfig.EditorConfig)
   - ️⛱️ [Shader languages support](https://marketplace.visualstudio.com/items?itemName=slevesque.shader)
   - 🐙 [GitHub Local Actions](https://marketplace.visualstudio.com/items?itemName=SanjulaGanepola.github-local-actions)
@@ -57,8 +64,8 @@ Turn your [LÖVE](https://love2d.org/) game ideas into polished multi-platform r
 
 ## Quick Start
 
-Use this template to [create a new repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-repository-from-a-template) for your game, then clone that repository locally.
-
+- **Don't fork this repository directly!**
+- [**Create a new repository from this template**](https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-repository-from-a-template) for your game, then clone that repository.
 - Open the `Workspace.code-workspace` file with [Visual Studio Code](https://code.visualstudio.com/) or [VSCodium](https://vscodium.com/)
   - You will be prompted that there are recommended extensions.
     - Click *'Install'*
