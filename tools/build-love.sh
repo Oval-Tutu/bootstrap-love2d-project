@@ -15,9 +15,9 @@ elif command -v 7z &>/dev/null; then
 
   mkdir -p "./builds/1"
   7z a -tzip -mx=6 -mpass=15 -mtc=off \
-  "./builds/1/${PRODUCT_NAME}.love" \
-  ./game/* \
-  -xr!.gitkeep
+    "./builds/1/${PRODUCT_NAME}.love" \
+    ./game/* \
+    -xr!.gitkeep
 else
   echo 'ERROR! Command not find `act` or `7z` to build the package.'
   exit 1
