@@ -14,7 +14,7 @@ function M.getSystemInfo()
     arch = arch,
     is64bit = is64bit,
     isArm = isArm,
-    isX86 = isX86
+    isX86 = isX86,
   }
 end
 
@@ -32,7 +32,7 @@ function M.getPlatformSubdir(sysInfo)
     return sysInfo.os
   elseif sysInfo.os == "windows" then
     if sysInfo.isX86 then
-      return sysInfo.is64bit and sysInfo.os .. "/win64" or sysInfo.os .."/win32"
+      return sysInfo.is64bit and sysInfo.os .. "/win64" or sysInfo.os .. "/win32"
     end
   end
   return nil
@@ -43,7 +43,9 @@ function M.loadNativeLibrary(libraryName)
   local extension = sysInfo.os == "windows" and ".dll" or ".so"
   local libraryFile = libraryName .. extension
   local subdir = M.getPlatformSubdir(sysInfo)
-  if not subdir then return nil end
+  if not subdir then
+    return nil
+  end
 
   local assetFile = "runtime/" .. libraryName .. "/" .. subdir .. "/" .. libraryFile
   local saveFile = love.filesystem.getSaveDirectory() .. "/" .. libraryFile

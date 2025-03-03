@@ -14,12 +14,12 @@ local overlayStats = {
     name = name,
     version = version,
     vendor = vendor,
-    device = device
+    device = device,
   },
   sysInfo = {
     arch = love.system.getOS() ~= "Web" and require("ffi").arch or "Web",
     os = love.system.getOS(),
-    cpuCount = love.system.getProcessorCount()
+    cpuCount = love.system.getProcessorCount(),
   },
   metrics = {
     canvases = {},
@@ -30,9 +30,9 @@ local overlayStats = {
     imageCount = {},
     memoryUsage = {},
     shaderSwitches = {},
-    textureMemory = {}
+    textureMemory = {},
   },
-  currentSample = 0
+  currentSample = 0,
 }
 
 -- Private functions
@@ -40,7 +40,9 @@ local overlayStats = {
 ---Calculates averages for all performance metrics
 ---@return table averages Table of averaged metric values
 local function getAverages()
-  if not overlayStats.isActive then return {} end
+  if not overlayStats.isActive then
+    return {}
+  end
 
   local averages = {}
   for metric, samples in pairs(overlayStats.metrics) do
@@ -66,11 +68,11 @@ local function handleController()
 
   local joysticks = love.joystick.getJoysticks()
   for _, joystick in ipairs(joysticks) do
-    if joystick:isGamepadDown('back') then
-      if joystick:isGamepadDown('a') then
+    if joystick:isGamepadDown("back") then
+      if joystick:isGamepadDown("a") then
         toggleOverlay()
         overlayStats.lastControllerCheck = currentTime
-      elseif joystick:isGamepadDown('b') then
+      elseif joystick:isGamepadDown("b") then
         toggleVSync()
         overlayStats.lastControllerCheck = currentTime
       end
@@ -93,7 +95,9 @@ end
 ---Toggles the VSync state in LÖVE
 ---Only functions when the overlay is active
 local function toggleVSync()
-  if not overlayStats.isActive then return end
+  if not overlayStats.isActive then
+    return
+  end
   overlayStats.vsyncEnabled = not overlayStats.vsyncEnabled
   love.window.setVSync(overlayStats.vsyncEnabled and 1 or 0)
   print(string.format("VSync %s", overlayStats.vsyncEnabled and "enabled" or "disabled"))
@@ -115,24 +119,34 @@ end
 ---Draws the performance overlay when active
 ---@return nil
 function overlayStats.draw()
-  if not overlayStats.isActive then return end
+  if not overlayStats.isActive then
+    return
+  end
 
   local averages = getAverages()
 
   -- Set up overlay drawing
-  love.graphics.push('all')
+  love.graphics.push("all")
   love.graphics.setNewFont(16)
   love.graphics.setColor(0, 0, 0, 0.8)
-  love.graphics.rectangle('fill', 10, 10, 280, 280)
+  love.graphics.rectangle("fill", 10, 10, 280, 280)
   love.graphics.setColor(0.678, 0.847, 0.902, 1)
 
   -- System Info
   local y = 20
-  love.graphics.print(overlayStats.sysInfo.os .. " " .. overlayStats.sysInfo.arch ..": " .. overlayStats.sysInfo.cpuCount .. "x CPU", 20, y)
+  love.graphics.print(
+    overlayStats.sysInfo.os .. " " .. overlayStats.sysInfo.arch .. ": " .. overlayStats.sysInfo.cpuCount .. "x CPU",
+    20,
+    y
+  )
   y = y + 30
 
   love.graphics.setColor(1, 1, 1, 1)
-  love.graphics.print(string.format("Renderer: %s (%s)", overlayStats.renderInfo.name, overlayStats.renderInfo.vendor), 20, y)
+  love.graphics.print(
+    string.format("Renderer: %s (%s)", overlayStats.renderInfo.name, overlayStats.renderInfo.vendor),
+    20,
+    y
+  )
   y = y + 20
 
   love.graphics.print(string.format("%s", overlayStats.renderInfo.version), 20, y)
@@ -142,9 +156,7 @@ function overlayStats.draw()
   love.graphics.setColor(0, 1, 0, 1)
   local frameTime = averages.frameTime or 0
   local fps = frameTime > 0 and (1 / frameTime) or 0
-  love.graphics.print(string.format("FPS: %.1f (%.1fms)",
-      fps,
-      frameTime * 1000), 20, y)
+  love.graphics.print(string.format("FPS: %.1f (%.1fms)", fps, frameTime * 1000), 20, y)
   y = y + 20
 
   -- Reset canvases each frame
@@ -182,7 +194,7 @@ function overlayStats.draw()
   y = y + 20
 
   -- Add VSync status with color indication
-  love.graphics.setColor(overlayStats.vsyncEnabled and {0, 1, 0, 1} or {1, 0, 0, 1})
+  love.graphics.setColor(overlayStats.vsyncEnabled and { 0, 1, 0, 1 } or { 1, 0, 0, 1 })
   love.graphics.print(string.format("VSync: %s", overlayStats.vsyncEnabled and "ON" or "OFF"), 20, y)
 
   love.graphics.pop()
@@ -194,7 +206,9 @@ end
 function overlayStats.update(dt)
   handleController()
 
-  if not overlayStats.isActive then return end
+  if not overlayStats.isActive then
+    return
+  end
   overlayStats.currentSample = overlayStats.currentSample + 1
   if overlayStats.currentSample > overlayStats.sampleSize then
     overlayStats.currentSample = 1
@@ -217,9 +231,9 @@ end
 ---@param key string The key that was pressed
 ---@return nil
 function overlayStats.handleKeyboard(key)
-  if key == 'f3' then
+  if key == "f3" then
     toggleOverlay()
-  elseif key == 'f5' then
+  elseif key == "f5" then
     toggleVSync()
   end
 end

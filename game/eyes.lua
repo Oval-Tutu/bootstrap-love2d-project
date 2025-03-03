@@ -1,13 +1,13 @@
 local eyes = {
   eyeSize = 128,
   eyeSpacing = 320,
-  online_color = {1, 0, 0},
+  online_color = { 1, 0, 0 },
   online_message = "Offline",
   shakeX = 0,
   shakeY = 0,
   shakeAmount = 5,
   x = 0,
-  y = 0
+  y = 0,
 }
 
 local function isMouseOverEye(eyeX, eyeY)
@@ -20,8 +20,8 @@ end
 local function drawEye(eyeX, eyeY, isWinking)
   if isWinking then
     love.graphics.setColor(1, 1, 1)
-    love.graphics.circle('fill', eyeX, eyeY, eyes.eyeSize)
-    love.graphics.setColor(0, 0, .4)
+    love.graphics.circle("fill", eyeX, eyeY, eyes.eyeSize)
+    love.graphics.setColor(0, 0, 0.4)
     love.graphics.setLineWidth(8)
     love.graphics.line(eyeX - eyes.eyeSize, eyeY, eyeX + eyes.eyeSize, eyeY)
   else
@@ -34,10 +34,10 @@ local function drawEye(eyeX, eyeY, isWinking)
     local pupilY = eyeY + (math.sin(angle) * distance)
 
     love.graphics.setColor(1, 1, 1)
-    love.graphics.circle('fill', eyeX, eyeY, eyes.eyeSize)
+    love.graphics.circle("fill", eyeX, eyeY, eyes.eyeSize)
 
-    love.graphics.setColor(0, 0, .4)
-    love.graphics.circle('fill', pupilX, pupilY, 16)
+    love.graphics.setColor(0, 0, 0.4)
+    love.graphics.circle("fill", pupilX, pupilY, 16)
   end
 end
 
@@ -46,7 +46,7 @@ function eyes.load()
   if https then
     code, body, headers = https.request("https://oval-tutu.com")
     if code < 400 then
-      eyes.online_color = {0, 1, 0}
+      eyes.online_color = { 0, 1, 0 }
       eyes.online_message = "Online"
     end
   end
@@ -95,24 +95,24 @@ function eyes.draw()
   local padding = 128
   if (eyes.shakeX + eyes.shakeY) ~= 0 then
     love.graphics.setColor(1, 0.5, 0)
-    local text = i18n('Ouch')
+    local text = i18n("Ouch")
     local textWidth = font:getWidth(text)
     love.graphics.print(text, (windowWidth - textWidth) / 2, windowHeight - 256)
   end
 
   if bothBlinking then
     love.graphics.setColor(1, 0, 1)
-    local text = i18n('Blink')
+    local text = i18n("Blink")
     local textWidth = font:getWidth(text)
     love.graphics.print(text, (windowWidth - textWidth) / 2, padding)
   else
     love.graphics.setColor(1, 1, 0)
     if leftEyeWinking then
-      local text = i18n('Left Eye') .. " " .. i18n('Wink')
+      local text = i18n("Left Eye") .. " " .. i18n("Wink")
       love.graphics.print(text, padding, padding)
     end
     if rightEyeWinking then
-      local text = i18n('Right Eye') .. " " .. i18n('Wink')
+      local text = i18n("Right Eye") .. " " .. i18n("Wink")
       local textWidth = font:getWidth(text)
       love.graphics.print(text, windowWidth - textWidth - padding, padding)
     end
@@ -120,7 +120,7 @@ function eyes.draw()
 
   -- Draw mouse position
   love.graphics.setColor(1, 1, 1)
-  local message = i18n('Mouse') .. " (" .. eyes.x .. "," .. eyes.y .. ")"
+  local message = i18n("Mouse") .. " (" .. eyes.x .. "," .. eyes.y .. ")"
   local textWidth = font:getWidth(message)
   local centerX = (windowWidth / 2) - (textWidth / 2)
 

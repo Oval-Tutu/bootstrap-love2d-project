@@ -1,11 +1,11 @@
 https = nil
-i18n = require('lib.smiti18n')
-i18n.loadFile('locales/en.lua')
-i18n.setLocale('en')
+i18n = require("lib.smiti18n")
+i18n.loadFile("locales/en.lua")
+i18n.setLocale("en")
 
-local overlayStats = require('lib.overlayStats')
-local runtimeLoader = require('runtime.loader')
-local eyes = require('eyes')
+local overlayStats = require("lib.overlayStats")
+local runtimeLoader = require("runtime.loader")
+local eyes = require("eyes")
 
 function love.load()
   https = runtimeLoader.loadHTTPS()
@@ -24,7 +24,7 @@ function love.update(dt)
 end
 
 function love.keypressed(key)
-  if key == 'escape' then
+  if key == "escape" then
     love.event.quit()
   else
     overlayStats.handleKeyboard(key) -- Should always be called last
