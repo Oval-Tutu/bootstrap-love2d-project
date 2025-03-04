@@ -14,34 +14,40 @@ esac
 
 if command -v act &>/dev/null; then
   source ./game/product.env
-
   # Check if PRODUCT_NAME was found
   if [ -z "${PRODUCT_NAME}" ]; then
     echo "Error: Could not find PRODUCT_NAME in game/product.env"
     exit 1
   fi
+  PRODUCT_FILE="$(echo "${PRODUCT_NAME}" | tr ' ' '-')"
 
   act -j build-${1}
 
   for EXT in .AppImage -debug-signed.apk -release-signed.aab -release-signed.apk .love .tar.gz -installer.exe .exe; do
-    if [ -f "builds/1/${PRODUCT_NAME}${EXT}/${PRODUCT_NAME}${EXT}.zip" ]; then
-      unzip -o "builds/1/${PRODUCT_NAME}${EXT}/${PRODUCT_NAME}${EXT}.zip" -d "builds/1/${PRODUCT_NAME}${EXT}/"
-      rm "builds/1/${PRODUCT_NAME}${EXT}/${PRODUCT_NAME}${EXT}.zip"
+    echo "Checking for ${PRODUCT_FILE}${EXT}..."
+    if [ -f "builds/1/${PRODUCT_FILE}${EXT}/${PRODUCT_FILE}${EXT}.zip" ]; then
+      unzip -o "builds/1/${PRODUCT_FILE}${EXT}/${PRODUCT_FILE}${EXT}.zip" -d "builds/1/${PRODUCT_FILE}${EXT}/"
+      rm "builds/1/${PRODUCT_FILE}${EXT}/${PRODUCT_FILE}${EXT}.zip"
       # Extract .tar.gz for SteamOS DevKit integration
-      if [ -f "builds/1/${PRODUCT_NAME}${EXT}/${PRODUCT_NAME}.tar.gz" ]; then
-        tar -xzf "builds/1/${PRODUCT_NAME}${EXT}/${PRODUCT_NAME}.tar.gz" -C "builds/1/${PRODUCT_NAME}${EXT}/"
-        rm "builds/1/${PRODUCT_NAME}${EXT}/${PRODUCT_NAME}.tar.gz"
-        # Create JSON notify for SteamOS DevKit
-        cat <<EOF >notify.json
+      if [ -f "builds/1/${PRODUCT_FILE}${EXT}/${PRODUCT_FILE}.tar.gz" ]; then
+        tar -xzf "builds/1/${PRODUCT_FILE}${EXT}/${PRODUCT_FILE}.tar.gz" -C "builds/1/${PRODUCT_FILE}${EXT}/"
+        rm "builds/1/${PRODUCT_FILE}${EXT}/${PRODUCT_FILE}.tar.gz"
+        # Test if localhost:32010 is available
+        if nc -z localhost 32010; then
+
+          # Create JSON notify for SteamOS DevKit
+          cat <<EOF >notify.json
 {
     "type": "build",
     "status": "success",
-    "name": "${PRODUCT_NAME}"
+    "name": "${PRODUCT_FILE}"
 }
 EOF
-        curl --header "Content-Type: application/json" \
-          --request POST http://localhost:32010/post_event \
-          -d @notify.json
+          curl --header "Content-Type: application/json" \
+            --request POST http://localhost:32010/post_event \
+            -d @notify.json
+          rm notify.json
+        fi
       fi
     fi
   done

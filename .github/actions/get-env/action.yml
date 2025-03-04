@@ -21,9 +21,10 @@ runs:
             echo "ANDROID_RECORD=NoRecord" >> $GITHUB_ENV
           fi
 
-          # Convert PRODUCT_NAME to ITCH_GAME format only when processing PRODUCT_NAME
+          # Convert PRODUCT_NAME to formats suitable for use a filenames
           if [[ "${cleaned_line}" =~ ^PRODUCT_NAME= ]]; then
             product_value=${cleaned_line#PRODUCT_NAME=}
+            echo "PRODUCT_FILE=$(echo ${product_value} | tr ' ' '-')" >> $GITHUB_ENV
             echo "ITCH_GAME=$(echo ${product_value} | tr ' ' '-' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
           fi
         done < ${{ inputs.env_file }}

@@ -29,6 +29,7 @@ jobs:
       upload_url: ${{ steps.create_release.outputs.upload_url || '' }}
       itch_game: ${{ env.ITCH_GAME }}
       itch_user: ${{ env.ITCH_USER }}
+      product_file: ${{ env.PRODUCT_FILE }}
       product_id: ${{ env.PRODUCT_ID }}
       product_id_android: ${{ env.PRODUCT_ID_ANDROID || env.PRODUCT_ID }}
       product_id_ios: ${{ env.PRODUCT_ID_IOS || env.PRODUCT_ID }}
@@ -202,19 +203,18 @@ jobs:
         uses: ./.github/actions/get-env
         with:
           env_file: game/product.env
-      - name: Install tools
-        uses: ./.github/actions/install-tools
       - name: Build LOVE package
         uses: ./.github/actions/build-love
         with:
           output_folder: ${{ env.OUTPUT_FOLDER }}
+          product_file: ${{ env.PRODUCT_FILE }}
           product_name: ${{ env.PRODUCT_NAME }}
       - name: Upload .love artifact
         if: ${{ needs.configure.outputs.build_type == 'dev' }}
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.PRODUCT_NAME }}.love
-          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love
+          name: ${{ env.PRODUCT_FILE }}.love
+          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_FILE }}.love
       - name: Upload .love release
         if: ${{ needs.configure.outputs.build_type == 'release' }}
         uses: actions/upload-release-asset@v1
@@ -222,8 +222,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.configure.outputs.upload_url }}
-          asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love
-          asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}.love
+          asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_FILE }}.love
+          asset_name: ${{ env.PRODUCT_FILE }}-${{ env.PRODUCT_VERSION }}.love
           asset_content_type: application/x-love-game
       - name: Upload .love to itch.io
         if: ${{ needs.configure.outputs.build_type == 'release' }}
@@ -233,7 +233,7 @@ jobs:
           channel: love
           itch_game: ${{ needs.configure.outputs.itch_game }}
           itch_user: ${{ needs.configure.outputs.itch_user }}
-          package: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.love
+          package: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_FILE }}.love
           version: ${{ env.PRODUCT_VERSION }}
 
   build-linux:
@@ -253,17 +253,11 @@ jobs:
         uses: ./.github/actions/get-env
         with:
           env_file: game/product.env
-      - name: Install tools
-        uses: ./.github/actions/install-tools
-      - name: Build LOVE package
-        uses: ./.github/actions/build-love
-        with:
-          output_folder: ${{ env.OUTPUT_FOLDER }}
-          product_name: ${{ env.PRODUCT_NAME }}
       - name: Create AppImage
         uses: ./.github/actions/build-linux
         with:
           love_version: ${{ env.LOVE_VERSION }}
+          product_file: ${{ env.PRODUCT_FILE }}
           product_name: ${{ env.PRODUCT_NAME }}
           product_desc: ${{ env.PRODUCT_DESC }}
           output_folder: ${{ env.OUTPUT_FOLDER }}
@@ -271,20 +265,20 @@ jobs:
         if: ${{ needs.configure.outputs.build_type == 'dev' && env.TARGET_LINUX_APPIMAGE == 'true' }}
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.PRODUCT_NAME }}.AppImage
-          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.AppImage
+          name: ${{ env.PRODUCT_FILE }}.AppImage
+          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_FILE }}.AppImage
       - name: Upload AppImage artifact for SteamOS Devkit Client
         if: ${{ env.TARGET_LINUX_APPIMAGE == 'true' && env.ACT == 'true' }}
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.PRODUCT_NAME }}.AppImage
-          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.AppImage
+          name: ${{ env.PRODUCT_FILE }}.AppImage
+          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_FILE }}.AppImage
       - name: Upload Tarball artifact
         if: ${{ needs.configure.outputs.build_type == 'dev' && env.TARGET_LINUX_TARBALL == 'true' }}
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.PRODUCT_NAME }}.tar.gz
-          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.tar.gz
+          name: ${{ env.PRODUCT_FILE }}.tar.gz
+          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_FILE }}.tar.gz
       - name: Upload AppImage release
         if: ${{ needs.configure.outputs.build_type == 'release' && env.TARGET_LINUX_APPIMAGE == 'true' }}
         uses: actions/upload-release-asset@v1
@@ -292,8 +286,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.configure.outputs.upload_url }}
-          asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.AppImage
-          asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}.AppImage
+          asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_FILE }}.AppImage
+          asset_name: ${{ env.PRODUCT_FILE }}-${{ env.PRODUCT_VERSION }}.AppImage
           asset_content_type: application/x-executable
       - name: Upload Tarball release
         if: ${{ needs.configure.outputs.build_type == 'release' && env.TARGET_LINUX_TARBALL == 'true' }}
@@ -302,8 +296,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.configure.outputs.upload_url }}
-          asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.tar.gz
-          asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}.tar.gz
+          asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_FILE }}.tar.gz
+          asset_name: ${{ env.PRODUCT_FILE }}-${{ env.PRODUCT_VERSION }}.tar.gz
           asset_content_type: application/gzip
       - name: Upload AppImage to itch.io
         if: ${{ needs.configure.outputs.build_type == 'release' && needs.configure.outputs.target_linux_appimage == 'true' }}
@@ -313,11 +307,11 @@ jobs:
           channel: linux_appimage
           itch_game: ${{ needs.configure.outputs.itch_game }}
           itch_user: ${{ needs.configure.outputs.itch_user }}
-          package: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.AppImage
+          package: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_FILE }}.AppImage
           version: ${{ env.PRODUCT_VERSION }}
 
   build-windows:
-    if: ${{ needs.configure.outputs.target_windows_zip == 'true' || needs.configure.outputs.target_windows_setup == 'true' || needs.configure.outputs.target_windows_sfx == 'true' }}
+    if: ${{ needs.configure.outputs.target_windows_zip == 'true' || needs.configure.outputs.target_windows_install == 'true' || needs.configure.outputs.target_windows_sfx == 'true' }}
     runs-on: ubuntu-22.04
     needs: [configure]
     continue-on-error: true
@@ -333,13 +327,6 @@ jobs:
         uses: ./.github/actions/get-env
         with:
           env_file: game/product.env
-      - name: Install tools
-        uses: ./.github/actions/install-tools
-      - name: Build LOVE package
-        uses: ./.github/actions/build-love
-        with:
-          output_folder: ${{ env.OUTPUT_FOLDER }}
-          product_name: ${{ env.PRODUCT_NAME }}
       - name: Build Windows
         uses: ./.github/actions/build-windows
         with:
@@ -347,6 +334,7 @@ jobs:
           build_type: ${{ needs.configure.outputs.build_type }}
           love_version: ${{ env.LOVE_VERSION }}
           product_desc: ${{ env.PRODUCT_DESC }}
+          product_file: ${{ env.PRODUCT_FILE }}
           product_name: ${{ env.PRODUCT_NAME }}
           product_company: ${{ env.PRODUCT_COMPANY }}
           product_copyright: ${{ env.PRODUCT_COPYRIGHT }}
@@ -364,20 +352,20 @@ jobs:
           if-no-files-found: warn
           include-hidden-files: false
           compression-level: 9
-          name: ${{ env.PRODUCT_NAME }}
+          name: ${{ env.PRODUCT_FILE }}
           path: ./tools/build/win64/*
       - name: Upload Windows SFX artifact
         if: ${{ needs.configure.outputs.build_type == 'dev' && needs.configure.outputs.target_windows_sfx == 'true' }}
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.PRODUCT_NAME }}.exe
-          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.exe
+          name: ${{ env.PRODUCT_FILE }}.exe
+          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_FILE }}.exe
       - name: Upload Windows Install artifact
         if: ${{ needs.configure.outputs.build_type == 'dev' && needs.configure.outputs.target_windows_install == 'true' }}
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.PRODUCT_NAME }}-installer.exe
-          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-installer.exe
+          name: ${{ env.PRODUCT_FILE }}-installer.exe
+          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_FILE }}-installer.exe
       - name: Upload Windows .zip release
         if: ${{ needs.configure.outputs.build_type == 'release' && needs.configure.outputs.target_windows_zip == 'true' }}
         uses: actions/upload-release-asset@v1
@@ -385,8 +373,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.configure.outputs.upload_url }}
-          asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.zip
-          asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}.zip
+          asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_FILE }}.zip
+          asset_name: ${{ env.PRODUCT_FILE }}-${{ env.PRODUCT_VERSION }}.zip
           asset_content_type: application/zip
       - name: Upload Windows Install release
         if: ${{ needs.configure.outputs.build_type == 'release' && needs.configure.outputs.target_windows_install == 'true' }}
@@ -395,8 +383,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.configure.outputs.upload_url }}
-          asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-installer.exe
-          asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}-installer.exe
+          asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_FILE }}-installer.exe
+          asset_name: ${{ env.PRODUCT_FILE }}-${{ env.PRODUCT_VERSION }}-installer.exe
           asset_content_type: application/x-msdownload
       - name: Upload Windows SFX release
         if: ${{ needs.configure.outputs.build_type == 'release' && needs.configure.outputs.target_windows_sfx == 'true' }}
@@ -405,8 +393,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.configure.outputs.upload_url }}
-          asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.exe
-          asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}.exe
+          asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_FILE }}.exe
+          asset_name: ${{ env.PRODUCT_FILE }}-${{ env.PRODUCT_VERSION }}.exe
           asset_content_type: application/x-msdownload
       - name: Upload Windows Install to itch.io
         if: ${{ needs.configure.outputs.build_type == 'release' && needs.configure.outputs.target_windows_install == 'true' }}
@@ -416,7 +404,7 @@ jobs:
           channel: windows
           itch_game: ${{ needs.configure.outputs.itch_game }}
           itch_user: ${{ needs.configure.outputs.itch_user }}
-          package: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-installer.exe
+          package: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_FILE }}-installer.exe
           version: ${{ env.PRODUCT_VERSION }}
       - name: Upload Windows SFX to itch.io
         if: ${{ needs.configure.outputs.build_type == 'release' && needs.configure.outputs.target_windows_sfx == 'true' }}
@@ -426,7 +414,7 @@ jobs:
           channel: windows
           itch_game: ${{ needs.configure.outputs.itch_game }}
           itch_user: ${{ needs.configure.outputs.itch_user }}
-          package: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.exe
+          package: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_FILE }}.exe
           version: ${{ env.PRODUCT_VERSION }}
 
   build-html:
@@ -446,35 +434,18 @@ jobs:
         uses: ./.github/actions/get-env
         with:
           env_file: game/product.env
-      - name: Install tools
-        uses: ./.github/actions/install-tools
-      - name: Build LOVE package
-        uses: ./.github/actions/build-love
+      - name: Build HTML package
+        uses: ./.github/actions/build-html
         with:
           output_folder: ${{ env.OUTPUT_FOLDER }}
+          product_file: ${{ env.PRODUCT_FILE }}
           product_name: ${{ env.PRODUCT_NAME }}
-      - name: Build love.js
-        run: |
-          curl -fsSL --retry 5 --retry-delay 15 --connect-timeout 30 --max-time 300 https://github.com/2dengine/love.js/archive/refs/heads/main.zip -o ./tools/love.js.zip || exit 1
-          unzip -q ./tools/love.js.zip -d ./tools/
-          sed -i "s/<title>löve.js<\/title>/<title>${PRODUCT_NAME}<\/title>/" ./tools/love.js-main/index.html
-          sed -i '/<base href="\/play\/">$/d' ./tools/love.js-main/index.html
-          sed -i "s/player.js/player.js?g=game.love/" ./tools/love.js-main/index.html
-          convert ./resources/icon.png -define icon:auto-resize="256,128,96,64,48,32,24,16" ./tools/love.js-main/favicon.ico
-          mkdir -p ${OUTPUT_FOLDER}/${PRODUCT_NAME}-html
-          rsync -a --exclude='.htaccess' --exclude='*.git*' --exclude='*.md' --exclude='*.txt' \
-            ./tools/love.js-main/ \
-            ${OUTPUT_FOLDER}/${PRODUCT_NAME}-html/
-          cp -v ${OUTPUT_FOLDER}/${PRODUCT_NAME}.love ${OUTPUT_FOLDER}/${PRODUCT_NAME}-html/game.love
-          7z a -tzip \
-            "${OUTPUT_FOLDER}/${PRODUCT_NAME}-html.zip" \
-            "${OUTPUT_FOLDER}/${PRODUCT_NAME}-html"/*
       - name: Upload HTML artifact
         if: ${{ needs.configure.outputs.build_type == 'dev' }}
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.PRODUCT_NAME }}-html
-          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-html
+          name: ${{ env.PRODUCT_FILE }}-html
+          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_FILE }}-html
       - name: Upload HTML release
         if: ${{ needs.configure.outputs.build_type == 'release' }}
         uses: actions/upload-release-asset@v1
@@ -482,8 +453,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.configure.outputs.upload_url }}
-          asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-html.zip
-          asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}-html.zip
+          asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_FILE }}-html.zip
+          asset_name: ${{ env.PRODUCT_FILE }}-${{ env.PRODUCT_VERSION }}-html.zip
           asset_content_type: application/zip
       - name: Upload HTML release to itch.io
         if: ${{ needs.configure.outputs.build_type == 'release' }}
@@ -493,7 +464,7 @@ jobs:
           channel: html
           itch_game: ${{ needs.configure.outputs.itch_game }}
           itch_user: ${{ needs.configure.outputs.itch_user }}
-          package: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}-html
+          package: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_FILE }}-html
           version: ${{ env.PRODUCT_VERSION }}
 
   build-android:
@@ -515,8 +486,6 @@ jobs:
         uses: ./.github/actions/get-env
         with:
           env_file: game/product.env
-      - name: Install tools
-        uses: ./.github/actions/install-tools
       - name: Build Android
         uses: ./.github/actions/build-android
         with:
@@ -528,6 +497,7 @@ jobs:
           android_version_code: ${{ needs.configure.outputs.android_version_code }}
           build_num: ${{ needs.configure.outputs.build_num }}
           build_type: ${{ needs.configure.outputs.build_type }}
+          product_file: ${{ env.PRODUCT_FILE }}
           product_name: ${{ env.PRODUCT_NAME }}
           product_id: ${{ needs.configure.outputs.product_id_android }}
           output_folder: ${{ env.OUTPUT_FOLDER }}
@@ -574,13 +544,13 @@ jobs:
         if: ${{ needs.configure.outputs.build_type == 'dev' }}
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.PRODUCT_NAME }}-debug-signed.apk
+          name: ${{ env.PRODUCT_FILE }}-debug-signed.apk
           path: ${{ steps.sign-apk-debug.outputs.signedReleaseFile }}
       - name: Upload Android release .apk artifact
         if: ${{ needs.configure.outputs.build_type == 'dev' }}
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.PRODUCT_NAME }}-release-signed.apk
+          name: ${{ env.PRODUCT_FILE }}-release-signed.apk
           path: ${{ steps.sign-apk-release.outputs.signedReleaseFile }}
       - name: Upload Android release .apk
         if: ${{ needs.configure.outputs.build_type == 'release' }}
@@ -589,7 +559,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.configure.outputs.upload_url }}
-          asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}-release.apk
+          asset_name: ${{ env.PRODUCT_FILE }}-${{ env.PRODUCT_VERSION }}-release.apk
           asset_path: ${{ steps.sign-apk-release.outputs.signedReleaseFile }}
           asset_content_type: application/vnd.android.package-archive
       - name: Upload Android release .aab
@@ -599,13 +569,13 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.configure.outputs.upload_url }}
-          asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}-release.aab
+          asset_name: ${{ env.PRODUCT_FILE }}-${{ env.PRODUCT_VERSION }}-release.aab
           asset_path: ${{ steps.sign-aab-release.outputs.signedReleaseFile }}
           asset_content_type: application/vnd.android.package-archive
       - name: Create unversioned Android .apk for itch.io
         if: ${{ needs.configure.outputs.build_type == 'release' }}
         run: |
-          cp -v "${{ steps.sign-apk-release.outputs.signedReleaseFile }}" "${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.apk"
+          cp -v "${{ steps.sign-apk-release.outputs.signedReleaseFile }}" "${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_FILE }}.apk"
       - name: Upload Android .apk to itch.io
         if: ${{ needs.configure.outputs.build_type == 'release' }}
         uses: ./.github/actions/publish-itch
@@ -614,7 +584,7 @@ jobs:
           channel: android
           itch_game: ${{ needs.configure.outputs.itch_game }}
           itch_user: ${{ needs.configure.outputs.itch_user }}
-          package: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.apk
+          package: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_FILE }}.apk
           version: ${{ env.PRODUCT_VERSION }}
 
   build-macos:
@@ -636,19 +606,13 @@ jobs:
         uses: ./.github/actions/get-env
         with:
           env_file: game/product.env
-      - name: Install tools
-        uses: ./.github/actions/install-tools
-      - name: Build LOVE package
-        uses: ./.github/actions/build-love
-        with:
-          output_folder: ${{ env.OUTPUT_FOLDER }}
-          product_name: ${{ env.PRODUCT_NAME }}
       - name: Build macOS
         uses: ./.github/actions/build-macos
         with:
           apple_version_code: ${{ needs.configure.outputs.apple_version_code }}
           love_version: ${{ env.LOVE_VERSION }}
           product_copyright: ${{ env.PRODUCT_COPYRIGHT }}
+          product_file: ${{ env.PRODUCT_FILE }}
           product_id: ${{ needs.configure.outputs.product_id_macos }}
           product_name: ${{ env.PRODUCT_NAME }}
           product_version: ${{ env.PRODUCT_VERSION }}
@@ -657,14 +621,14 @@ jobs:
         if: ${{ needs.configure.outputs.build_type == 'dev' }}
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.PRODUCT_NAME }}.app
-          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME  }}.app.zip
+          name: ${{ env.PRODUCT_FILE }}.app
+          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_FILE }}.app.zip
       - name: Upload macOS .dmg artifact
         if: ${{ needs.configure.outputs.build_type == 'dev' && runner.os == 'macOS' }}
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.PRODUCT_NAME }}.dmg
-          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.dmg
+          name: ${{ env.PRODUCT_FILE }}.dmg
+          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_FILE }}.dmg
       - name: Upload macOS .app release
         if: ${{ needs.configure.outputs.build_type == 'release' }}
         uses: actions/upload-release-asset@v1
@@ -672,8 +636,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.configure.outputs.upload_url }}
-          asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}.app.zip
-          asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME  }}.app.zip
+          asset_name: ${{ env.PRODUCT_FILE }}-${{ env.PRODUCT_VERSION }}.app.zip
+          asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_FILE }}.app.zip
           asset_content_type: application/zip
       - name: Upload macOS .dmg release
         if: ${{ needs.configure.outputs.build_type == 'release' }}
@@ -682,8 +646,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.configure.outputs.upload_url }}
-          asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}.dmg
-          asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME  }}.dmg
+          asset_name: ${{ env.PRODUCT_FILE }}-${{ env.PRODUCT_VERSION }}.dmg
+          asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_FILE }}.dmg
           asset_content_type: application/x-apple-diskimage
       - name: Upload macOS .dmg to itch.io
         if: ${{ needs.configure.outputs.build_type == 'release' }}
@@ -693,7 +657,7 @@ jobs:
           channel: osx
           itch_game: ${{ needs.configure.outputs.itch_game }}
           itch_user: ${{ needs.configure.outputs.itch_user }}
-          package: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME  }}.dmg
+          package: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_FILE }}.dmg
           version: ${{ env.PRODUCT_VERSION }}
 
   build-ios:
@@ -713,13 +677,6 @@ jobs:
         uses: ./.github/actions/get-env
         with:
           env_file: game/product.env
-      - name: Install tools
-        uses: ./.github/actions/install-tools
-      - name: Build LOVE package
-        uses: ./.github/actions/build-love
-        with:
-          output_folder: ${{ env.OUTPUT_FOLDER }}
-          product_name: ${{ env.PRODUCT_NAME }}
       - name: Build iOS
         uses: ./.github/actions/build-ios
         with:
@@ -727,6 +684,7 @@ jobs:
           love_version: ${{ env.LOVE_VERSION }}
           product_company: ${{ env.PRODUCT_COMPANY }}
           product_copyright: ${{ env.PRODUCT_COPYRIGHT }}
+          product_file: ${{ env.PRODUCT_FILE }}
           product_id: ${{ needs.configure.outputs.product_id_ios }}
           product_name: ${{ env.PRODUCT_NAME }}
           product_version: ${{ env.PRODUCT_VERSION }}
@@ -735,8 +693,8 @@ jobs:
         if: ${{ needs.configure.outputs.build_type == 'dev' }}
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.PRODUCT_NAME }}.ipa
-          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.ipa
+          name: ${{ env.PRODUCT_FILE }}.ipa
+          path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_FILE }}.ipa
       - name: Upload iOS release
         if: ${{ needs.configure.outputs.build_type == 'release' }}
         uses: actions/upload-release-asset@v1
@@ -744,8 +702,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.configure.outputs.upload_url }}
-          asset_name: ${{ env.PRODUCT_NAME }}-${{ env.PRODUCT_VERSION }}.ipa
-          asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}.ipa
+          asset_name: ${{ env.PRODUCT_FILE }}-${{ env.PRODUCT_VERSION }}.ipa
+          asset_path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_FILE }}.ipa
           asset_content_type: application/octet-stream
   summary:
     name: Build parameters
