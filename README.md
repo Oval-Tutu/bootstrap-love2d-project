@@ -27,8 +27,9 @@ Turn your [LÖVE](https://love2d.org/) game ideas into polished multi-platform r
   - 🍏 macOS (App bundle and .dmg Disk Image)
   - 🪟 Windows (Installer, SFX .exe and .zip)
   - 🔐 [lua-https](https://github.com/love2d/lua-https) built-in to LÖVE 11.5
-  - 🎮 Automatic publishing to [itch.io](https://itch.io/)
+  - ⤴️ Automatic publishing to [itch.io](https://itch.io/)
 - ️⚙️ [Shared product configuration](game/product.env) between the game and the GitHub Actions
+- 🎮 [SteamOS DevKit](https://gitlab.steamos.cloud/devkit/steamos-devkit) integration
 - 📊 Integrated performance metrics overlay
 - ️❄️ Nix flake to provision a dev shell
 

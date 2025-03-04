@@ -212,6 +212,14 @@ Not every artifact will be published to Itch.io, as some platforms are not suppo
 - HTML artifacts will be published to Itch.io if `TARGET_HTML` is enabled.
 - Itch.io does not support iOS artifacts.
 
+### SteamOS DevKit
+
+If you're running Linux or macOS, have `act` installed and configured to run the GitHub Actions locally then you can use `./tools/build.sh linux` to automatically push new Linux builds directly to your Steam Deck using the [SteamOS DevKit Client Tool](https://gitlab.steamos.cloud/devkit/steamos-devkit).
+
+- **Install the SteamOS DevKit**: Follow the instructions in the [How to load and run games on Steam Deck](https://partner.steamgames.com/doc/steamdeck/loadgames) to install the SteamOS Devkit Client Tool and connect to your Steam Deck to your development machine.
+- Execute `./tools/build.sh linux` which will build the Linux tarball and notify the SteamOS DevKit Client API to automatically push the new build to the Steam Deck.
+- On your Steam Deck, navigate the library to find a new title named 'Devkit Game: YourGameName' and select it to run.
+
 ## Android
 
 In order to sign the APKs and AABs, the [zipalign & Sign Android Release Action](https://github.com/kevin-david/zipalign-sign-android-release) is used. You'll need to create Debug and Release keystores and set the appropriate secrets in the GitHub repository settings.
