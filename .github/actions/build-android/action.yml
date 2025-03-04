@@ -36,6 +36,9 @@ inputs:
     description: Android version code
     required: false
     default: '1'
+  product_file:
+    description: The basename of the file to be generated
+    required: true
   product_id:
     description: Product ID - reverse domain name
     required: true
@@ -48,6 +51,8 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Install tools
+      uses: ./.github/actions/install-tools
     - name: Checkout love-android ${{ inputs.android_love_version }}
       uses: actions/checkout@v4
       with:
@@ -123,7 +128,7 @@ runs:
         popd
         unzip -l ./tools/love-android/app/build/outputs/apk/*/debug/app-embed-*-debug.apk | grep -i '.so'
         mkdir -p ${{ inputs.output_folder }}/apk/debug
-        mv -v ./tools/love-android/app/build/outputs/apk/*/debug/app-embed-*-debug.apk ${{ inputs.output_folder }}/apk/debug/${{ inputs.product_name }}-debug.apk
+        mv -v ./tools/love-android/app/build/outputs/apk/*/debug/app-embed-*-debug.apk ${{ inputs.output_folder }}/apk/debug/${{ inputs.product_file }}-debug.apk
     - name: Build Android release .apk
       shell: bash
       run: |
@@ -132,7 +137,7 @@ runs:
         popd
         unzip -l ./tools/love-android/app/build/outputs/apk/*/release/app-embed-*-release-unsigned.apk | grep -i '.so'
         mkdir -p ${{ inputs.output_folder }}/apk/release
-        mv -v ./tools/love-android/app/build/outputs/apk/*/release/app-embed-*-release-unsigned.apk ${{ inputs.output_folder }}/apk/release/${{ inputs.product_name }}-release.apk
+        mv -v ./tools/love-android/app/build/outputs/apk/*/release/app-embed-*-release-unsigned.apk ${{ inputs.output_folder }}/apk/release/${{ inputs.product_file }}-release.apk
     - name: Build Android .aab
       if: ${{ inputs.build_type == 'release' }}
       shell: bash
@@ -142,4 +147,4 @@ runs:
         popd
         unzip -l ./tools/love-android/app/build/outputs/bundle/*/app-embed-*-release.aab | grep -i '.so'
         mkdir -p ${{ inputs.output_folder }}/aab/release
-        mv -v ./tools/love-android/app/build/outputs/bundle/*/app-embed-*-release.aab ${{ inputs.output_folder }}/aab/release/${{ inputs.product_name }}-release.aab
+        mv -v ./tools/love-android/app/build/outputs/bundle/*/app-embed-*-release.aab ${{ inputs.output_folder }}/aab/release/${{ inputs.product_file }}-release.aab

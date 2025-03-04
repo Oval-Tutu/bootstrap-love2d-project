@@ -21,6 +21,9 @@ inputs:
   product_desc:
     description: Product description
     required: true
+  product_file:
+    description: The basename of the file to be generated
+    required: true
   product_name:
     description: Product name
     required: true
@@ -50,6 +53,14 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Install tools
+      uses: ./.github/actions/install-tools
+    - name: Build LOVE package
+      uses: ./.github/actions/build-love
+      with:
+        output_folder: ${{ inputs.output_folder }}
+        product_file: ${{ inputs.product_file }}
+        product_name: ${{ inputs.product_name }}
     - name: Install WineHQ
       shell: bash
       run: |
@@ -99,7 +110,7 @@ runs:
             --set-version-string FileDescription "${{ inputs.product_desc }}" \
             --set-version-string InternalName "${{ inputs.product_name }}" \
             --set-version-string LegalCopyright "${{ inputs.product_copyright }}" \
-            --set-version-string OriginalFilename "${{ inputs.product_name }}.exe" \
+            --set-version-string OriginalFilename "${{ inputs.product_file }}.exe" \
             --set-version-string PrivateBuild "${{ inputs.build_num }}" \
             --set-file-version "${{ inputs.build_num }}" \
             --set-product-version "${{ inputs.product_version }}" \
@@ -111,15 +122,15 @@ runs:
         for ARCH in win64; do
           mkdir -p ./tools/build/$ARCH/
           cp ./tools/love-$ARCH/* ./tools/build/$ARCH/
-          mv -v ./tools/build/$ARCH/love.exe ./tools/build/$ARCH/${{ inputs.product_name }}.exe
-          dd if=${{ inputs.output_folder }}/${{ inputs.product_name }}.love of=./tools/build/$ARCH/${{ inputs.product_name }}.exe obs=1M oflag=append conv=notrunc
+          mv -v ./tools/build/$ARCH/love.exe ./tools/build/$ARCH/${{ inputs.product_file }}.exe
+          dd if=${{ inputs.output_folder }}/${{ inputs.product_file }}.love of=./tools/build/$ARCH/${{ inputs.product_file }}.exe obs=1M oflag=append conv=notrunc
         done
     - name: Create Windows .zip files
       if: ${{ inputs.build_type == 'release' && inputs.target_windows_zip == 'true' }}
       shell: bash
       run: |
         for ARCH in win64; do
-          7z a -tzip -mx=9 -mfb=273 -mpass=15 -mtc=off ${{ inputs.output_folder }}/${{ inputs.product_name }}.zip ./tools/build/$ARCH/*
+          7z a -tzip -mx=9 -mfb=273 -mpass=15 -mtc=off ${{ inputs.output_folder }}/${{ inputs.product_file }}.zip ./tools/build/$ARCH/*
         done
     # https://gist.github.com/drewchapin/246de6d0c404a79ee66a5ead35b480bc
     # https://github.com/AnonymerNiklasistanonym/NsiWindowsInstallerExamples/blob/main/example_02_license_uninstaller_components/windows_installer.nsi
@@ -145,6 +156,7 @@ runs:
         ;-------------------------------------------------------------------------------
         ; Constants
         !define PRODUCT_NAME "${{ inputs.product_name }}"
+        !define PRODUCT_FILE "${{ inputs.product_file }}"
         !define PRODUCT_COMPANY "${{ inputs.product_company }}"
         !define PRODUCT_COPYRIGHT "${{ inputs.product_copyright }}"
         !define PRODUCT_DESCRIPTION "${{ inputs.product_desc }}"
@@ -157,7 +169,7 @@ runs:
         ;-------------------------------------------------------------------------------
         ; Attributes
         Name "${PRODUCT_NAME}"
-        OutFile "${{ inputs.output_folder }}/${PRODUCT_NAME}-installer.exe"
+        OutFile "${{ inputs.output_folder }}/${PRODUCT_FILE}-installer.exe"
         InstallDir "${PRODUCT_DIR}"
         InstallDirRegKey HKCU "Software\${PRODUCT_COMPANY}\${PRODUCT_NAME}" ""
         RequestExecutionLevel user ; user|highest|admin
@@ -191,7 +203,7 @@ runs:
         !insertmacro MUI_PAGE_FINISH
         LangString DESC_Section1 ${LANG_ENGLISH} "Runtime and game data for ${PRODUCT_NAME} v${PRODUCT_VERSION} (${BUILD_VERSION})"
         !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
-          !insertmacro MUI_DESCRIPTION_TEXT ${Section1} $(DESC_Section1)
+          !insertmacro MUI_DESCRIPTION_TEXT Section1 DESC_Section1
         !insertmacro MUI_FUNCTION_DESCRIPTION_END
         ;-------------------------------------------------------------------------------
         ; Uninstaller Pages
@@ -209,10 +221,10 @@ runs:
           SetOutPath "$INSTDIR"
           File /r "./tools/build/win64/*"
           ; Add icon to the uninstaller executable
-          CreateShortcut "$SMPROGRAMS\${PRODUCT_NAME}.lnk" "$INSTDIR\${PRODUCT_NAME}.exe"
+          CreateShortcut "$SMPROGRAMS\${PRODUCT_NAME}.lnk" "$INSTDIR\${PRODUCT_FILE}.exe"
           ;Create an uninstaller that will also be recognized by Windows:
           WriteRegStr   HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_UUID}" "DisplayName"          "${PRODUCT_NAME}"
-          WriteRegStr   HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_UUID}" "DisplayIcon"          "$\"$INSTDIR\${PRODUCT_NAME}.exe$\""
+          WriteRegStr   HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_UUID}" "DisplayIcon"          "$\"$INSTDIR\${PRODUCT_FILE}.exe$\""
           WriteRegStr   HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_UUID}" "Publisher"            "${PRODUCT_COMPANY}"
           WriteRegStr   HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_UUID}" "Comments"             "${PRODUCT_DESCRIPTION}"
           WriteRegStr   HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_UUID}" "DisplayVersion"       "${PRODUCT_VERSION}"
@@ -252,24 +264,24 @@ runs:
         WINEDEBUG: "-all"  # Disable WINE debug output
       shell: bash
       run: |
-        SFX_EXE="${{ inputs.output_folder }}/${{ inputs.product_name }}.exe"
+        SFX_EXE="${{ inputs.output_folder }}/${{ inputs.product_file }}.exe"
         # Create 7z archive of the game
         mkdir -p ./tools/build/sfx
-        7z a -mx=5 -m0=BCJ -m1=LZMA2 ./tools/build/sfx/${{ inputs.product_name }}.7z ./tools/build/win64/*
+        7z a -mx=5 -m0=BCJ -m1=LZMA2 ./tools/build/sfx/${{ inputs.product_file }}.7z ./tools/build/win64/*
 
         # Create SFX configuration
         cat > ./tools/config.txt << EOF
         ;!@Install@!UTF-8!
         Title="${{ inputs.product_name}}"
         Progress="no"
-        RunProgram="${{ inputs.product_name }}.exe"
+        RunProgram="${{ inputs.product_file }}.exe"
         ;!@InstallEnd@!
         EOF
 
         # Concatenate the SFX module, config and 7z archive
         cp -v ./tools/lzma-sdk/bin/7zSD.sfx "${SFX_EXE}"
         dd if=./tools/config.txt of="${SFX_EXE}" bs=1M oflag=append conv=notrunc
-        dd if=./tools/build/sfx/${{ inputs.product_name }}.7z of="${SFX_EXE}" bs=1M oflag=append conv=notrunc
+        dd if=./tools/build/sfx/${{ inputs.product_file }}.7z of="${SFX_EXE}" bs=1M oflag=append conv=notrunc
 
         env WINEARCH=win64 WINEPREFIX="$HOME/.wine-win64" wine ./tools/rcedit-win64.exe \
           "${SFX_EXE}" \
@@ -278,7 +290,7 @@ runs:
           --set-version-string FileDescription "${{ inputs.product_desc }}" \
           --set-version-string InternalName "${{ inputs.product_name }}" \
           --set-version-string LegalCopyright "${{ inputs.product_copyright }}" \
-          --set-version-string OriginalFilename "${{ inputs.product_name }}.exe" \
+          --set-version-string OriginalFilename "${{ inputs.product_file }}.exe" \
           --set-version-string PrivateBuild "${{ inputs.build_num }}" \
           --set-file-version "${{ inputs.build_num }}" \
           --set-product-version "${{ inputs.product_version }}" \

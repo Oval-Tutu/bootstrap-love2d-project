@@ -6,11 +6,14 @@ inputs:
   love_version:
     description: LÖVE version to use
     required: true
-  product_name:
-    description: Product name
-    required: true
   product_desc:
     description: Product description
+    required: true
+  product_file:
+    description: The basename of the file to be generated
+    required: true
+  product_name:
+    description: Product name
     required: true
   output_folder:
     description: Output folder path
@@ -18,6 +21,14 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Install tools
+      uses: ./.github/actions/install-tools
+    - name: Build LOVE package
+      uses: ./.github/actions/build-love
+      with:
+        output_folder: ${{ inputs.output_folder }}
+        product_file: ${{ inputs.product_file }}
+        product_name: ${{ inputs.product_name }}
     - shell: bash
       run: |
         convert ./resources/icon.png -resize 256x256 "${{ inputs.output_folder }}/icon.png"
@@ -45,42 +56,42 @@ runs:
         rm -f ./tools/squashfs-root/love.desktop || true
 
         # Create .desktop file
-        cat > ./tools/squashfs-root/${{ inputs.product_name }}.desktop << EOF
+        cat > ./tools/squashfs-root/${{ inputs.product_file }}.desktop << EOF
         [Desktop Entry]
         Name=${{ inputs.product_name }}
         Comment=${{ inputs.product_desc }}
         Type=Application
         Keywords=love;game;
         Categories=Game;
-        Exec=${{ inputs.product_name }} %f
-        Icon=${{ inputs.product_name }}
+        Exec=${{ inputs.product_file }} %f
+        Icon=${{ inputs.product_file }}
         Terminal=false
         NoDisplay=false
         EOF
-        cp -v ./tools/squashfs-root/${{ inputs.product_name }}.desktop ./tools/squashfs-root/share/applications/${{ inputs.product_name }}.desktop
+        cp -v ./tools/squashfs-root/${{ inputs.product_file }}.desktop ./tools/squashfs-root/share/applications/${{ inputs.product_file }}.desktop
 
         echo "Assembling executable..."
-        sed -i 's|bin/love|bin/${{ inputs.product_name }}|g' ./tools/squashfs-root/AppRun
-        mv -v ./tools/squashfs-root/bin/love ./tools/squashfs-root/bin/${{ inputs.product_name }}
-        dd if=${{ inputs.output_folder }}/${{ inputs.product_name }}.love of=./tools/squashfs-root/bin/${{ inputs.product_name }} obs=1M oflag=append conv=notrunc
-        chmod +x ./tools/squashfs-root/bin/${{ inputs.product_name }}
+        sed -i 's|bin/love|bin/${{ inputs.product_file }}|g' ./tools/squashfs-root/AppRun
+        mv -v ./tools/squashfs-root/bin/love ./tools/squashfs-root/bin/${{ inputs.product_file }}
+        dd if=${{ inputs.output_folder }}/${{ inputs.product_file }}.love of=./tools/squashfs-root/bin/${{ inputs.product_file }} obs=1M oflag=append conv=notrunc
+        chmod +x ./tools/squashfs-root/bin/${{ inputs.product_file }}
 
         if [ -f "${{ inputs.output_folder }}/icon.png" ]; then
           echo "Copying icon..."
           ICON_PATH=$(basename -- "${{ inputs.output_folder }}/icon.png")
           mkdir -p ./tools/squashfs-root/share/icons/hicolor/256x256/apps
-          cp ${{ inputs.output_folder }}/icon.png "./tools/squashfs-root/share/icons/hicolor/256x256/apps/${{ inputs.product_name }}.${ICON_PATH##*.}"
-          cp ${{ inputs.output_folder }}/icon.png "./tools/squashfs-root/${{ inputs.product_name }}.${ICON_PATH##*.}"
+          cp ${{ inputs.output_folder }}/icon.png "./tools/squashfs-root/share/icons/hicolor/256x256/apps/${{ inputs.product_file }}.${ICON_PATH##*.}"
+          cp ${{ inputs.output_folder }}/icon.png "./tools/squashfs-root/${{ inputs.product_file }}.${ICON_PATH##*.}"
           cp ${{ inputs.output_folder }}/icon.png ./tools/squashfs-root/.DirIcon
         fi
 
         if [ "$ACT" == "true" ]; then
-          ./tools/appimagetool.AppImage --appimage-extract-and-run ./tools/squashfs-root ${{ inputs.output_folder }}/${{ inputs.product_name }}.AppImage
+          ./tools/appimagetool.AppImage --appimage-extract-and-run ./tools/squashfs-root ${{ inputs.output_folder }}/${{ inputs.product_file }}.AppImage
         else
-          ./tools/appimagetool.AppImage ./tools/squashfs-root ${{ inputs.output_folder }}/${{ inputs.product_name }}.AppImage
+          ./tools/appimagetool.AppImage ./tools/squashfs-root ${{ inputs.output_folder }}/${{ inputs.product_file }}.AppImage
         fi
-        chmod a+x ${{ inputs.output_folder }}/${{ inputs.product_name }}.AppImage
+        chmod a+x ${{ inputs.output_folder }}/${{ inputs.product_file }}.AppImage
 
         # Create tarball
-        mv -v ./tools/squashfs-root/AppRun ./tools/squashfs-root/${{ inputs.product_name }}
-        tar -czf ${{ inputs.output_folder }}/${{ inputs.product_name }}.tar.gz -C ./tools/squashfs-root .
+        mv -v ./tools/squashfs-root/AppRun ./tools/squashfs-root/${{ inputs.product_file }}
+        tar -czf ${{ inputs.output_folder }}/${{ inputs.product_file }}.tar.gz -C ./tools/squashfs-root .

@@ -27,6 +27,7 @@
           # Pinned packages available in the environment
           packages = with pkgs; [
             act
+            netcat-gnu
             luaformatter
             luajit
             lua-language-server

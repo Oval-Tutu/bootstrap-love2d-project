@@ -17,6 +17,9 @@ inputs:
   product_id:
     description: The product ID of the game
     required: true
+  product_file:
+    description: The basename of the file to be generated
+    required: true
   product_name:
     description: The product name of the game
     required: true
@@ -29,6 +32,14 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Install tools
+      uses: ./.github/actions/install-tools
+    - name: Build LOVE package
+      uses: ./.github/actions/build-love
+      with:
+        output_folder: ${{ inputs.output_folder}}
+        product_file: ${{ inputs.product_file }}
+        product_name: ${{ inputs.product_name }}
     - name: Checkout Love
       uses: actions/checkout@v4
       with:
@@ -49,11 +60,10 @@ runs:
       shell: bash
       run: |
         mv -v ./tools/love-apple-dependencies/iOS/libraries ./tools/love/platform/xcode/ios
-        cp -v ./${{ inputs.output_folder }}/${{ inputs.product_name }}.love ./tools/love/platform/xcode/game.love
+        cp -v ./${{ inputs.output_folder }}/${{ inputs.product_file }}.love ./tools/love/platform/xcode/game.love
     - name: Create iOS icons
       shell: bash
       run: |
-        tree ./tools/love
         rm -fv ./tools/love/platform/xcode/Images.xcassets/iOS\ AppIcon.appiconset/*.png
         sips -z 1024 1024 ./resources/icon.png --out ./tools/love/platform/xcode/Images.xcassets/iOS\ AppIcon.appiconset/icon-1024pt@1x.png
         sips -z 29 29 ./resources/icon.png --out ./tools/love/platform/xcode/Images.xcassets/iOS\ AppIcon.appiconset/icon-29pt@1x.png
@@ -74,7 +84,7 @@ runs:
         plutil -replace CFBundleName -string "${{ inputs.product_name }}" "$PLIST_FILE"
         plutil -replace CFBundleDisplayName -string "${{ inputs.product_name }}" "$PLIST_FILE"
         plutil -replace CFBundleIdentifier -string "${{ inputs.product_id }}" "$PLIST_FILE"
-        plutil -replace CFBundleExecutable -string "${{ inputs.product_name }}" "$PLIST_FILE"
+        plutil -replace CFBundleExecutable -string "${{ inputs.product_file }}" "$PLIST_FILE"
         plutil -replace CFBundleShortVersionString -string "${{ inputs.apple_version_code }}" "$PLIST_FILE"
         plutil -replace CFBundleVersion -string "${{ inputs.product_version }}" "$PLIST_FILE"
         plutil -replace ITSAppUsesNonExemptEncryption -bool false "$PLIST_FILE"
@@ -89,12 +99,15 @@ runs:
       run: |
         PROJECT_FILE="./tools/love/platform/xcode/love.xcodeproj/project.pbxproj"
         sed -i.bak 's/PRODUCT_BUNDLE_IDENTIFIER = org\.love2d\.love/PRODUCT_BUNDLE_IDENTIFIER = ${{ inputs.product_id }}/g' "$PROJECT_FILE"
-        sed -i.bak 's/PRODUCT_NAME = love/PRODUCT_NAME = ${{ inputs.product_name }}/g' "$PROJECT_FILE"
-        sed -i.bak 's/path = love\.app/path = ${{ inputs.product_name }}\.app/g' "$PROJECT_FILE"
-        sed -i.bak 's/productName = love/productName = ${{ inputs.product_name }}/g' "$PROJECT_FILE"
-        sed -i.bak 's/name = love/name = ${{ inputs.product_name }}/g' "$PROJECT_FILE"
+        sed -i.bak 's/PRODUCT_NAME = love/PRODUCT_NAME = ${{ inputs.product_file }}/g' "$PROJECT_FILE"
+        sed -i.bak 's/path = love\.app/path = ${{ inputs.product_file }}\.app/g' "$PROJECT_FILE"
+        sed -i.bak 's/productName = love/productName = ${{ inputs.product_file }}/g' "$PROJECT_FILE"
+        sed -i.bak 's/name = love/name = ${{ inputs.product_file }}/g' "$PROJECT_FILE"
         sed -i.bak 's/MARKETING_VERSION = ${{ inputs.love_version}}/MARKETING_VERSION = ${{ inputs.product_version }}/g' "$PROJECT_FILE"
-        cat "$PROJECT_FILE"
+        grep "${{ inputs.product_id }}" "$PROJECT_FILE" || true
+        grep "${{ inputs.product_file }}" "$PROJECT_FILE" || true
+        grep "${{ inputs.product_name }}" "$PROJECT_FILE" || true
+        grep "${{ inputs.product_version }}" "$PROJECT_FILE" || true
     - name: Update Resources to include game.love
       shell: bash
       run: |
@@ -139,7 +152,7 @@ runs:
             -scheme love-ios \
             -configuration Release \
             -destination 'generic/platform=iOS' \
-            -archivePath "${{ inputs.output_folder }}/${{ inputs.product_name }}.xcarchive" \
+            -archivePath "${{ inputs.output_folder }}/${{ inputs.product_file }}.xcarchive" \
             IPHONEOS_DEPLOYMENT_TARGET=12.0 \
             PRODUCT_BUNDLE_IDENTIFIER="${{ inputs.product_id }}" \
             CODE_SIGN_IDENTITY="" \
@@ -150,19 +163,20 @@ runs:
       shell: bash
       run: |
         # This is a poor emulation of the Xcode export process
-        cd ${{ inputs.output_folder}}
-        mkdir Payload
-        cp -r ${{ inputs.product_name }}.xcarchive/Products/Applications/${{ inputs.product_name }}.app Payload/
-        zip -r ${{ inputs.product_name }}.ipa Payload
-        rm -rf Payload
+        pushd ${{ inputs.output_folder}}
+          mkdir Payload
+          cp -r "${{ inputs.product_file }}.xcarchive/Products/Applications/${{ inputs.product_file }}.app" Payload/
+          zip -r "${{ inputs.product_file }}.ipa" Payload
+          rm -rf Payload
+        popd
     - name: Validate iOS app
       shell: bash
       run: |
-        md5sum ${{ inputs.output_folder}}/${{ inputs.product_name }}.love
-        md5sum ${{ inputs.output_folder}}//${{ inputs.product_name }}.xcarchive/Products/Applications/${{ inputs.product_name }}.app/game.love
-        plutil -lint ${{ inputs.output_folder}}/${{ inputs.product_name }}.xcarchive/Info.plist
-        plutil -p ${{ inputs.output_folder}}/${{ inputs.product_name }}.xcarchive/Info.plist
-        plutil -lint ${{ inputs.output_folder}}/${{ inputs.product_name }}.xcarchive/Products/Applications/${{ inputs.product_name }}.app/Info.plist
-        plutil -p ${{ inputs.output_folder}}/${{ inputs.product_name }}.xcarchive/Products/Applications/${{ inputs.product_name }}.app/Info.plist
+        md5sum "${{ inputs.output_folder}}/${{ inputs.product_file }}.love"
+        md5sum "${{ inputs.output_folder}}//${{ inputs.product_file }}.xcarchive/Products/Applications/${{ inputs.product_file }}.app/game.love"
+        plutil -lint "${{ inputs.output_folder}}/${{ inputs.product_file }}.xcarchive/Info.plist"
+        plutil -p "${{ inputs.output_folder}}/${{ inputs.product_file }}.xcarchive/Info.plist"
+        plutil -lint "${{ inputs.output_folder}}/${{ inputs.product_file }}.xcarchive/Products/Applications/${{ inputs.product_file }}.app/Info.plist"
+        plutil -p "${{ inputs.output_folder}}/${{ inputs.product_file }}.xcarchive/Products/Applications/${{ inputs.product_file }}.app/Info.plist"
         # Summary
         tree ${{ inputs.output_folder}}

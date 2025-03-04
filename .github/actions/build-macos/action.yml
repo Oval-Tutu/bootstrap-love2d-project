@@ -11,6 +11,9 @@ inputs:
   product_copyright:
     description: The product copyright of the game
     required: true
+  product_file:
+    description: The basename of the file to be generated
+    required: true
   product_id:
     description: The product ID of the macOS app
     required: true
@@ -28,17 +31,25 @@ runs:
   steps:
       # notorise .app
       # notarize .dmg
+    - name: Install tools
+      uses: ./.github/actions/install-tools
+    - name: Build LOVE package
+      uses: ./.github/actions/build-love
+      with:
+        output_folder: ${{ inputs.output_folder }}
+        product_file: ${{ inputs.product_file }}
+        product_name: ${{ inputs.product_name }}
     - name: Get LÖVE for macOS
       shell: bash
       run: |
         curl -fsSL --retry 5 --retry-delay 15 --connect-timeout 30 --max-time 300 https://github.com/love2d/love/releases/download/${{ inputs.love_version }}/love-${{ inputs.love_version }}-macos.zip -o ./tools/love-${{ inputs.love_version }}-macos.zip || exit 1
         7z x -o./tools/ ./tools/love-${{ inputs.love_version }}-macos.zip
-        mv -v ./tools/love.app ./tools/${{ inputs.product_name }}.app
-        rm -rfv ./tools/${{ inputs.product_name }}.app/Contents/Resources/*.icns
+        mv -v ./tools/love.app ./tools/${{ inputs.product_file }}.app
+        rm -rfv ./tools/${{ inputs.product_file }}.app/Contents/Resources/*.icns
     - name: Copy .love game
       shell: bash
-      run: cp -v ./${{ inputs.output_folder }}/*.love ./tools/${{ inputs.product_name }}.app/Contents/Resources/${{ inputs.product_name }}.love
-    - name: Create ${{ inputs.product_name}}.icns
+      run: cp -v ./${{ inputs.output_folder }}/*.love ./tools/${{ inputs.product_file }}.app/Contents/Resources/${{ inputs.product_file }}.love
+    - name: Create ${{ inputs.product_file}}.icns
       shell: bash
       run: |
         mkdir -p ./tools/icon.iconset
@@ -75,9 +86,9 @@ runs:
         fi
 
         if command -v iconutil >/dev/null 2>&1; then
-          iconutil -c icns ./tools/icon.iconset -o ./tools/${{ inputs.product_name }}.icns
+          iconutil -c icns ./tools/icon.iconset -o ./tools/${{ inputs.product_file }}.icns
         elif command -v png2icns >/dev/null 2>&1; then
-          png2icns ./tools/${{ inputs.product_name }}.icns \
+          png2icns ./tools/${{ inputs.product_file }}.icns \
             ./tools/icon.iconset/icon_16x16.png \
             ./tools/icon.iconset/icon_32x32.png \
             ./tools/icon.iconset/icon_128x128.png \
@@ -87,75 +98,41 @@ runs:
           echo "iconutil and png2icns not found"
           exit 1
         fi
-        cp -v ./tools/${{ inputs.product_name }}.icns ./tools/${{ inputs.product_name }}.app/Contents/Resources/
+        cp -v ./tools/${{ inputs.product_file }}.icns ./tools/${{ inputs.product_file }}.app/Contents/Resources/
     - name: Update Info.plist
       shell: bash
       run: |
         if command -v plutil >/dev/null 2>&1; then
           # Update Name, Identifier and Versions
           plutil -replace CFBundleIdentifier -string "${{ inputs.product_id }}" \
-            ./tools/${{ inputs.product_name }}.app/Contents/Info.plist
+            ./tools/${{ inputs.product_file }}.app/Contents/Info.plist
           plutil -replace CFBundleName -string "${{ inputs.product_name }}" \
-            ./tools/${{ inputs.product_name }}.app/Contents/Info.plist
+            ./tools/${{ inputs.product_file }}.app/Contents/Info.plist
           plutil -replace CFBundleShortVersionString -string "${{ inputs.product_version }}" \
-            ./tools/${{ inputs.product_name }}.app/Contents/Info.plist
+            ./tools/${{ inputs.product_file }}.app/Contents/Info.plist
           plutil -replace CFBundleVersion -string "${{ inputs.apple_version_code }}" \
-            ./tools/${{ inputs.product_name }}.app/Contents/Info.plist
+            ./tools/${{ inputs.product_file }}.app/Contents/Info.plist
 
           # Update icon
-          plutil -replace CFBundleIconFile -string "${{ inputs.product_name }}" \
-            ./tools/${{ inputs.product_name }}.app/Contents/Info.plist
+          plutil -replace CFBundleIconFile -string "${{ inputs.product_file }}" \
+            ./tools/${{ inputs.product_file }}.app/Contents/Info.plist
           plutil -replace CFBundleIconName -string "${{ inputs.product_name }}" \
-            ./tools/${{ inputs.product_name }}.app/Contents/Info.plist
+            ./tools/${{ inputs.product_file }}.app/Contents/Info.plist
 
           # Update copyright
           plutil -replace NSHumanReadableCopyright -string "${{ inputs.product_copyright }}" \
-            ./tools/${{ inputs.product_name }}.app/Contents/Info.plist
+            ./tools/${{ inputs.product_file }}.app/Contents/Info.plist
 
           # Remove CFBundleDocumentTypes, not required for a standalone game
           plutil -remove CFBundleDocumentTypes \
-            ./tools/${{ inputs.product_name }}.app/Contents/Info.plist
+            ./tools/${{ inputs.product_file }}.app/Contents/Info.plist
 
           # Remove Uniform Type Identifiers. not required for a standalone game
           plutil -remove UTExportedTypeDeclarations \
-            ./tools/${{ inputs.product_name }}.app/Contents/Info.plist
+            ./tools/${{ inputs.product_file }}.app/Contents/Info.plist
         else
-          # Update Name, Identifier and Versions
-          xmlstarlet ed -L \
-            -u '/plist/dict/string[preceding-sibling::key[1][text()="CFBundleIdentifier"]]' \
-            -v '${{ inputs.product_id }}' \
-            -u '/plist/dict/string[preceding-sibling::key[1][text()="CFBundleName"]]' \
-            -v '${{ inputs.product_name }}' \
-            -u '/plist/dict/string[preceding-sibling::key[1][text()="CFBundleShortVersionString"]]' \
-            -v '${{ inputs.product_version }}' \
-            ./tools/${{ inputs.product_name }}.app/Contents/Info.plist
-          xmlstarlet ed -L -s '/plist/dict' -t elem -n 'key' -v 'CFBundleVersion' \
-            -s '/plist/dict' -t elem -n 'string' -v '${{ inputs.apple_version_code }}' \
-            ./tools/${{ inputs.product_name }}.app/Contents/Info.plist
-
-          # Update icon
-          xmlstarlet ed -L \
-            -u '/plist/dict/string[preceding-sibling::key[1][text()="CFBundleIconFile"]]' \
-            -v '${{ inputs.product_name }}' \
-            -u '/plist/dict/string[preceding-sibling::key[1][text()="CFBundleIconName"]]' \
-            -v '${{ inputs.product_name }}' \
-            ./tools/${{ inputs.product_name }}.app/Contents/Info.plist
-
-          # Update copyright
-          xmlstarlet ed -L \
-            -u '/plist/dict/string[preceding-sibling::key[1][text()="NSHumanReadableCopyright"]]' \
-            -v '${{ inputs.product_copyright }}' \
-            ./tools/${{ inputs.product_name }}.app/Contents/Info.plist
-
-          # Remove CFBundleDocumentTypes, not required for a standalone game
-          xmlstarlet ed -L \
-            -d '/plist/dict/key[text()="CFBundleDocumentTypes"]|/plist/dict/array[preceding-sibling::key[1][text()="CFBundleDocumentTypes"]]' \
-            ./tools/${{ inputs.product_name }}.app/Contents/Info.plist
-
-          # Remove Uniform Type Identifiers. not required for a standalone game
-          xmlstarlet ed -L \
-            -d '/plist/dict/key[text()="UTExportedTypeDeclarations"]|/plist/dict/array[preceding-sibling::key[1][text()="UTExportedTypeDeclarations"]]' \
-            ./tools/${{ inputs.product_name }}.app/Contents/Info.plist
+          echo "plutil not found"
+          exit 1
         fi
     - name: Validate Info.plist
       shell: bash
@@ -174,23 +151,18 @@ runs:
           fi
           ' sh {} \;
         else
-          curl -fsSL --retry 5 --retry-delay 15 --connect-timeout 30 --max-time 300 \
-            https://www.apple.com/DTDs/PropertyList-1.0.dtd \
-            -o ./tools/${{ inputs.product_name }}.app/Contents/PropertyList-1.0.dtd || exit 1
-          sed 's|http://www.apple.com/DTDs/PropertyList-1.0.dtd|PropertyList-1.0.dtd|g' ./tools/${{ inputs.product_name }}.app/Contents/Info.plist > ./tools/${{ inputs.product_name }}.app/Contents/Check.plist
-          xmlstarlet val -e -d ./tools/${{ inputs.product_name }}.app/Contents/PropertyList-1.0.dtd --net ./tools/${{ inputs.product_name }}.app/Contents/Check.plist
-          rm ./tools/${{ inputs.product_name }}.app/Contents/Check.plist
-          rm ./tools/${{ inputs.product_name }}.app/Contents/PropertyList-1.0.dtd
+          echo "plutil not found"
+          exit 1
         fi
-        tree ./tools/${{ inputs.product_name }}.app
-        cat ./tools/${{ inputs.product_name }}.app/Contents/Info.plist
+        tree ./tools/${{ inputs.product_file }}.app
+        cat ./tools/${{ inputs.product_file }}.app/Contents/Info.plist
     - name: Create macOS .zip of .app
       shell: bash
       run: |
         if command -v ditto >/dev/null 2>&1; then
-          ditto -c -k --keepParent ./tools/${{ inputs.product_name }}.app ${{ inputs.output_folder }}/${{ inputs.product_name }}.app.zip
+          ditto -c -k --keepParent ./tools/${{ inputs.product_file }}.app ${{ inputs.output_folder }}/${{ inputs.product_file }}.app.zip
         else
-          zip -ry --symlinks ${{ inputs.output_folder }}/${{ inputs.product_name }}.app.zip ./tools/${{ inputs.product_name }}.app
+          zip -ry --symlinks ${{ inputs.output_folder }}/${{ inputs.product_file }}.app.zip ./tools/${{ inputs.product_file }}.app
         fi
         tree ${{ inputs.output_folder }}
     - name: Create macOS .dmg of .app
@@ -198,16 +170,16 @@ runs:
       shell: bash
       run: |
         #--background "./resources/background.png" \
-        #--volicon ./tools/${{ inputs.product_name }}.icns \
+        #--volicon ./tools/${{ inputs.product_file }}.icns \
         create-dmg \
-          --volname "${{ inputs.product_name }}" \
+          --volname "${{ inputs.product_file }}" \
           --window-pos 200 120 \
           --window-size 800 400 \
           --icon-size 100 \
-          --icon "${{ inputs.product_name }}.app" 200 190 \
-          --hide-extension "${{ inputs.product_name }}.app" \
+          --icon "${{ inputs.product_file }}.app" 200 190 \
+          --hide-extension "${{ inputs.product_file }}.app" \
           --app-drop-link 600 185 \
           --no-internet-enable \
           --skip-jenkins \
-          ${{ inputs.output_folder }}/${{ inputs.product_name }}.dmg \
-          ./tools/${{ inputs.product_name }}.app/
+          ${{ inputs.output_folder }}/${{ inputs.product_file }}.dmg \
+          ./tools/${{ inputs.product_file }}.app/

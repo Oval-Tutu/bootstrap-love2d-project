@@ -1,0 +1,41 @@
+name: Build HTML Package
+description: Create an HTML build using love.js
+inputs:
+  output_folder:
+    description: The folder in which the generated package file will be placed
+    required: true
+  product_file:
+    description: The basename of the file to be generated
+    required: true
+  product_name:
+    description: The name of the game
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Install tools
+      uses: ./.github/actions/install-tools
+    - name: Build LOVE package
+      uses: ./.github/actions/build-love
+      with:
+        output_folder: ${{ inputs.output_folder }}
+        product_file: ${{ inputs.product_file }}
+        product_name: ${{ inputs.product_name }}
+    - name: Build HTML package
+      shell: bash
+      run: |
+        #"${{ inputs.output_folder }}/${{ inputs.product_file }}.love" \
+        curl -fsSL --retry 5 --retry-delay 15 --connect-timeout 30 --max-time 300 https://github.com/2dengine/love.js/archive/refs/heads/main.zip -o ./tools/love.js.zip || exit 1
+        unzip -q ./tools/love.js.zip -d ./tools/
+        sed -i "s/<title>löve.js<\/title>/<title>${{ inputs.product_name }}<\/title>/" ./tools/love.js-main/index.html
+        sed -i '/<base href="\/play\/">$/d' ./tools/love.js-main/index.html
+        sed -i "s/player.js/player.js?g=game.love/" ./tools/love.js-main/index.html
+        convert ./resources/icon.png -define icon:auto-resize="256,128,96,64,48,32,24,16" ./tools/love.js-main/favicon.ico
+        mkdir -p "${{ inputs.output_folder }}/${{ inputs.product_file }}-html"
+        rsync -a --exclude='.htaccess' --exclude='*.git*' --exclude='*.md' --exclude='*.txt' \
+          ./tools/love.js-main/ \
+          ${{ inputs.output_folder }}/${{ inputs.product_file }}-html/
+        cp -v ${{ inputs.output_folder }}/${{ inputs.product_file }}.love ${{ inputs.output_folder }}/${{ inputs.product_file }}-html/game.love
+        7z a -tzip \
+          "${{ inputs.output_folder }}/${{ inputs.product_file }}-html.zip" \
+          "${{ inputs.output_folder }}/${{ inputs.product_file }}-html"/*
