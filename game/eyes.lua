@@ -177,7 +177,8 @@ eyes.colors = {
   orange = { 1, 0.5, 0 },
   red = { 1, 0, 0 },
   purple = { 1, 0, 1 },
-  green = { 0, 1, 0 }
+  green = { 0, 1, 0 },
+  darkGrey = { 0.1, 0.1, 0.1 }
 }
 
 -- Eye state
@@ -211,6 +212,10 @@ function eyes.draw()
   local centerY = windowHeight / 2
   local leftEyeX = (windowWidth / 2) - (eyes.eyeSpacing / 2)
   local rightEyeX = (windowWidth / 2) + (eyes.eyeSpacing / 2)
+
+  -- Draw background
+  love.graphics.setColor(eyes.colors.darkGrey)
+  love.graphics.rectangle("fill", 0, 0, windowWidth, windowHeight)
 
   eyes.shakeX, eyes.shakeY = updateShakeEffect(leftEyeX, rightEyeX, centerY, eyes.eyeSize, eyes.shakeAmount)
 
