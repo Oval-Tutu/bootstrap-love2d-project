@@ -1,6 +1,14 @@
+---@class Loader
+---A native library loader for LÖVE games
 local M = {}
 
--- Get system architecture information
+---Gets system architecture information
+---@return table systemInfo Table containing OS and architecture details
+---@return string systemInfo.os Operating system name in lowercase
+---@return string systemInfo.arch Architecture name
+---@return boolean systemInfo.is64bit Whether the system is 64-bit
+---@return boolean systemInfo.isArm Whether the system uses ARM architecture
+---@return boolean systemInfo.isX86 Whether the system uses x86 architecture
 function M.getSystemInfo()
   local os = love.system.getOS():lower():gsub("%s+", "")
   local ffi = require("ffi")
@@ -18,7 +26,9 @@ function M.getSystemInfo()
   }
 end
 
--- Determine platform-specific subdirectory
+---Determines platform-specific subdirectory for native libraries
+---@param sysInfo table System information from getSystemInfo()
+---@return string|nil platformSubdir Platform-specific subdirectory or nil if not supported
 function M.getPlatformSubdir(sysInfo)
   if sysInfo.os == "android" then
     if sysInfo.isArm then
@@ -38,6 +48,9 @@ function M.getPlatformSubdir(sysInfo)
   return nil
 end
 
+---Loads a native library from the appropriate platform-specific directory
+---@param libraryName string Name of the library to load without extension
+---@return table|nil library Loaded library module or nil on failure
 function M.loadNativeLibrary(libraryName)
   local sysInfo = M.getSystemInfo()
   local extension = sysInfo.os == "windows" and ".dll" or ".so"
@@ -83,6 +96,8 @@ function M.loadNativeLibrary(libraryName)
   end
 end
 
+---Loads the HTTPS library appropriate for the current LÖVE version and platform
+---@return table|nil https HTTPS library module or nil if unavailable or on Web platform
 function M.loadHTTPS()
   local major = love.getVersion()
   local os = love.system.getOS()
