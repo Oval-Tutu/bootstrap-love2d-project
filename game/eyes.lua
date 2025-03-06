@@ -19,26 +19,40 @@ end
 ---@param isWinking boolean Whether the eye is winking
 ---@param eyeSize number The size of the eye
 ---@param colors table Color definitions
-local function drawEye(eyeX, eyeY, isWinking, eyeSize, colors)
+---@param isTouching boolean Whether any eye is being touched
+local function drawEye(eyeX, eyeY, isWinking, eyeSize, colors, isTouching)
   if isWinking then
-    love.graphics.setColor(colors.white)
+    love.graphics.setColor(isTouching and colors.lightPink or colors.white)
     love.graphics.circle("fill", eyeX, eyeY, eyeSize)
-    love.graphics.setColor(colors.blue)
+    love.graphics.setColor(isTouching and colors.darkRed or colors.blue)
     love.graphics.setLineWidth(8)
     love.graphics.line(eyeX - eyeSize, eyeY, eyeX + eyeSize, eyeY)
   else
-    local distanceX = love.mouse.getX() - eyeX
-    local distanceY = love.mouse.getY() - eyeY
-    local distance = math.min(math.sqrt(distanceX ^ 2 + distanceY ^ 2), eyeSize / 2)
-    local angle = math.atan2(distanceY, distanceX)
+    local pupilX, pupilY
 
-    local pupilX = eyeX + (math.cos(angle) * distance)
-    local pupilY = eyeY + (math.sin(angle) * distance)
+    if (isTouching) then
+      -- Random oscillation around the center when any eye is being touched
+      local oscillationRange = eyeSize / 16
+      pupilX = eyeX + love.math.random(-oscillationRange, oscillationRange)
+      pupilY = eyeY + love.math.random(-oscillationRange, oscillationRange)
 
-    love.graphics.setColor(colors.white)
+      love.graphics.setColor(colors.lightPink)
+    else
+      -- Normal eye tracking behavior
+      local distanceX = love.mouse.getX() - eyeX
+      local distanceY = love.mouse.getY() - eyeY
+      local distance = math.min(math.sqrt(distanceX ^ 2 + distanceY ^ 2), eyeSize / 2)
+      local angle = math.atan2(distanceY, distanceX)
+
+      pupilX = eyeX + (math.cos(angle) * distance)
+      pupilY = eyeY + (math.sin(angle) * distance)
+
+      love.graphics.setColor(colors.white)
+    end
+
     love.graphics.circle("fill", eyeX, eyeY, eyeSize)
 
-    love.graphics.setColor(colors.blue)
+    love.graphics.setColor(isTouching and colors.darkRed or colors.blue)
     love.graphics.circle("fill", pupilX, pupilY, 16)
   end
 end
@@ -123,9 +137,13 @@ local function checkOnlineStatus()
   return success and result and result.code and result.code < 400
 end
 
----Updates the eye state based on input
+---Updates the eye state based on input and cursor position
 ---@param state table Current eye state reference
-local function updateEyeState(state)
+---@param leftEyeX number The x-coordinate of the left eye
+---@param rightEyeX number The x-coordinate of the right eye
+---@param centerY number The y-coordinate of both eyes
+---@param eyeSize number The size of the eye
+local function updateEyeState(state, leftEyeX, rightEyeX, centerY, eyeSize)
   local leftButton = love.mouse.isDown(1)
   local rightButton = love.mouse.isDown(2)
   local middleButton = love.mouse.isDown(3)
@@ -133,6 +151,9 @@ local function updateEyeState(state)
   state.bothBlinking = middleButton or (leftButton and rightButton)
   state.leftEyeWinking = state.bothBlinking or (leftButton and not state.bothBlinking)
   state.rightEyeWinking = state.bothBlinking or (rightButton and not state.bothBlinking)
+
+  -- Check if either eye is being touched
+  state.touching = isMouseOverEye(leftEyeX, centerY, eyeSize) or isMouseOverEye(rightEyeX, centerY, eyeSize)
 end
 
 ---Updates the shake effect when mouse is over eyes
@@ -182,6 +203,8 @@ eyes.colors = {
   purple = { 1, 0, 1 },
   green = { 0, 1, 0 },
   darkGrey = { 0.1, 0.1, 0.1 },
+  lightPink = { 1, 0.92, 0.92 },
+  darkRed = { 0.6, 0, 0 },
   -- Fire colors for particle system
   fire = {
     { 1, 1, 0, 1 },     -- bright yellow
@@ -195,7 +218,8 @@ eyes.colors = {
 eyes.state = {
   leftEyeWinking = false,
   rightEyeWinking = false,
-  bothBlinking = false
+  bothBlinking = false,
+  touching = false  -- New state to track if either eye is being touched
 }
 
 ---Creates and initializes the particle system for the cursor
@@ -274,10 +298,11 @@ function eyes.draw()
   love.graphics.push()
   love.graphics.translate(eyes.shakeX, eyes.shakeY)
 
-  updateEyeState(eyes.state)
+  -- Update eye state with position information for touch detection
+  updateEyeState(eyes.state, leftEyeX, rightEyeX, centerY, eyes.eyeSize)
 
-  drawEye(leftEyeX, centerY, eyes.state.leftEyeWinking, eyes.eyeSize, eyes.colors)
-  drawEye(rightEyeX, centerY, eyes.state.rightEyeWinking, eyes.eyeSize, eyes.colors)
+  drawEye(leftEyeX, centerY, eyes.state.leftEyeWinking, eyes.eyeSize, eyes.colors, eyes.state.touching)
+  drawEye(rightEyeX, centerY, eyes.state.rightEyeWinking, eyes.eyeSize, eyes.colors, eyes.state.touching)
 
   drawStatusMessages(windowWidth, windowHeight, font, eyes.state, eyes.shakeX, eyes.shakeY, eyes.colors)
   drawMouseCursor(windowWidth, font, eyes.x, eyes.y, eyes.colors, eyes.particleSystem)
