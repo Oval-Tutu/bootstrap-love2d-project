@@ -1,4 +1,5 @@
 ---@class Eyes Module for drawing and managing interactive eyes
+local overlayStats = require("lib.overlayStats")
 
 -- Private functions defined as locals
 ---Checks if the mouse is over an eye
@@ -87,10 +88,9 @@ end
 ---@param x number Mouse X position
 ---@param y number Mouse Y position
 ---@param colors table Color definitions
-local function drawMouseCursor(windowWidth, font, x, y, colors)
-  love.graphics.setColor(colors.red)
-  love.graphics.circle("fill", x, y, 10)
-
+---@param particleSystem love.ParticleSystem The fire particle system
+local function drawMouseCursor(windowWidth, font, x, y, colors, particleSystem)
+  love.graphics.draw(particleSystem)
   love.graphics.setColor(colors.white)
   local message = i18n("Mouse") .. " (" .. x .. "," .. y .. ")"
   local textWidth = font:getWidth(message)
@@ -167,6 +167,9 @@ local eyes = {
   -- Online status
   online_color = { 1, 0, 0 },
   online_message = "Offline",
+
+  -- Particle system
+  particleSystem = nil,
 }
 
 -- Constants
@@ -178,7 +181,14 @@ eyes.colors = {
   red = { 1, 0, 0 },
   purple = { 1, 0, 1 },
   green = { 0, 1, 0 },
-  darkGrey = { 0.1, 0.1, 0.1 }
+  darkGrey = { 0.1, 0.1, 0.1 },
+  -- Fire colors for particle system
+  fire = {
+    { 1, 1, 0, 1 },     -- bright yellow
+    { 1, 0.5, 0, 1 },   -- orange
+    { 1, 0.2, 0, 0.8 }, -- red-orange
+    { 0.7, 0, 0, 0 }    -- fade out to transparent dark red
+  }
 }
 
 -- Eye state
@@ -188,12 +198,50 @@ eyes.state = {
   bothBlinking = false
 }
 
+---Creates and initializes the particle system for the cursor
+---@return love.ParticleSystem The initialized particle system
+local function initParticleSystem()
+  local particleImg = love.graphics.newCanvas(8, 8)
+  love.graphics.setCanvas(particleImg)
+  love.graphics.clear()
+  love.graphics.setColor(1, 1, 1)
+  love.graphics.circle("fill", 4, 4, 4)
+  love.graphics.setCanvas()
+
+  local particleSystem = love.graphics.newParticleSystem(particleImg, 100)
+
+  -- Configure particle system to look like fire
+  particleSystem:setParticleLifetime(0.5, 1.2)
+  particleSystem:setEmissionRate(60)
+  particleSystem:setSizeVariation(0.5)
+  particleSystem:setLinearAcceleration(0, -30, 0, -60)
+  particleSystem:setSpeed(20, 40)
+
+  -- Apply fire colors from constants
+  particleSystem:setColors(unpack(eyes.colors.fire))
+
+  particleSystem:setDirection(-math.pi/2)
+  particleSystem:setSpread(math.pi/4)
+  particleSystem:setSizes(1.0, 1.5, 0.8)
+
+  -- Start the particle system
+  particleSystem:start()
+
+  return particleSystem
+end
+
 ---Loads resources and initializes the eyes
 function eyes.load()
   if checkOnlineStatus() then
     eyes.online_color = eyes.colors.green
     eyes.online_message = "Online"
   end
+
+  -- Initialize the particle system
+  eyes.particleSystem = initParticleSystem()
+
+  -- Register particle system with overlayStats
+  overlayStats.registerParticleSystem(eyes.particleSystem)
 
   love.graphics.setFont(love.graphics.newFont(42))
   love.mouse.setVisible(false)
@@ -203,6 +251,10 @@ function eyes.update(dt)
   eyes.x, eyes.y = love.mouse.getPosition()
   eyes.x = math.floor(eyes.x)
   eyes.y = math.floor(eyes.y)
+
+  -- Update particle system
+  eyes.particleSystem:update(dt)
+  eyes.particleSystem:setPosition(eyes.x, eyes.y)
 end
 
 function eyes.draw()
@@ -228,7 +280,7 @@ function eyes.draw()
   drawEye(rightEyeX, centerY, eyes.state.rightEyeWinking, eyes.eyeSize, eyes.colors)
 
   drawStatusMessages(windowWidth, windowHeight, font, eyes.state, eyes.shakeX, eyes.shakeY, eyes.colors)
-  drawMouseCursor(windowWidth, font, eyes.x, eyes.y, eyes.colors)
+  drawMouseCursor(windowWidth, font, eyes.x, eyes.y, eyes.colors, eyes.particleSystem)
   drawOnlineStatus(windowWidth, font, eyes.online_color, eyes.online_message)
 
   love.graphics.pop()
