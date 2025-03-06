@@ -24,6 +24,28 @@ local function loadSoundEffects()
   return sounds
 end
 
+---Loads the ambient fire sound effect as dual mono sources for true stereo mixing
+---@return table Table containing left and right channel fire sounds
+local function loadAmbientFireSound()
+  local soundPath = "sfx/fire.ogg"
+  -- Create two instances of the sound
+  local leftChannel = love.audio.newSource(soundPath, "stream")
+  local rightChannel = love.audio.newSource(soundPath, "stream")
+
+  -- Configure both for looping
+  leftChannel:setLooping(true)
+  rightChannel:setLooping(true)
+
+  -- Hard pan each source to its respective side
+  leftChannel:setPosition(-1, 0, 0)
+  rightChannel:setPosition(1, 0, 0)
+
+  return {
+    left = leftChannel,
+    right = rightChannel
+  }
+end
+
 ---Plays a random "aargh" sound effect
 ---@param sounds table Array of sound sources
 local function playRandomSound(sounds)
@@ -252,6 +274,9 @@ local eyes = {
   soundJustFinished = false, -- New flag to track if a sound just finished
   lastTouchTime = 0,
   touchCooldown = 0.5, -- Minimum time between sound triggers
+
+  -- Ambient sound
+  ambientFireSound = nil,
 }
 
 -- Constants
@@ -266,7 +291,6 @@ eyes.colors = {
   darkGrey = { 0.1, 0.1, 0.1 },
   lightPink = { 1, 0.92, 0.92 },
   darkRed = { 0.6, 0, 0 },
-  -- Enhanced fire colors with more color stops for smoother transitions
   fire = {
     { 1, 0.7, 0, 0.8 },   -- golden orange
     { 1, 0.4, 0, 0.7 },   -- orange
@@ -280,13 +304,13 @@ eyes.colors = {
     { 1, 0.8, 0.2, 0.7 }, -- yellow-orange
     { 1, 0.6, 0, 0.5 },   -- orange
     { 1, 0.3, 0, 0.3 },   -- reddish-orange
-    { 0.8, 0.1, 0, 0 }    -- fade out
+    { 0.8, 0.1, 0 }    -- fade out
   },
   -- Spark colors (bright and short-lived)
   spark = {
     { 1, 1, 1, 1 },     -- white
     { 1, 1, 0.6, 0.8 }, -- bright yellow
-    { 1, 0.8, 0.3, 0.6 }, -- yellow-orange
+    { 1, 0.3, 0, 0.3 },   -- reddish-orange
     { 1, 0.6, 0.1, 0 }  -- fade to transparent
   },
   -- Smoke colors for the smoke particle system
@@ -482,6 +506,11 @@ function eyes.load()
   -- Load sound effects
   eyes.sounds = loadSoundEffects()
 
+  -- Load and start playing the ambient fire sounds (true stereo)
+  eyes.ambientFireSound = loadAmbientFireSound()
+  eyes.ambientFireSound.left:play()
+  eyes.ambientFireSound.right:play()
+
   love.graphics.setFont(love.graphics.newFont(42))
   love.mouse.setVisible(false)
 end
@@ -490,6 +519,32 @@ function eyes.update(dt)
   eyes.x, eyes.y = love.mouse.getPosition()
   eyes.x = math.floor(eyes.x)
   eyes.y = math.floor(eyes.y)
+  local windowWidth = love.graphics.getWidth()
+  local windowHeight = love.graphics.getHeight()
+
+  if eyes.ambientFireSound then
+    -- Create a balanced stereo effect with smooth crossfade
+    local normalizedX = eyes.x / windowWidth
+
+    -- Calculate smooth volume levels for each channel
+    -- Left channel is louder when cursor is left (normalizedX near 0)
+    -- Right channel is louder when cursor is right (normalizedX near 1)
+    -- Both channels maintain at least 30% volume for continuous stereo sound
+    local leftVolume = math.max(0.3, 1.0 - (normalizedX * 0.7))
+    local rightVolume = math.max(0.3, 0.3 + (normalizedX * 0.7))
+
+    -- Calculate overall volume based on proximity to center (same as before)
+    local centerX = windowWidth / 2
+    local centerY = windowHeight / 2
+    local distanceFromCenterX = 1.0 - math.abs(eyes.x - centerX) / centerX
+    local distanceFromCenterY = 1.0 - math.abs(eyes.y - centerY) / centerY
+    local volumeMultiplier = distanceFromCenterX * distanceFromCenterY
+    local baseVolume = 0.5 + (volumeMultiplier * 0.7)
+
+    -- Apply volumes to both channels
+    eyes.ambientFireSound.left:setVolume(leftVolume * baseVolume)
+    eyes.ambientFireSound.right:setVolume(rightVolume * baseVolume)
+  end
 
   -- Update standard particle systems
   eyes.fireSystem:update(dt)
@@ -527,8 +582,6 @@ function eyes.update(dt)
   end
 
   -- Handle eye touching and sound effects
-  local windowWidth = love.graphics.getWidth()
-  local windowHeight = love.graphics.getHeight()
   local centerY = windowHeight / 2
   local leftEyeX = (windowWidth / 2) - (eyes.eyeSpacing / 2)
   local rightEyeX = (windowWidth / 2) + (eyes.eyeSpacing / 2)
