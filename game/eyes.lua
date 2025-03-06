@@ -13,6 +13,36 @@ local function isMouseOverEye(eyeX, eyeY, eyeSize)
   return distance < eyeSize
 end
 
+---Loads all available "aargh" sound effects
+---@return table An array of sound sources
+local function loadSoundEffects()
+  local sounds = {}
+  for i = 0, 7 do
+    local soundPath = "sfx/aargh" .. i .. ".ogg"
+    table.insert(sounds, love.audio.newSource(soundPath, "static"))
+  end
+  return sounds
+end
+
+---Plays a random "aargh" sound effect
+---@param sounds table Array of sound sources
+local function playRandomSound(sounds)
+  -- Select a random sound
+  local index = love.math.random(1, #sounds)
+  local sound = sounds[index]
+
+  -- Stop any previous instance that might be playing
+  sound:stop()
+
+  -- Set up finish properties
+  sound:setLooping(false)
+
+  -- Play the sound
+  sound:play()
+
+  return sound
+end
+
 ---Draws a single eye
 ---@param eyeX number The x-coordinate of the eye
 ---@param eyeY number The y-coordinate of the eye
@@ -65,16 +95,8 @@ end
 ---@param shakeX number Current X shake amount
 ---@param shakeY number Current Y shake amount
 ---@param colors table Color definitions
-local function drawStatusMessages(windowWidth, windowHeight, font, state, shakeX, shakeY, colors)
+local function drawStatusMessages(windowWidth, windowHeight, font, state, colors)
   local padding = 128
-
-  -- Draw "Ouch" message when eyes are shaking
-  if (shakeX + shakeY) ~= 0 then
-    love.graphics.setColor(colors.orange)
-    local text = i18n("Ouch")
-    local textWidth = font:getWidth(text)
-    love.graphics.print(text, (windowWidth - textWidth) / 2, windowHeight - 256)
-  end
 
   -- Draw blinking/winking messages
   if state.bothBlinking then
@@ -222,6 +244,14 @@ local eyes = {
   -- Timer for spark emission control
   sparkTimer = 0,
   sparkInterval = 0.15,
+
+  -- Sound effects
+  sounds = {},
+  currentSound = nil,
+  soundPlaying = false,
+  soundJustFinished = false, -- New flag to track if a sound just finished
+  lastTouchTime = 0,
+  touchCooldown = 0.5, -- Minimum time between sound triggers
 }
 
 -- Constants
@@ -449,6 +479,9 @@ function eyes.load()
   overlayStats.registerParticleSystem(eyes.sparkSystem)
   overlayStats.registerParticleSystem(eyes.smokeSystem)
 
+  -- Load sound effects
+  eyes.sounds = loadSoundEffects()
+
   love.graphics.setFont(love.graphics.newFont(42))
   love.mouse.setVisible(false)
 end
@@ -482,6 +515,51 @@ function eyes.update(dt)
     -- Emit a random number of sparks in a burst
     eyes.sparkSystem:emit(love.math.random(1, 5))
   end
+
+  -- Check sound state - if we have a current sound, check if it's still playing
+  if eyes.currentSound then
+    if not eyes.currentSound:isPlaying() then
+      -- Sound finished playing
+      eyes.currentSound = nil
+      eyes.soundPlaying = false
+      eyes.soundJustFinished = true -- Set flag when sound finishes
+    end
+  end
+
+  -- Handle eye touching and sound effects
+  local windowWidth = love.graphics.getWidth()
+  local windowHeight = love.graphics.getHeight()
+  local centerY = windowHeight / 2
+  local leftEyeX = (windowWidth / 2) - (eyes.eyeSpacing / 2)
+  local rightEyeX = (windowWidth / 2) + (eyes.eyeSpacing / 2)
+
+  -- Update eye state with position information for touch detection
+  local wasTouching = eyes.state.touching
+  updateEyeState(eyes.state, leftEyeX, rightEyeX, centerY, eyes.eyeSize)
+
+  local currentTime = love.timer.getTime()
+  local cooldownElapsed = (currentTime - eyes.lastTouchTime) > eyes.touchCooldown
+
+  -- Play a sound if:
+  -- 1. We just started touching an eye, OR
+  -- 2. A sound just finished and we're still touching an eye
+  -- AND in both cases: No sound is playing and cooldown has elapsed
+  if ((eyes.state.touching and not wasTouching) or
+      (eyes.state.touching and eyes.soundJustFinished)) and
+     not eyes.soundPlaying and cooldownElapsed then
+
+    eyes.soundPlaying = true
+    eyes.soundJustFinished = false -- Reset flag after using it
+    eyes.lastTouchTime = currentTime
+
+    -- Play a random sound and keep track of it
+    eyes.currentSound = playRandomSound(eyes.sounds)
+  end
+
+  -- If we're not touching anymore, reset the finished sound flag
+  if not eyes.state.touching then
+    eyes.soundJustFinished = false
+  end
 end
 
 function eyes.draw()
@@ -507,7 +585,7 @@ function eyes.draw()
   drawEye(leftEyeX, centerY, eyes.state.leftEyeWinking, eyes.eyeSize, eyes.colors, eyes.state.touching)
   drawEye(rightEyeX, centerY, eyes.state.rightEyeWinking, eyes.eyeSize, eyes.colors, eyes.state.touching)
 
-  drawStatusMessages(windowWidth, windowHeight, font, eyes.state, eyes.shakeX, eyes.shakeY, eyes.colors)
+  drawStatusMessages(windowWidth, windowHeight, font, eyes.state, eyes.colors)
   drawMouseCursor(windowWidth, font, eyes.x, eyes.y, eyes.colors,
                   eyes.fireSystem, eyes.coreSystem, eyes.sparkSystem, eyes.smokeSystem)
   drawOnlineStatus(windowWidth, font, eyes.online_color, eyes.online_message)
