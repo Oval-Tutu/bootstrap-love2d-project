@@ -9,7 +9,7 @@ local M = {}
 ---@return boolean systemInfo.is64bit Whether the system is 64-bit
 ---@return boolean systemInfo.isArm Whether the system uses ARM architecture
 ---@return boolean systemInfo.isX86 Whether the system uses x86 architecture
-function M.getSystemInfo()
+local function getSystemInfo()
   local os = love.system.getOS():lower():gsub("%s+", "")
   local ffi = require("ffi")
   local arch = ffi.arch
@@ -29,7 +29,7 @@ end
 ---Determines platform-specific subdirectory for native libraries
 ---@param sysInfo table System information from getSystemInfo()
 ---@return string|nil platformSubdir Platform-specific subdirectory or nil if not supported
-function M.getPlatformSubdir(sysInfo)
+local function getPlatformSubdir(sysInfo)
   if sysInfo.os == "android" then
     if sysInfo.isArm then
       return sysInfo.is64bit and sysInfo.os .. "/arm64-v8a" or sysInfo.os .. "/armeabi-v7a"
@@ -52,10 +52,10 @@ end
 ---@param libraryName string Name of the library to load without extension
 ---@return table|nil library Loaded library module or nil on failure
 function M.loadNativeLibrary(libraryName)
-  local sysInfo = M.getSystemInfo()
+  local sysInfo = getSystemInfo()
   local extension = sysInfo.os == "windows" and ".dll" or ".so"
   local libraryFile = libraryName .. extension
-  local subdir = M.getPlatformSubdir(sysInfo)
+  local subdir = getPlatformSubdir(sysInfo)
   if not subdir then
     return nil
   end
