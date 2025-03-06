@@ -10,6 +10,8 @@ local overlayStats = {
   vsyncEnabled = nil,
   lastControllerCheck = 0,
   CONTROLLER_COOLDOWN = 0.2,
+  -- Store active particle systems
+  particleSystems = {},
   renderInfo = {
     name = name,
     version = version,
@@ -31,6 +33,7 @@ local overlayStats = {
     memoryUsage = {},
     shaderSwitches = {},
     textureMemory = {},
+    particleCount = {},
   },
   currentSample = 0,
 }
@@ -129,7 +132,7 @@ function overlayStats.draw()
   love.graphics.push("all")
   love.graphics.setNewFont(16)
   love.graphics.setColor(0, 0, 0, 0.8)
-  love.graphics.rectangle("fill", 10, 10, 280, 280)
+  love.graphics.rectangle("fill", 10, 10, 280, 300)
   love.graphics.setColor(0.678, 0.847, 0.902, 1)
 
   -- System Info
@@ -193,6 +196,11 @@ function overlayStats.draw()
   love.graphics.print(string.format("Images: %d", currentImages), 20, y)
   y = y + 20
 
+  -- Display particle count
+  local currentParticleCount = averages.particleCount or 0
+  love.graphics.print(string.format("Particles: %d", math.floor(currentParticleCount)), 20, y)
+  y = y + 20
+
   -- Add VSync status with color indication
   love.graphics.setColor(overlayStats.vsyncEnabled and { 0, 1, 0, 1 } or { 1, 0, 0, 1 })
   love.graphics.print(string.format("VSync: %s", overlayStats.vsyncEnabled and "ON" or "OFF"), 20, y)
@@ -225,6 +233,15 @@ function overlayStats.update(dt)
   overlayStats.metrics.textureMemory[overlayStats.currentSample] = stats.texturememory / (1024 * 1024)
   overlayStats.metrics.memoryUsage[overlayStats.currentSample] = collectgarbage("count")
   overlayStats.metrics.frameTime[overlayStats.currentSample] = dt
+
+  -- Calculate total particle count from all registered systems
+  local totalParticles = 0
+  for ps, _ in pairs(overlayStats.particleSystems) do
+    if ps:isActive() then
+      totalParticles = totalParticles + ps:getCount()
+    end
+  end
+  overlayStats.metrics.particleCount[overlayStats.currentSample] = totalParticles
 end
 
 ---Processes keyboard input for the overlay
@@ -236,6 +253,20 @@ function overlayStats.handleKeyboard(key)
   elseif key == "f5" then
     toggleVSync()
   end
+end
+
+---Register a particle system to be tracked
+---@param particleSystem love.ParticleSystem The particle system to register
+---@return nil
+function overlayStats.registerParticleSystem(particleSystem)
+  overlayStats.particleSystems[particleSystem] = true
+end
+
+---Unregister a particle system from tracking
+---@param particleSystem love.ParticleSystem The particle system to unregister
+---@return nil
+function overlayStats.unregisterParticleSystem(particleSystem)
+  overlayStats.particleSystems[particleSystem] = nil
 end
 
 return overlayStats

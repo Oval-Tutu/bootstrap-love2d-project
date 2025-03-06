@@ -106,6 +106,26 @@ When the game is running you can access the performance metrics overlay by press
 - Select + A: Toggle Overlay
 - Select + B: Toggle VSync
 
+### How to Register/Unregister Particle Systems for performance metrics
+
+#### Basic Usage
+
+```lua
+-- When creating a particle system
+local particleSystem = love.graphics.newParticleSystem(imageData)
+overlayStats.registerParticleSystem(particleSystem)
+
+-- Later, when you no longer need the particle system
+overlayStats.unregisterParticleSystem(particleSystem)
+```
+
+#### Implementation Details
+
+- **Where to register**: After creating any particle system you want tracked in your stats overlay
+- **When to register**: Immediately after creating the particle system, typically in your load/initialization code
+- **When to unregister**: When destroying the particle system or when it's no longer relevant to track
+- **Implementation note**: Only active particle systems (`particleSystem:isActive()`) are counted
+
 ## Detailed Documentation
 
 - [**USAGE.md**](USAGE.md)
