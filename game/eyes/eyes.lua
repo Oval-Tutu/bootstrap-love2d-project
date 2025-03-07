@@ -886,6 +886,10 @@ function eyes.load()
       // Calculate distance from current pixel to eye center
       float dist = distance(screen_coords, eyeCenter);
 
+      // Create smooth anti-aliased edge with 1 pixel feathering
+      float edgeSmoothing = 1.0;
+      float alpha = 1.0 - smoothstep(eyeSize - edgeSmoothing, eyeSize, dist);
+
       // Only apply effect within the eye circle
       if (dist > eyeSize) {
         return vec4(0.0, 0.0, 0.0, 0.0); // Transparent outside the eye
@@ -904,8 +908,8 @@ function eyes.load()
       // Interpolate between bright and shaded colors
       vec4 finalColor = mix(brightColor, shadedColor, gradientFactor);
 
-      // Preserve the incoming alpha value from the love.graphics.setColor call
-      return vec4(finalColor.rgb, color.a);
+      // Apply anti-aliased edge to alpha
+      return vec4(finalColor.rgb, finalColor.a * alpha);
     }
   ]]
   eyes.eyeShader = love.graphics.newShader(shaderCode)
