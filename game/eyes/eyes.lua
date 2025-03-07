@@ -2,6 +2,7 @@
 local background = require("eyes.background")
 local audio = require("eyes.audio")
 local fire = require("eyes.fire")
+local shadows = require("eyes.shadows")
 
 -- The public module
 local eyes = {
@@ -552,6 +553,7 @@ function eyes.load()
   background:load()
   audio:load()
   fire:load()
+  shadows.load()
 
   if checkOnlineStatus() then
     eyes.online_color = eyes.colors.green
@@ -615,6 +617,9 @@ function eyes.update(dt)
   eyes.y = math.floor(eyes.y)
   local windowWidth = love.graphics.getWidth()
   local windowHeight = love.graphics.getHeight()
+
+  -- Update shadow positions
+  shadows.update(dt, windowHeight)
 
   -- Calculate base eye positions once per frame
   local leftEyeX, rightEyeX, centerY = calculateEyePositions(windowWidth, windowHeight, eyes.eyeSpacing)
@@ -711,6 +716,19 @@ function eyes.draw()
   love.graphics.push()
   love.graphics.translate(eyes.shakeX, eyes.shakeY)
   background:draw()
+
+  -- Draw shadows first so they appear beneath the eyes
+  shadows.draw(
+    eyes.eyePositions.left + eyes.floatOffset.leftX,
+    eyes.eyePositions.centerY + eyes.floatOffset.leftY,
+    eyes.eyeSize
+  )
+
+  shadows.draw(
+    eyes.eyePositions.right + eyes.floatOffset.rightX,
+    eyes.eyePositions.centerY + eyes.floatOffset.rightY,
+    eyes.eyeSize
+  )
 
   -- Draw eyes with their respective fade values, reflection effects, and pupil dilation
   drawEye(
