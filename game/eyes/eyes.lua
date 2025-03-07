@@ -1,6 +1,6 @@
 ---@class Eyes Module for drawing and managing interactive eyes
 local overlayStats = require("lib.overlayStats")
-local background = require("eyes.background") -- Add background module
+local background = require("eyes.background")
 
 -- The public module
 local eyes = {
@@ -90,7 +90,7 @@ local eyes = {
 -- Constants - Define colors before they're used in functions
 eyes.colors = {
   white = { 1, 1, 1 },
-  shadedWhite = { 0.8, 0.8, 0.9 }, -- Darker shading for more pronounced depth effect
+  shadedWhite = { 0.8, 0.8, 0.9 },
   blue = { 0, 0.5, 0.95 },
   yellow = { 1, 1, 0 },
   orange = { 1, 0.5, 0 },
@@ -142,8 +142,8 @@ eyes.state = {
   rightEyeWinking = false,
   bothBlinking = false,
   touching = false,
-  touchingLeft = false, -- Track left eye touch specifically
-  touchingRight = false -- Track right eye touch specifically
+  touchingLeft = false,
+  touchingRight = false
 }
 
 -- Private functions defined as locals
@@ -272,7 +272,7 @@ local function drawEye(eyeX, eyeY, isWinking, eyeSize, colors, fadeValue,
   end
 
   -- Calculate offset for highlight position (towards the fire/cursor)
-  local highlightOffsetFactor = 0.4 -- Increased from 0.3 for more defined highlight position
+  local highlightOffsetFactor = 0.4
   local highlightX = eyeX + (dirX * eyeSize * highlightOffsetFactor)
   local highlightY = eyeY + (dirY * eyeSize * highlightOffsetFactor)
 
@@ -1052,10 +1052,6 @@ function eyes.draw()
 
   -- Draw the parallax background
   background:draw()
-
-  -- Comment out the original background color - replaced by our parallax background
-  -- love.graphics.setColor(eyes.colors.darkGrey)
-  -- love.graphics.rectangle("fill", 0, 0, windowWidth, windowHeight)
 
   -- Calculate shake effect
   eyes.shakeX, eyes.shakeY = updateShakeEffect(eyes.eyePositions, eyes.eyeSize, eyes.shakeAmount)
