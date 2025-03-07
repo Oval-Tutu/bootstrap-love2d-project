@@ -436,8 +436,14 @@ local function drawEye(eyeX, eyeY, eyeSize, colors, fadeValue,
     local actualIntensity = reflectionIntensity * (1.0 - fadeValue)
 
     if actualIntensity > 0.01 then -- Only draw if visible
-      -- Save current blend mode
+      -- Save current blend mode and line style
       local prevBlendMode = love.graphics.getBlendMode()
+      local prevLineStyle = love.graphics.getLineStyle()
+      local prevLineWidth = love.graphics.getLineWidth()
+
+      -- Enable smooth line drawing
+      love.graphics.setLineStyle("smooth")
+      love.graphics.setLineWidth(2)
 
       -- Calculate the angle from pupil to cursor (fire source)
       local fireAngle = math.atan2(love.mouse.getY() - pupilY, love.mouse.getX() - pupilX)
@@ -446,7 +452,7 @@ local function drawEye(eyeX, eyeY, eyeSize, colors, fadeValue,
       local glintAngle = fireAngle + math.pi
 
       -- Calculate the pupil radius and position glint on its edge
-      local pupilRadius = eyeSize * 0.2 -- Approximation of pupil radius
+      local pupilRadius = eyeSize * 0.15 -- Approximation of pupil radius
       local glintX = pupilX + math.cos(glintAngle) * pupilRadius
       local glintY = pupilY + math.sin(glintAngle) * pupilRadius
 
@@ -457,16 +463,18 @@ local function drawEye(eyeX, eyeY, eyeSize, colors, fadeValue,
       -- Use additive blending for glow effect
       love.graphics.setBlendMode("add")
 
-      -- Draw the main glint
+      -- Draw the main glint with anti-aliasing
       love.graphics.setColor(1, 0.95, 0.8, 0.8 * actualIntensity)
       love.graphics.circle("fill", glintX, glintY, glintSize)
 
-      -- Add a brighter core
-      love.graphics.setColor(1, 1, 1, 0.9 * actualIntensity)
+      -- Add a brighter core with anti-aliasing
+      love.graphics.setColor(1, 1, 0.9, 0.9 * actualIntensity)
       love.graphics.circle("fill", glintX, glintY, glintSize * 0.6)
 
-      -- Restore previous blend mode
+      -- Restore previous graphics settings
       love.graphics.setBlendMode(prevBlendMode)
+      love.graphics.setLineStyle(prevLineStyle)
+      love.graphics.setLineWidth(prevLineWidth)
     end
   end
 end
