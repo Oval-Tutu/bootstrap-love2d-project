@@ -1,9 +1,11 @@
 local overlayStats = require("lib.overlayStats")
----@class Fire Module for fire effects and particle systems
-local fire = {}
 
--- Fire-related colors
-fire.colors = {
+---@class Fire A class for fire effects and particle systems
+local Fire = {}
+Fire.__index = Fire
+
+-- Fire-related colors (static shared data)
+local FIRE_COLORS = {
   fire = {
     { 1, 0.7, 0, 0.8 },   -- golden orange
     { 1, 0.4, 0, 0.7 },   -- orange
@@ -11,7 +13,6 @@ fire.colors = {
     { 0.7, 0.1, 0, 0.3 }, -- dark red
     { 0.4, 0, 0, 0 }      -- fade out to transparent
   },
-  -- Core fire colors (brighter and more intense)
   corefire = {
     { 1, 1, 0.8, 0.9 },   -- bright yellow
     { 1, 0.8, 0.2, 0.7 }, -- yellow-orange
@@ -19,41 +20,52 @@ fire.colors = {
     { 1, 0.3, 0, 0.3 },   -- reddish-orange
     { 0.8, 0.1, 0 }    -- fade out
   },
-  -- Spark colors (bright and short-lived)
   spark = {
     { 1, 1, 1, 1 },     -- white
     { 1, 1, 0.6, 0.8 }, -- bright yellow
     { 1, 0.3, 0, 0.3 },   -- reddish-orange
     { 1, 0.6, 0.1, 0 }  -- fade to transparent
   },
-  -- Smoke colors for the smoke particle system
   smoke = {
     { 0.5, 0.5, 0.5, 0 },   -- transparent to start
     { 0.4, 0.4, 0.4, 0.2 }, -- light gray with some transparency
     { 0.3, 0.3, 0.3, 0.1 }, -- mid gray, fading
     { 0.2, 0.2, 0.2, 0 }    -- dark gray, completely transparent
   },
-  -- Fire reflection color in the eyes
   reflection = {
     { 1, 0.95, 0.8, 1.0 },  -- Bright white-yellow
     { 1, 0.8, 0.3, 0.7 }    -- Fading orange-yellow
   }
 }
 
--- Particle systems
-fire.fireSystem = nil    -- Outer erratic flames
-fire.coreSystem = nil    -- Stable inner core
-fire.sparkSystem = nil   -- Occasional bright sparks
-fire.smokeSystem = nil   -- Smoke effect
+---Creates a new Fire instance
+---@return Fire
+function Fire.new()
+  local self = setmetatable({}, Fire)
 
--- Timer for spark emission control
-fire.sparkTimer = 0
-fire.sparkInterval = 0.15
+  -- Instance properties (formerly global state)
+  self.fireSystem = nil    -- Outer erratic flames
+  self.coreSystem = nil    -- Stable inner core
+  self.sparkSystem = nil   -- Occasional bright sparks
+  self.smokeSystem = nil   -- Smoke effect
+
+  -- Timer for spark emission control
+  self.sparkTimer = 0
+  self.sparkInterval = 0.15
+
+  -- Colors reference (can be customized per instance)
+  self.colors = FIRE_COLORS
+
+  -- Initialize the particle systems
+  self:initParticleSystem()
+
+  return self
+end
 
 ---Configures a particle system with common properties
 ---@param particleSystem love.ParticleSystem The particle system to configure
 ---@param config table Configuration parameters
-local function configureParticleSystem(particleSystem, config)
+function Fire:configureParticleSystem(particleSystem, config)
   particleSystem:setParticleLifetime(config.lifetime.min, config.lifetime.max)
   particleSystem:setEmissionRate(config.emissionRate)
   particleSystem:setSizeVariation(config.sizeVariation)
@@ -84,7 +96,7 @@ end
 ---@return love.ParticleSystem The core fire particle system
 ---@return love.ParticleSystem The spark particle system
 ---@return love.ParticleSystem The smoke particle system
-function fire.initParticleSystem()
+function Fire:initParticleSystem()
   -- Create flame particle image
   local particleImg = love.graphics.newCanvas(32, 32)
   love.graphics.setCanvas(particleImg)
@@ -130,7 +142,7 @@ function fire.initParticleSystem()
 
   -- 1. OUTER FIRE SYSTEM - More erratic, dancing flames
   local fireSystem = love.graphics.newParticleSystem(particleImg, 100)
-  configureParticleSystem(fireSystem, {
+  self:configureParticleSystem(fireSystem, {
     lifetime = { min = 0.5, max = 1.2 },
     emissionRate = 70,
     sizeVariation = 0.6,
@@ -141,7 +153,7 @@ function fire.initParticleSystem()
     spread = math.pi/3,
     radial = { min = -10, max = 10 },
     tangential = { min = -30, max = 30 },
-    colors = fire.colors.fire,
+    colors = self.colors.fire,
     spin = { min = -0.5, max = 0.5 },
     spinVariation = 1,
     autostart = true
@@ -149,7 +161,7 @@ function fire.initParticleSystem()
 
   -- 2. CORE FIRE SYSTEM - Stable inner core
   local coreSystem = love.graphics.newParticleSystem(particleImg, 50)
-  configureParticleSystem(coreSystem, {
+  self:configureParticleSystem(coreSystem, {
     lifetime = { min = 0.3, max = 0.8 },
     emissionRate = 50,
     sizeVariation = 0.3,
@@ -160,13 +172,13 @@ function fire.initParticleSystem()
     spread = math.pi/8,
     radial = { min = -2, max = 2 },
     tangential = { min = -5, max = 5 },
-    colors = fire.colors.corefire,
+    colors = self.colors.corefire,
     autostart = true
   })
 
   -- 3. SPARK SYSTEM - Occasional bright particles shooting upward
   local sparkSystem = love.graphics.newParticleSystem(sparkImg, 30)
-  configureParticleSystem(sparkSystem, {
+  self:configureParticleSystem(sparkSystem, {
     lifetime = { min = 0.5, max = 1.5 },
     emissionRate = 0, -- Controlled manually
     sizeVariation = 0.5,
@@ -177,7 +189,7 @@ function fire.initParticleSystem()
     spread = math.pi/2,
     radial = { min = -50, max = 50 },
     tangential = { min = -20, max = 20 },
-    colors = fire.colors.spark,
+    colors = self.colors.spark,
     spin = { min = -2, max = 2 },
     spinVariation = 1,
     autostart = false
@@ -186,7 +198,7 @@ function fire.initParticleSystem()
   -- 4. SMOKE SYSTEM
   local smokeSystem = love.graphics.newParticleSystem(particleImg, 40)
   smokeSystem:setOffset(love.math.random(-5,5), love.math.random(60,90))
-  configureParticleSystem(smokeSystem, {
+  self:configureParticleSystem(smokeSystem, {
     lifetime = { min = 1.0, max = 2.5 },
     emissionRate = 15,
     sizeVariation = 0.8,
@@ -197,17 +209,17 @@ function fire.initParticleSystem()
     spread = math.pi/2,
     radial = { min = -10, max = 10 },
     tangential = { min = -20, max = 20 },
-    colors = fire.colors.smoke,
+    colors = self.colors.smoke,
     spin = { min = 0.1, max = 0.8 },
     spinVariation = 1,
     autostart = true
   })
 
-  -- Store the systems in the fire module
-  fire.fireSystem = fireSystem
-  fire.coreSystem = coreSystem
-  fire.sparkSystem = sparkSystem
-  fire.smokeSystem = smokeSystem
+  -- Store the systems in instance properties
+  self.fireSystem = fireSystem
+  self.coreSystem = coreSystem
+  self.sparkSystem = sparkSystem
+  self.smokeSystem = smokeSystem
 
   return fireSystem, coreSystem, sparkSystem, smokeSystem
 end
@@ -226,7 +238,7 @@ end
 ---@return number leftY Y position for left eye reflection
 ---@return number rightX X position for right eye reflection
 ---@return number rightY Y position for right eye reflection
-function fire.calculateReflectionProperties(mouseX, mouseY, leftEyeX, rightEyeX, eyeY, eyeSize, config)
+function Fire:calculateReflectionProperties(mouseX, mouseY, leftEyeX, rightEyeX, eyeY, eyeSize, config)
   -- Calculate distances to each eye
   local distanceToLeft = math.sqrt((mouseX - leftEyeX)^2 + (mouseY - eyeY)^2)
   local distanceToRight = math.sqrt((mouseX - rightEyeX)^2 + (mouseY - eyeY)^2)
@@ -272,7 +284,7 @@ end
 ---@param config table Pupil dilation configuration parameters
 ---@return number leftDilation Dilation factor for left eye (0-1)
 ---@return number rightDilation Dilation factor for right eye (0-1)
-function fire.calculatePupilDilation(mouseX, mouseY, leftEyeX, rightEyeX, eyeY, config)
+function Fire:calculatePupilDilation(mouseX, mouseY, leftEyeX, rightEyeX, eyeY, config)
   -- Calculate distances to each eye
   local distanceToLeft = math.sqrt((mouseX - leftEyeX)^2 + (mouseY - eyeY)^2)
   local distanceToRight = math.sqrt((mouseX - rightEyeX)^2 + (mouseY - eyeY)^2)
@@ -296,16 +308,14 @@ function fire.calculatePupilDilation(mouseX, mouseY, leftEyeX, rightEyeX, eyeY, 
   return leftDilation, rightDilation
 end
 
----Load and initialize the fire particle systems
----@param overlayStats table Optional stats overlay module for registering particle systems
-function fire.load()
-  fire.initParticleSystem()
-  -- Register particle systems with overlayStats if provided
-  if overlayStats then
-    overlayStats.registerParticleSystem(fire.fireSystem)
-    overlayStats.registerParticleSystem(fire.coreSystem)
-    overlayStats.registerParticleSystem(fire.sparkSystem)
-    overlayStats.registerParticleSystem(fire.smokeSystem)
+---Register particle systems with the stats overlay
+---@param overlayStatsModule table Optional stats overlay module for registering particle systems
+function Fire:registerWithStats(overlayStatsModule)
+  if overlayStatsModule then
+    overlayStatsModule.registerParticleSystem(self.fireSystem)
+    overlayStatsModule.registerParticleSystem(self.coreSystem)
+    overlayStatsModule.registerParticleSystem(self.sparkSystem)
+    overlayStatsModule.registerParticleSystem(self.smokeSystem)
   end
 end
 
@@ -313,36 +323,34 @@ end
 ---@param dt number Delta time
 ---@param x number Current x position of the fire (mouse)
 ---@param y number Current y position of the fire (mouse)
-function fire.update(dt, x, y)
+function Fire:update(dt, x, y)
   -- Update particle systems
-  fire.fireSystem:update(dt)
-  fire.fireSystem:setPosition(x, y)
+  self.fireSystem:update(dt)
+  self.fireSystem:setPosition(x, y)
 
-  fire.coreSystem:update(dt)
-  fire.coreSystem:setPosition(x, y)
+  self.coreSystem:update(dt)
+  self.coreSystem:setPosition(x, y)
 
-  fire.smokeSystem:update(dt)
-  fire.smokeSystem:setPosition(x, y)
+  self.smokeSystem:update(dt)
+  self.smokeSystem:setPosition(x, y)
 
-  fire.sparkSystem:update(dt)
-  fire.sparkSystem:setPosition(x, y)
+  self.sparkSystem:update(dt)
+  self.sparkSystem:setPosition(x, y)
 
   -- Spark emission control - randomly emit sparks
-  fire.sparkTimer = fire.sparkTimer + dt
-  if fire.sparkTimer >= fire.sparkInterval then
+  self.sparkTimer = self.sparkTimer + dt
+  if self.sparkTimer >= self.sparkInterval then
     -- Reset timer and set a random interval for next spark
-    fire.sparkTimer = 0
-    fire.sparkInterval = love.math.random(0.05, 0.3)
+    self.sparkTimer = 0
+    self.sparkInterval = love.math.random(0.05, 0.3)
 
     -- Emit a random number of sparks in a burst
-    fire.sparkSystem:emit(love.math.random(1, 5))
+    self.sparkSystem:emit(love.math.random(1, 5))
   end
 end
 
 ---Draw the fire effect
----@param x number Current x position for the fire (mouse)
----@param y number Current y position for the fire (mouse)
-function fire.draw()
+function Fire:draw()
   -- FIXME: Set color to yellow to prevent the fire from being snuffed out while the mouse is moving
   -- Bisected by analysing commit f5abe687d04f62418fc00e31310d50f64f7b83fb
   love.graphics.setColor({ 1, 1, 0 })
@@ -354,20 +362,55 @@ function fire.draw()
 
   -- 1. Smoke behind everything (alpha blending)
   love.graphics.setBlendMode("alpha")
-  love.graphics.draw(fire.smokeSystem)
+  love.graphics.draw(self.smokeSystem)
 
   -- 2. Core fire on top of outer fire (brighter)
-  love.graphics.draw(fire.coreSystem)
+  love.graphics.draw(self.coreSystem)
 
   -- 3. Outer fire with additive blending
   love.graphics.setBlendMode("add")
-  love.graphics.draw(fire.fireSystem)
+  love.graphics.draw(self.fireSystem)
 
   -- 4. Sparks on top of everything (brightest)
-  love.graphics.draw(fire.sparkSystem)
+  love.graphics.draw(self.sparkSystem)
 
   -- Restore previous blend mode
   love.graphics.setBlendMode(prevBlendMode)
 end
+
+-- For backward compatibility with old code
+local fire = {}
+
+-- Create a global singleton instance and expose its methods
+local globalInstance = Fire.new()
+
+-- Copy all Fire class methods to the module table
+for k, v in pairs(Fire) do
+  if type(v) == "function" and k ~= "new" then
+    fire[k] = function(...)
+      return globalInstance[k](globalInstance, ...)
+    end
+  end
+end
+
+-- Add the convenience method to access the class
+fire.Fire = Fire
+
+-- Create a load function for backward compatibility
+function fire.load()
+  globalInstance:registerWithStats(overlayStats)
+end
+
+-- Forward other instance methods from the global instance
+fire.update = function(dt, x, y)
+  return globalInstance:update(dt, x, y)
+end
+
+fire.draw = function()
+  return globalInstance:draw()
+end
+
+-- Make colors accessible
+fire.colors = globalInstance.colors
 
 return fire
