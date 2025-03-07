@@ -17,8 +17,8 @@ end
 ---@return table An array of sound sources
 local function loadSoundEffects()
   local sounds = {}
-  for i = 0, 7 do
-    local soundPath = "sfx/aargh" .. i .. ".ogg"
+  for i = 1, 7 do
+    local soundPath = "eyes/sfx/aargh" .. i .. ".ogg"
     table.insert(sounds, love.audio.newSource(soundPath, "static"))
   end
   return sounds
@@ -27,7 +27,7 @@ end
 ---Loads the ambient fire sound effect as dual mono sources for true stereo mixing
 ---@return table Table containing left and right channel fire sounds
 local function loadAmbientFireSound()
-  local soundPath = "sfx/fire.ogg"
+  local soundPath = "eyes/sfx/fire.ogg"
   -- Create two instances of the sound
   local leftChannel = love.audio.newSource(soundPath, "stream")
   local rightChannel = love.audio.newSource(soundPath, "stream")
