@@ -1,5 +1,6 @@
 ---@class Eyes Module for drawing and managing interactive eyes
 local overlayStats = require("lib.overlayStats")
+local background = require("eyes.background") -- Add background module
 
 -- The public module
 local eyes = {
@@ -825,6 +826,9 @@ end
 
 ---Loads resources and initializes the eyes
 function eyes.load()
+  -- Initialize the parallax background
+  background:load()
+
   if checkOnlineStatus() then
     eyes.online_color = eyes.colors.green
     eyes.online_message = "Online"
@@ -859,6 +863,9 @@ function eyes.load()
 end
 
 function eyes.update(dt)
+  -- Update the parallax background
+  background:update(dt)
+
   eyes.x, eyes.y = love.mouse.getPosition()
   eyes.x = math.floor(eyes.x)
   eyes.y = math.floor(eyes.y)
@@ -970,9 +977,16 @@ function eyes.draw()
   local windowHeight = love.graphics.getHeight()
   local font = love.graphics.getFont()
 
-  -- Draw background
-  love.graphics.setColor(eyes.colors.darkGrey)
+  -- Draw a solid black background first
+  love.graphics.setColor(0, 0, 0)
   love.graphics.rectangle("fill", 0, 0, windowWidth, windowHeight)
+
+  -- Draw the parallax background
+  background:draw()
+
+  -- Comment out the original background color - replaced by our parallax background
+  -- love.graphics.setColor(eyes.colors.darkGrey)
+  -- love.graphics.rectangle("fill", 0, 0, windowWidth, windowHeight)
 
   -- Calculate shake effect
   eyes.shakeX, eyes.shakeY = updateShakeEffect(eyes.eyePositions, eyes.eyeSize, eyes.shakeAmount)
