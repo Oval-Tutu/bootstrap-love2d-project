@@ -343,6 +343,10 @@ end
 ---@param x number Current x position for the fire (mouse)
 ---@param y number Current y position for the fire (mouse)
 function fire.draw()
+  -- FIXME: Set color to yellow to prevent the fire from being snuffed out while the mouse is moving
+  -- Bisected by analysing commit f5abe687d04f62418fc00e31310d50f64f7b83fb
+  love.graphics.setColor({ 1, 1, 0 })
+
   -- Save current blend mode
   local prevBlendMode = love.graphics.getBlendMode()
 
