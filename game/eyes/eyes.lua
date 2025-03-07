@@ -295,7 +295,7 @@ local function drawEye(eyeX, eyeY, isWinking, eyeSize, colors, fadeValue)
     -- Draw pupil texture on top of iris with subtle offset
     if eyes.pupilTexture then
       -- Pupil should be smaller than iris
-      local pupilScale = (eyeSize * 0.7) / 512
+      local pupilScale = (eyeSize * 0.8) / 512
 
       -- Draw pupil with original color
       love.graphics.setColor(1, 1, 1)
