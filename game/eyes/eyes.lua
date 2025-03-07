@@ -20,6 +20,9 @@ local eyes = {
   eyeFadeLeft = 0,
   eyeFadeRight = 0,
 
+  -- Blood veins texture
+  bloodVeinsTexture = nil,
+
   -- Online status
   online_color = { 1, 0, 0 },
   online_message = "Offline",
@@ -212,6 +215,30 @@ local function drawEye(eyeX, eyeY, isWinking, eyeSize, colors, fadeValue)
   -- Draw the eye base with interpolated color
   love.graphics.setColor(eyeColor)
   love.graphics.circle("fill", eyeX, eyeY, eyeSize)
+
+  -- Draw blood veins if texture is loaded with opacity based on fade value
+  if eyes.bloodVeinsTexture and fadeValue > 0 then
+    -- Save current blend mode
+    local prevBlendMode = love.graphics.getBlendMode()
+    love.graphics.setBlendMode("alpha")
+
+    -- Calculate scale factor to match eye size
+    -- Original texture is 512x512, so scale to match the eye diameter (2 * eyeSize)
+    local scale = (2 * eyeSize) / 512
+
+    -- Draw the texture centered on the eye with alpha based on fade value
+    love.graphics.setColor(1, 1, 1, fadeValue)
+    love.graphics.draw(
+      eyes.bloodVeinsTexture,
+      eyeX, eyeY,
+      0,                     -- rotation (0 means no rotation)
+      scale, scale,          -- scale X and Y
+      256, 256               -- origin point (center of the 512x512 texture)
+    )
+
+    -- Restore previous blend mode
+    love.graphics.setBlendMode(prevBlendMode)
+  end
 
   -- Draw either the winking line or the pupil
   love.graphics.setColor(pupilColor)
@@ -598,6 +625,9 @@ function eyes.load()
     eyes.online_color = eyes.colors.green
     eyes.online_message = "Online"
   end
+
+  -- Load blood veins texture
+  eyes.bloodVeinsTexture = love.graphics.newImage("eyes/gfx/blood_veins_100.png")
 
   -- Initialize the particle systems - pass colors as parameter
   eyes.fireSystem, eyes.coreSystem, eyes.sparkSystem, eyes.smokeSystem = initParticleSystem(eyes.colors)
