@@ -464,24 +464,27 @@ function Fire:draw()
   love.graphics.setBlendMode(prevBlendMode)
 end
 
--- For backward compatibility with old code - simplified approach
-local fire = {}
+-- For backward compatibility with old code - use metatable for automatic method forwarding
 local globalInstance = Fire.new()
 
--- Expose key functions directly with forwarding
-fire.load = function() globalInstance:registerWithStats(overlayStats) end
-fire.update = function(dt, x, y) globalInstance:update(dt, x, y) end
-fire.draw = function() globalInstance:draw() end
-fire.calculateReflectionProperties = function(...)
-  return globalInstance:calculateReflectionProperties(...)
-end
-fire.calculatePupilDilation = function(...)
-  return globalInstance:calculatePupilDilation(...)
-end
+local fire = setmetatable({
+  -- Explicitly defined properties
+  Fire = Fire,
+  colors = globalInstance.colors
+}, {
+  __index = function(_, key)
+    local value = globalInstance[key]
+    if type(value) == "function" then
+      -- Automatically wrap instance methods for global access
+      return function(...)
+        return value(globalInstance, ...)
+      end
+    end
+    return value
+  end
+})
 
--- Add class constructor
-fire.Fire = Fire
--- Make colors accessible
-fire.colors = globalInstance.colors
+-- Special case for load since it performs registration
+fire.load = function() globalInstance:registerWithStats(overlayStats) end
 
 return fire
