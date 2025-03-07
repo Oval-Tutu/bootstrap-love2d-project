@@ -102,8 +102,7 @@ local eyes = {
   eyeShader = nil,
 
   -- Online status
-  online_color = { 1, 0, 0 },
-  online_message = "Offline",
+  isOnline = false,
 }
 
 -- Constants - Define colors
@@ -115,7 +114,7 @@ eyes.colors = {
   orange = { 1, 0.5, 0 },
   red = { 1, 0, 0 },
   purple = { 1, 0, 1 },
-  green = { 0, 1, 0 },
+  green = { 0, 0.8, 0.2 },
   darkGrey = { 0.1, 0.1, 0.1 },
   lightPink = { 1, 0.92, 0.92 },
   darkRed = { 0.6, 0, 0 },
@@ -306,12 +305,16 @@ end
 ---@param reflectionY number Y position of the fire reflection
 ---@param reflectionIntensity number Intensity of the fire reflection (0-1)
 ---@param dilationFactor number Pupil dilation factor (0-1, with 1 being most dilated)
+---@param isOnline boolean Whether the system is online
 local function drawEye(eyeX, eyeY, eyeSize, colors, fadeValue,
-                       reflectionX, reflectionY, reflectionIntensity, dilationFactor)
+                       reflectionX, reflectionY, reflectionIntensity, dilationFactor, isOnline)
   -- Interpolate between white and pink based on fade value
   local eyeColor = interpolateColor(colors.white, colors.lightPink, fadeValue)
   local shadedEyeColor = interpolateColor(colors.shadedWhite, colors.lightPink, fadeValue)
-  local pupilColor = interpolateColor(colors.blue, colors.darkRed, fadeValue)
+
+  -- Select iris color based on online status
+  local baseIrisColor = isOnline and colors.green or colors.blue
+  local pupilColor = interpolateColor(baseIrisColor, colors.darkRed, fadeValue)
 
   -- Calculate the direction vector from eye to fire/cursor
   local fireX, fireY = love.mouse.getPosition()
@@ -479,33 +482,15 @@ local function drawEye(eyeX, eyeY, eyeSize, colors, fadeValue,
   end
 end
 
----Draws the mouse cursor position text and cursor dot
----@param windowWidth number Width of the window
----@param font love.Font The font to use for messages
+---Updates the fire effect and fire dot
 ---@param x number Mouse X position
 ---@param y number Mouse Y position
----@param colors table Color definitions
-local function drawMouseCursor(windowWidth, font, x, y, colors)
+local function drawFireEffect(x, y)
   -- Draw fire effect using the fire module
   fire.draw()
 
-  love.graphics.setColor(colors.white)
-  local message = i18n("Mouse") .. " (" .. x .. "," .. y .. ")"
-  local textWidth = font:getWidth(message)
-  local centerX = (windowWidth / 2) - (textWidth / 2)
-  love.graphics.print(message, centerX, 32)
-end
-
----Draws the online status message
----@param windowWidth number Width of the window
----@param font love.Font The font to use for messages
----@param online_color table Color for online status
----@param online_message string Online status message
-local function drawOnlineStatus(windowWidth, font, online_color, online_message)
-  love.graphics.setColor(online_color)
-  local textWidth = font:getWidth(online_message)
-  local centerX = (windowWidth / 2) - (textWidth / 2)
-  love.graphics.print(online_message, centerX, 76)
+  -- Make the mouse invisible
+  love.mouse.setVisible(false)
 end
 
 ---Updates the online status by performing a network request
@@ -563,10 +548,8 @@ function eyes.load()
   fire:load()
   shadows.load()
 
-  if checkOnlineStatus() then
-    eyes.online_color = eyes.colors.green
-    eyes.online_message = "Online"
-  end
+  -- Check online status
+  eyes.isOnline = checkOnlineStatus()
 
   -- Load textures
   eyes.bloodVeinsTexture = love.graphics.newImage("eyes/gfx/blood_veins_100.png")
@@ -738,13 +721,14 @@ function eyes.draw()
     eyes.eyeSize
   )
 
-  -- Draw eyes with their respective fade values, reflection effects, and pupil dilation
+  -- Draw eyes with their respective fade values, reflection effects, pupil dilation, and online status
   drawEye(
     eyes.eyePositions.left + eyes.floatOffset.leftX, eyes.eyePositions.centerY + eyes.floatOffset.leftY,
     eyes.eyeSize, eyes.colors,
     eyes.eyeFadeLeft,
     eyes.reflection.leftX, eyes.reflection.leftY, eyes.reflection.leftIntensity,
-    eyes.pupilDilation.left
+    eyes.pupilDilation.left,
+    eyes.isOnline
   )
 
   drawEye(
@@ -752,12 +736,12 @@ function eyes.draw()
     eyes.eyeSize, eyes.colors,
     eyes.eyeFadeRight,
     eyes.reflection.rightX, eyes.reflection.rightY, eyes.reflection.rightIntensity,
-    eyes.pupilDilation.right
+    eyes.pupilDilation.right,
+    eyes.isOnline
   )
 
-  -- Draw cursor and online status
-  drawMouseCursor(windowWidth, font, eyes.x, eyes.y, eyes.colors)
-  drawOnlineStatus(windowWidth, font, eyes.online_color, eyes.online_message)
+  -- Draw only the fire effect, no mouse coordinates or online status
+  drawFireEffect(eyes.x, eyes.y)
 
   love.graphics.pop()
 end
