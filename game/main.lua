@@ -24,7 +24,7 @@ function love.update(dt)
 end
 
 function love.keypressed(key)
-  if key == "escape" then
+  if key == "escape" and love.system.getOS() ~= "Web" then
     love.event.quit()
   else
     overlayStats.handleKeyboard(key) -- Should always be called last
