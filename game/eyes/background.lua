@@ -94,8 +94,9 @@ function background:draw()
   -- Draw layers from back to front (furthest to nearest)
   for i = #self.layers, 1, -1 do
     local layer = self.layers[i]
-    local x = alignX - layer.horizontalOffset * scale
-    local y = alignY + (layer.verticalOffset * scale)  -- Apply vertical offset with scaling
+    -- Round positions to integer pixels to prevent shimmer
+    local x = math.floor(alignX - layer.horizontalOffset * scale)
+    local y = math.floor(alignY + (layer.verticalOffset * scale))
 
     -- Reset color for drawing
     love.graphics.setColor(1, 1, 1)
@@ -105,8 +106,8 @@ function background:draw()
       local repsX = math.ceil(screenWidth / scaledWidth) + 2 -- +2 to ensure smooth transitions
 
       for repX = 0, repsX do
-        -- Calculate position for this repetition
-        local repX_pos = x + (repX * scaledWidth * 2)
+        -- Calculate position for this repetition and round to integer
+        local repX_pos = math.floor(x + (repX * scaledWidth * 2))
 
         -- Draw the image part (first half of the conceptual doubled width)
         love.graphics.draw(
@@ -137,9 +138,11 @@ function background:draw()
 
       -- Draw the necessary repetitions horizontally for regular layers
       for repX = 0, repsX - 1 do
+        -- Round each repetition position to integer pixels
+        local repX_pos = math.floor(x + repX * scaledWidth)
         love.graphics.draw(
           layer.image,
-          x + repX * scaledWidth,
+          repX_pos,
           y,
           0,
           scale,
