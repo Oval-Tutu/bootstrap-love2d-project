@@ -16,7 +16,7 @@ The implementation plan should include the following:
 - Focus on clean, elegant solutions that follow Lua and LÖVE 2D best practices
 - Explain the rationale behind your suggestions
 - Suggest changes that are minimal and incremental
-- Keep functions small, manageable and focused
+- Keep functions small, manageable and focused and do not refactor unrelated code
 - Avoid code duplication and promote reusability
 - Use local variables appropriately to avoid global namespace pollution
 - Leverage Lua's strengths like tables and first-class functions

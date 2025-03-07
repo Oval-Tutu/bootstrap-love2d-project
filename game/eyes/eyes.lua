@@ -138,9 +138,6 @@ eyes.colors = {
 
 -- Eye state
 eyes.state = {
-  leftEyeWinking = false,
-  rightEyeWinking = false,
-  bothBlinking = false,
   touching = false,
   touchingLeft = false,
   touchingRight = false
@@ -242,7 +239,6 @@ end
 ---Draws a single eye
 ---@param eyeX number The x-coordinate of the eye
 ---@param eyeY number The y-coordinate of the eye
----@param isWinking boolean Whether the eye is winking
 ---@param eyeSize number The size of the eye
 ---@param colors table Color definitions
 ---@param fadeValue number The fade progress (0-1) from white to pink
@@ -250,7 +246,7 @@ end
 ---@param reflectionY number Y position of the fire reflection
 ---@param reflectionIntensity number Intensity of the fire reflection (0-1)
 ---@param dilationFactor number Pupil dilation factor (0-1, with 1 being most dilated)
-local function drawEye(eyeX, eyeY, isWinking, eyeSize, colors, fadeValue,
+local function drawEye(eyeX, eyeY, eyeSize, colors, fadeValue,
                        reflectionX, reflectionY, reflectionIntensity, dilationFactor)
   -- Interpolate between white and pink based on fade value
   local eyeColor = interpolateColor(colors.white, colors.lightPink, fadeValue)
@@ -313,140 +309,104 @@ local function drawEye(eyeX, eyeY, isWinking, eyeSize, colors, fadeValue,
     love.graphics.setBlendMode(prevBlendMode)
   end
 
-  -- Draw either the winking line or the pupil
-  if isWinking then
+  -- Calculate tracking position (where pupil would be when tracking mouse)
+  local distanceX = love.mouse.getX() - eyeX
+  local distanceY = love.mouse.getY() - eyeY
+  local distance = math.min(math.sqrt(distanceX^2 + distanceY^2), eyeSize / 2)
+  local angle = math.atan2(distanceY, distanceX)
+
+  local trackingX = eyeX + (math.cos(angle) * distance)
+  local trackingY = eyeY + (math.sin(angle) * distance)
+
+  -- Calculate oscillation position (where pupil would be when eye is touched)
+  local oscillationRange = eyeSize / 16
+  local oscillationX = eyeX + love.math.random(-oscillationRange, oscillationRange)
+  local oscillationY = eyeY + love.math.random(-oscillationRange, oscillationRange)
+
+  -- Interpolate between tracking and oscillation based on fade value
+  local irisX = trackingX + (oscillationX - trackingX) * fadeValue
+  local irisY = trackingY + (oscillationY - trackingY) * fadeValue
+
+  -- Calculate a subtle additional offset for the pupil (25% of the main tracking)
+  local pupilOffsetFactor = 0.10 -- Controls how much extra the pupil moves relative to iris
+  local subtleDistance = distance * pupilOffsetFactor
+
+  -- Apply the subtle offset to the pupil position
+  local pupilX = irisX + (math.cos(angle) * subtleDistance)
+  local pupilY = irisY + (math.sin(angle) * subtleDistance)
+
+  -- Draw textured iris with color tinting based on fade value
+  if eyes.irisTexture then
+    -- Calculate scale for iris texture (about 140% of the eye size)
+    local irisScale = (eyeSize * 1.4) / 512
+
+    -- Apply color tinting to iris
     love.graphics.setColor(pupilColor)
-    love.graphics.setLineWidth(8)
-    love.graphics.line(eyeX - eyeSize, eyeY, eyeX + eyeSize, eyeY)
-  else
-    -- Calculate tracking position (where pupil would be when tracking mouse)
-    local distanceX = love.mouse.getX() - eyeX
-    local distanceY = love.mouse.getY() - eyeY
-    local distance = math.min(math.sqrt(distanceX^2 + distanceY^2), eyeSize / 2)
-    local angle = math.atan2(distanceY, distanceX)
-
-    local trackingX = eyeX + (math.cos(angle) * distance)
-    local trackingY = eyeY + (math.sin(angle) * distance)
-
-    -- Calculate oscillation position (where pupil would be when eye is touched)
-    local oscillationRange = eyeSize / 16
-    local oscillationX = eyeX + love.math.random(-oscillationRange, oscillationRange)
-    local oscillationY = eyeY + love.math.random(-oscillationRange, oscillationRange)
-
-    -- Interpolate between tracking and oscillation based on fade value
-    local irisX = trackingX + (oscillationX - trackingX) * fadeValue
-    local irisY = trackingY + (oscillationY - trackingY) * fadeValue
-
-    -- Calculate a subtle additional offset for the pupil (25% of the main tracking)
-    local pupilOffsetFactor = 0.10 -- Controls how much extra the pupil moves relative to iris
-    local subtleDistance = distance * pupilOffsetFactor
-
-    -- Apply the subtle offset to the pupil position
-    local pupilX = irisX + (math.cos(angle) * subtleDistance)
-    local pupilY = irisY + (math.sin(angle) * subtleDistance)
-
-    -- Draw textured iris with color tinting based on fade value
-    if eyes.irisTexture then
-      -- Calculate scale for iris texture (about 140% of the eye size)
-      local irisScale = (eyeSize * 1.4) / 512
-
-      -- Apply color tinting to iris
-      love.graphics.setColor(pupilColor)
-      love.graphics.draw(
-        eyes.irisTexture,
-        irisX, irisY,
-        0,                -- no rotation
-        irisScale, irisScale,
-        256, 256         -- center of 512x512 texture
-      )
-    end
-
-    -- Draw pupil texture on top of iris with subtle offset
-    if eyes.pupilTexture then
-      -- Calculate base pupil scale with dilation effect
-      local basePupilScale = eyeSize * 0.8 / 512
-      -- Apply dilation factor (up to maxDilation % larger)
-      local dilatedScale = basePupilScale * (1 + (eyes.pupilDilation.maxDilation * dilationFactor))
-
-      -- Draw pupil with original color
-      love.graphics.setColor(1, 1, 1)
-      love.graphics.draw(
-        eyes.pupilTexture,
-        pupilX, pupilY,
-        0,                -- no rotation
-        dilatedScale, dilatedScale,
-        256, 256         -- center of 512x512 texture
-      )
-    end
-
-    -- Draw fire reflection as a glint on the edge of pupil opposite to the fire source
-    -- The glint should fade away completely when the eye is being touched
-    if reflectionIntensity > 0 then
-      -- Calculate actual reflection intensity - fades out completely when eye is touched
-      local actualIntensity = reflectionIntensity * (1.0 - fadeValue)
-
-      if actualIntensity > 0.01 then -- Only draw if visible
-        -- Save current blend mode
-        local prevBlendMode = love.graphics.getBlendMode()
-
-        -- Calculate the angle from pupil to cursor (fire source)
-        local fireAngle = math.atan2(love.mouse.getY() - pupilY, love.mouse.getX() - pupilX)
-
-        -- Calculate the opposite angle (pupil edge away from fire)
-        local glintAngle = fireAngle + math.pi
-
-        -- Calculate the pupil radius and position glint on its edge
-        local pupilRadius = eyeSize * 0.2 -- Approximation of pupil radius
-        local glintX = pupilX + math.cos(glintAngle) * pupilRadius
-        local glintY = pupilY + math.sin(glintAngle) * pupilRadius
-
-        -- Calculate glint size - significantly smaller than before
-        local baseGlintSize = eyeSize * eyes.reflection.baseSize
-        local glintSize = baseGlintSize * actualIntensity
-
-        -- Use additive blending for glow effect
-        love.graphics.setBlendMode("add")
-
-        -- Draw the main glint
-        love.graphics.setColor(1, 0.95, 0.8, 0.8 * actualIntensity)
-        love.graphics.circle("fill", glintX, glintY, glintSize)
-
-        -- Add a brighter core
-        love.graphics.setColor(1, 1, 1, 0.9 * actualIntensity)
-        love.graphics.circle("fill", glintX, glintY, glintSize * 0.6)
-
-        -- Restore previous blend mode
-        love.graphics.setBlendMode(prevBlendMode)
-      end
-    end
+    love.graphics.draw(
+      eyes.irisTexture,
+      irisX, irisY,
+      0,                -- no rotation
+      irisScale, irisScale,
+      256, 256         -- center of 512x512 texture
+    )
   end
-end
 
----Draws status messages based on eye state
----@param windowWidth number Width of the window
----@param windowHeight number Height of the window
----@param font love.Font The font to use for messages
----@param state table Current eye state
----@param colors table Color definitions
-local function drawStatusMessages(windowWidth, windowHeight, font, state, colors)
-  local padding = 128
+  -- Draw pupil texture on top of iris with subtle offset
+  if eyes.pupilTexture then
+    -- Calculate base pupil scale with dilation effect
+    local basePupilScale = eyeSize * 0.8 / 512
+    -- Apply dilation factor (up to maxDilation % larger)
+    local dilatedScale = basePupilScale * (1 + (eyes.pupilDilation.maxDilation * dilationFactor))
 
-  -- Draw blinking/winking messages
-  if state.bothBlinking then
-    love.graphics.setColor(colors.purple)
-    local text = i18n("Blink")
-    local textWidth = font:getWidth(text)
-    love.graphics.print(text, (windowWidth - textWidth) / 2, padding)
-  else
-    love.graphics.setColor(colors.yellow)
-    if state.leftEyeWinking then
-      local text = i18n("Left Eye") .. " " .. i18n("Wink")
-      love.graphics.print(text, padding, padding)
-    end
-    if state.rightEyeWinking then
-      local text = i18n("Right Eye") .. " " .. i18n("Wink")
-      local textWidth = font:getWidth(text)
-      love.graphics.print(text, windowWidth - textWidth - padding, padding)
+    -- Draw pupil with original color
+    love.graphics.setColor(1, 1, 1)
+    love.graphics.draw(
+      eyes.pupilTexture,
+      pupilX, pupilY,
+      0,                -- no rotation
+      dilatedScale, dilatedScale,
+      256, 256         -- center of 512x512 texture
+    )
+  end
+
+  -- Draw fire reflection as a glint on the edge of pupil opposite to the fire source
+  -- The glint should fade away completely when the eye is being touched
+  if reflectionIntensity > 0 then
+    -- Calculate actual reflection intensity - fades out completely when eye is touched
+    local actualIntensity = reflectionIntensity * (1.0 - fadeValue)
+
+    if actualIntensity > 0.01 then -- Only draw if visible
+      -- Save current blend mode
+      local prevBlendMode = love.graphics.getBlendMode()
+
+      -- Calculate the angle from pupil to cursor (fire source)
+      local fireAngle = math.atan2(love.mouse.getY() - pupilY, love.mouse.getX() - pupilX)
+
+      -- Calculate the opposite angle (pupil edge away from fire)
+      local glintAngle = fireAngle + math.pi
+
+      -- Calculate the pupil radius and position glint on its edge
+      local pupilRadius = eyeSize * 0.2 -- Approximation of pupil radius
+      local glintX = pupilX + math.cos(glintAngle) * pupilRadius
+      local glintY = pupilY + math.sin(glintAngle) * pupilRadius
+
+      -- Calculate glint size - significantly smaller than before
+      local baseGlintSize = eyeSize * eyes.reflection.baseSize
+      local glintSize = baseGlintSize * actualIntensity
+
+      -- Use additive blending for glow effect
+      love.graphics.setBlendMode("add")
+
+      -- Draw the main glint
+      love.graphics.setColor(1, 0.95, 0.8, 0.8 * actualIntensity)
+      love.graphics.circle("fill", glintX, glintY, glintSize)
+
+      -- Add a brighter core
+      love.graphics.setColor(1, 1, 1, 0.9 * actualIntensity)
+      love.graphics.circle("fill", glintX, glintY, glintSize * 0.6)
+
+      -- Restore previous blend mode
+      love.graphics.setBlendMode(prevBlendMode)
     end
   end
 end
@@ -521,14 +481,6 @@ end
 ---@param eyePositions table Table with eye position data
 ---@param eyeSize number The size of the eye
 local function updateEyeState(state, eyePositions, eyeSize)
-  local leftButton = love.mouse.isDown(1)
-  local rightButton = love.mouse.isDown(2)
-  local middleButton = love.mouse.isDown(3)
-
-  state.bothBlinking = middleButton or (leftButton and rightButton)
-  state.leftEyeWinking = state.bothBlinking or (leftButton and not state.bothBlinking)
-  state.rightEyeWinking = state.bothBlinking or (rightButton and not state.bothBlinking)
-
   -- Check touches for each eye individually
   state.touchingLeft = isMouseOverEye(eyePositions.left, eyePositions.centerY, eyeSize)
   state.touchingRight = isMouseOverEye(eyePositions.right, eyePositions.centerY, eyeSize)
@@ -1066,7 +1018,7 @@ function eyes.draw()
   -- Draw eyes with their respective fade values, reflection effects, and pupil dilation
   drawEye(
     eyes.eyePositions.left, eyes.eyePositions.centerY,
-    eyes.state.leftEyeWinking, eyes.eyeSize, eyes.colors,
+    eyes.eyeSize, eyes.colors,
     eyes.eyeFadeLeft,
     eyes.reflection.leftX, eyes.reflection.leftY, eyes.reflection.leftIntensity,
     eyes.pupilDilation.left
@@ -1074,13 +1026,13 @@ function eyes.draw()
 
   drawEye(
     eyes.eyePositions.right, eyes.eyePositions.centerY,
-    eyes.state.rightEyeWinking, eyes.eyeSize, eyes.colors,
+    eyes.eyeSize, eyes.colors,
     eyes.eyeFadeRight,
     eyes.reflection.rightX, eyes.reflection.rightY, eyes.reflection.rightIntensity,
     eyes.pupilDilation.right
   )
 
-  drawStatusMessages(windowWidth, windowHeight, font, eyes.state, eyes.colors)
+  -- Draw cursor and online status
   drawMouseCursor(windowWidth, font, eyes.x, eyes.y, eyes.colors,
                   eyes.fireSystem, eyes.coreSystem, eyes.sparkSystem, eyes.smokeSystem)
   drawOnlineStatus(windowWidth, font, eyes.online_color, eyes.online_message)
