@@ -38,6 +38,19 @@ local FIRE_COLORS = {
   }
 }
 
+-- Base configuration templates
+local BASE_PARTICLE_CONFIG = {
+  direction = -math.pi/2,
+  sizeVariation = 0.5,
+  autostart = true
+}
+
+local BASE_FIRE_CONFIG = {
+  spread = math.pi/3,
+  radial = { min = -10, max = 10 },
+  tangential = { min = -20, max = 20 }
+}
+
 ---Creates a new Fire instance
 ---@return Fire
 function Fire.new()
@@ -60,6 +73,152 @@ function Fire.new()
   self:initParticleSystem()
 
   return self
+end
+
+---Creates a flame particle image
+---@return love.Canvas The flame particle image
+function Fire:createFlameImage()
+  local particleImg = love.graphics.newCanvas(32, 32)
+  love.graphics.setCanvas(particleImg)
+  love.graphics.clear()
+
+  -- Enable antialiasing and draw a teardrop/flame shape
+  local prevLineStyle = love.graphics.getLineStyle()
+  love.graphics.setLineStyle("smooth")
+  love.graphics.setColor(1, 1, 1)
+
+  -- Create a teardrop shape (narrow at top, wider at bottom)
+  local points = {}
+  local centerX, centerY = 16, 16
+  for i = 0, 32 do
+    local angle = (i / 32) * math.pi * 2
+    -- Modify radius to create teardrop shape
+    local radius = 14 * (1 - 0.3 * math.sin(angle)) -- Slightly narrower at top
+    local x = centerX + radius * math.cos(angle)
+    local y = centerY + radius * math.sin(angle) * 1.2 -- Stretch vertically
+    table.insert(points, x)
+    table.insert(points, y)
+  end
+  love.graphics.polygon("fill", unpack(points))
+
+  -- Add glow effect
+  love.graphics.setColor(1, 1, 1, 0.5)
+  love.graphics.circle("fill", 16, 16, 16)
+
+  love.graphics.setLineStyle(prevLineStyle)
+  love.graphics.setCanvas()
+
+  return particleImg
+end
+
+---Creates a spark particle image
+---@return love.Canvas The spark particle image
+function Fire:createSparkImage()
+  local sparkImg = love.graphics.newCanvas(16, 16)
+  love.graphics.setCanvas(sparkImg)
+  love.graphics.clear()
+
+  local prevLineStyle = love.graphics.getLineStyle()
+  love.graphics.setLineStyle("smooth")
+  love.graphics.setColor(1, 1, 1, 1)
+  love.graphics.circle("fill", 8, 8, 6)
+  love.graphics.setColor(1, 1, 0.8, 0.6)
+  love.graphics.circle("fill", 8, 8, 8)
+  love.graphics.setLineStyle(prevLineStyle)
+  love.graphics.setCanvas()
+
+  return sparkImg
+end
+
+---Creates the outer fire particle system
+---@param image love.Canvas The flame image to use
+---@return love.ParticleSystem The configured fire particle system
+function Fire:createFireSystem(image)
+  local system = love.graphics.newParticleSystem(image, 100)
+  return self:configureParticleSystem(system, {
+    lifetime = { min = 0.5, max = 1.2 },
+    emissionRate = 70,
+    sizeVariation = 0.6,
+    acceleration = { minX = -15, minY = -80, maxX = 15, maxY = -100 },
+    speed = { min = 15, max = 60 },
+    sizes = { 0.2, 0.7, 0.5, 0.2 },
+    direction = BASE_PARTICLE_CONFIG.direction,
+    spread = BASE_FIRE_CONFIG.spread,
+    radial = BASE_FIRE_CONFIG.radial,
+    tangential = BASE_FIRE_CONFIG.tangential,
+    colors = self.colors.fire,
+    spin = { min = -0.5, max = 0.5 },
+    spinVariation = 1,
+    autostart = BASE_PARTICLE_CONFIG.autostart
+  })
+end
+
+---Creates the core fire particle system
+---@param image love.Canvas The flame image to use
+---@return love.ParticleSystem The configured core fire particle system
+function Fire:createCoreSystem(image)
+  local system = love.graphics.newParticleSystem(image, 50)
+  return self:configureParticleSystem(system, {
+    lifetime = { min = 0.3, max = 0.8 },
+    emissionRate = 50,
+    sizeVariation = 0.3,
+    acceleration = { minX = -5, minY = -100, maxX = 5, maxY = -130 },
+    speed = { min = 20, max = 40 },
+    sizes = { 0.4, 0.6, 0.3, 0.1 },
+    direction = BASE_PARTICLE_CONFIG.direction,
+    spread = math.pi/8,
+    radial = { min = -2, max = 2 },
+    tangential = { min = -5, max = 5 },
+    colors = self.colors.corefire,
+    autostart = BASE_PARTICLE_CONFIG.autostart
+  })
+end
+
+---Creates the spark particle system
+---@param image love.Canvas The spark image to use
+---@return love.ParticleSystem The configured spark particle system
+function Fire:createSparkSystem(image)
+  local system = love.graphics.newParticleSystem(image, 30)
+  return self:configureParticleSystem(system, {
+    lifetime = { min = 0.5, max = 1.5 },
+    emissionRate = 0, -- Controlled manually
+    sizeVariation = BASE_PARTICLE_CONFIG.sizeVariation,
+    acceleration = { minX = -20, minY = -200, maxX = 20, maxY = -300 },
+    speed = { min = 50, max = 150 },
+    sizes = { 0.6, 0.4, 0.2, 0 },
+    direction = BASE_PARTICLE_CONFIG.direction,
+    spread = math.pi/2,
+    radial = { min = -50, max = 50 },
+    tangential = { min = -20, max = 20 },
+    colors = self.colors.spark,
+    spin = { min = -2, max = 2 },
+    spinVariation = 1,
+    autostart = false
+  })
+end
+
+---Creates the smoke particle system
+---@param image love.Canvas The flame image to use
+---@return love.ParticleSystem The configured smoke particle system
+function Fire:createSmokeSystem(image)
+  local system = love.graphics.newParticleSystem(image, 40)
+  system:setOffset(love.math.random(-5,5), love.math.random(60,90))
+  return self:configureParticleSystem(system, {
+    lifetime = { min = 1.0, max = 2.5 },
+    emissionRate = 15,
+    sizeVariation = 0.8,
+    acceleration = { minX = -5, minY = -20, maxX = 5, maxY = -40 },
+    speed = { min = 5, max = 15 },
+    sizes = { 0.1, 0.6, 1.0, 1.3 },
+    direction = BASE_PARTICLE_CONFIG.direction,
+    spread = math.pi/2,
+    radial = { min = -10, max = 10 },
+    tangential = { min = -20, max = 20 },
+    colors = self.colors.smoke,
+    spin = { min = 0.1, max = 0.8 },
+    spinVariation = 1,
+    autostart = BASE_PARTICLE_CONFIG.autostart
+  })
 end
 
 ---Configures a particle system with common properties
@@ -97,123 +256,15 @@ end
 ---@return love.ParticleSystem The spark particle system
 ---@return love.ParticleSystem The smoke particle system
 function Fire:initParticleSystem()
-  -- Create flame particle image
-  local particleImg = love.graphics.newCanvas(32, 32)
-  love.graphics.setCanvas(particleImg)
-  love.graphics.clear()
+  -- Create particle images
+  local particleImg = self:createFlameImage()
+  local sparkImg = self:createSparkImage()
 
-  -- Enable antialiasing and draw a teardrop/flame shape
-  local prevLineStyle = love.graphics.getLineStyle()
-  love.graphics.setLineStyle("smooth")
-  love.graphics.setColor(1, 1, 1)
-
-  -- Create a teardrop shape (narrow at top, wider at bottom)
-  local points = {}
-  local centerX, centerY = 16, 16
-  for i = 0, 32 do
-    local angle = (i / 32) * math.pi * 2
-    -- Modify radius to create teardrop shape
-    local radius = 14 * (1 - 0.3 * math.sin(angle)) -- Slightly narrower at top
-    local x = centerX + radius * math.cos(angle)
-    local y = centerY + radius * math.sin(angle) * 1.2 -- Stretch vertically
-    table.insert(points, x)
-    table.insert(points, y)
-  end
-  love.graphics.polygon("fill", unpack(points))
-
-  -- Add glow effect
-  love.graphics.setColor(1, 1, 1, 0.5)
-  love.graphics.circle("fill", 16, 16, 16)
-
-  love.graphics.setLineStyle(prevLineStyle)
-  love.graphics.setCanvas()
-
-  -- Create spark particle image (smaller, brighter)
-  local sparkImg = love.graphics.newCanvas(16, 16)
-  love.graphics.setCanvas(sparkImg)
-  love.graphics.clear()
-  love.graphics.setLineStyle("smooth")
-  love.graphics.setColor(1, 1, 1, 1)
-  love.graphics.circle("fill", 8, 8, 6)
-  love.graphics.setColor(1, 1, 0.8, 0.6)
-  love.graphics.circle("fill", 8, 8, 8)
-  love.graphics.setLineStyle(prevLineStyle)
-  love.graphics.setCanvas()
-
-  -- 1. OUTER FIRE SYSTEM - More erratic, dancing flames
-  local fireSystem = love.graphics.newParticleSystem(particleImg, 100)
-  self:configureParticleSystem(fireSystem, {
-    lifetime = { min = 0.5, max = 1.2 },
-    emissionRate = 70,
-    sizeVariation = 0.6,
-    acceleration = { minX = -15, minY = -80, maxX = 15, maxY = -100 },
-    speed = { min = 15, max = 60 },
-    sizes = { 0.2, 0.7, 0.5, 0.2 },
-    direction = -math.pi/2,
-    spread = math.pi/3,
-    radial = { min = -10, max = 10 },
-    tangential = { min = -30, max = 30 },
-    colors = self.colors.fire,
-    spin = { min = -0.5, max = 0.5 },
-    spinVariation = 1,
-    autostart = true
-  })
-
-  -- 2. CORE FIRE SYSTEM - Stable inner core
-  local coreSystem = love.graphics.newParticleSystem(particleImg, 50)
-  self:configureParticleSystem(coreSystem, {
-    lifetime = { min = 0.3, max = 0.8 },
-    emissionRate = 50,
-    sizeVariation = 0.3,
-    acceleration = { minX = -5, minY = -100, maxX = 5, maxY = -130 },
-    speed = { min = 20, max = 40 },
-    sizes = { 0.4, 0.6, 0.3, 0.1 },
-    direction = -math.pi/2,
-    spread = math.pi/8,
-    radial = { min = -2, max = 2 },
-    tangential = { min = -5, max = 5 },
-    colors = self.colors.corefire,
-    autostart = true
-  })
-
-  -- 3. SPARK SYSTEM - Occasional bright particles shooting upward
-  local sparkSystem = love.graphics.newParticleSystem(sparkImg, 30)
-  self:configureParticleSystem(sparkSystem, {
-    lifetime = { min = 0.5, max = 1.5 },
-    emissionRate = 0, -- Controlled manually
-    sizeVariation = 0.5,
-    acceleration = { minX = -20, minY = -200, maxX = 20, maxY = -300 },
-    speed = { min = 50, max = 150 },
-    sizes = { 0.6, 0.4, 0.2, 0 },
-    direction = -math.pi/2,
-    spread = math.pi/2,
-    radial = { min = -50, max = 50 },
-    tangential = { min = -20, max = 20 },
-    colors = self.colors.spark,
-    spin = { min = -2, max = 2 },
-    spinVariation = 1,
-    autostart = false
-  })
-
-  -- 4. SMOKE SYSTEM
-  local smokeSystem = love.graphics.newParticleSystem(particleImg, 40)
-  smokeSystem:setOffset(love.math.random(-5,5), love.math.random(60,90))
-  self:configureParticleSystem(smokeSystem, {
-    lifetime = { min = 1.0, max = 2.5 },
-    emissionRate = 15,
-    sizeVariation = 0.8,
-    acceleration = { minX = -5, minY = -20, maxX = 5, maxY = -40 },
-    speed = { min = 5, max = 15 },
-    sizes = { 0.1, 0.6, 1.0, 1.3 },
-    direction = -math.pi/2,
-    spread = math.pi/2,
-    radial = { min = -10, max = 10 },
-    tangential = { min = -20, max = 20 },
-    colors = self.colors.smoke,
-    spin = { min = 0.1, max = 0.8 },
-    spinVariation = 1,
-    autostart = true
-  })
+  -- Create all particle systems using factory methods
+  local fireSystem = self:createFireSystem(particleImg)
+  local coreSystem = self:createCoreSystem(particleImg)
+  local sparkSystem = self:createSparkSystem(sparkImg)
+  local smokeSystem = self:createSmokeSystem(particleImg)
 
   -- Store the systems in instance properties
   self.fireSystem = fireSystem
