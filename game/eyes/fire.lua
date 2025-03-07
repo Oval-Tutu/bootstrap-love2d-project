@@ -51,6 +51,72 @@ Fire.BASE_FIRE_CONFIG = {
   tangential = { min = -20, max = 20 }
 }
 
+-- Particle system configuration templates
+Fire.PARTICLE_CONFIGS = {
+  fire = {
+    count = 100,
+    lifetime = { min = 0.5, max = 1.2 },
+    emissionRate = 70,
+    sizeVariation = 0.6,
+    acceleration = { minX = -15, minY = -80, maxX = 15, maxY = -100 },
+    speed = { min = 15, max = 60 },
+    sizes = { 0.2, 0.7, 0.5, 0.2 },
+    spread = Fire.BASE_FIRE_CONFIG.spread,
+    radial = Fire.BASE_FIRE_CONFIG.radial,
+    tangential = Fire.BASE_FIRE_CONFIG.tangential,
+    spin = { min = -0.5, max = 0.5 },
+    spinVariation = 1,
+    -- Use default base properties for the rest
+  },
+
+  core = {
+    count = 50,
+    lifetime = { min = 0.3, max = 0.8 },
+    emissionRate = 50,
+    sizeVariation = 0.3,
+    acceleration = { minX = -5, minY = -100, maxX = 5, maxY = -130 },
+    speed = { min = 20, max = 40 },
+    sizes = { 0.4, 0.6, 0.3, 0.1 },
+    spread = math.pi/8,
+    radial = { min = -2, max = 2 },
+    tangential = { min = -5, max = 5 },
+    -- Use default base properties for the rest
+  },
+
+  spark = {
+    count = 30,
+    lifetime = { min = 0.5, max = 1.5 },
+    emissionRate = 0, -- Controlled manually
+    acceleration = { minX = -20, minY = -200, maxX = 20, maxY = -300 },
+    speed = { min = 50, max = 150 },
+    sizes = { 0.6, 0.4, 0.2, 0 },
+    spread = math.pi/2,
+    radial = { min = -50, max = 50 },
+    tangential = { min = -20, max = 20 },
+    spin = { min = -2, max = 2 },
+    spinVariation = 1,
+    autostart = false,
+    -- Use default base properties for the rest
+  },
+
+  smoke = {
+    count = 40,
+    lifetime = { min = 1.0, max = 2.5 },
+    emissionRate = 15,
+    sizeVariation = 0.8,
+    acceleration = { minX = -5, minY = -20, maxX = 5, maxY = -40 },
+    speed = { min = 5, max = 15 },
+    sizes = { 0.1, 0.6, 1.0, 1.3 },
+    spread = math.pi/2,
+    radial = { min = -10, max = 10 },
+    tangential = { min = -20, max = 20 },
+    spin = { min = 0.1, max = 0.8 },
+    spinVariation = 1,
+    offset = function() return love.math.random(-5,5), love.math.random(60,90) end,
+    -- Use default base properties for the rest
+  }
+}
+
 -- Shared resources across all instances
 Fire.resources = {
   particleImage = nil,
@@ -181,95 +247,51 @@ function Fire:destroy()
   Fire.releaseResources()
 end
 
----Creates the outer fire particle system
----@param image love.Canvas The flame image to use
----@return love.ParticleSystem The configured fire particle system
-function Fire:createFireSystem(image)
-  local system = love.graphics.newParticleSystem(image, 100)
-  return self:configureParticleSystem(system, {
-    lifetime = { min = 0.5, max = 1.2 },
-    emissionRate = 70,
-    sizeVariation = 0.6,
-    acceleration = { minX = -15, minY = -80, maxX = 15, maxY = -100 },
-    speed = { min = 15, max = 60 },
-    sizes = { 0.2, 0.7, 0.5, 0.2 },
-    direction = Fire.BASE_PARTICLE_CONFIG.direction,
-    spread = Fire.BASE_FIRE_CONFIG.spread,
-    radial = Fire.BASE_FIRE_CONFIG.radial,
-    tangential = Fire.BASE_FIRE_CONFIG.tangential,
-    colors = self.colors.fire,
-    spin = { min = -0.5, max = 0.5 },
-    spinVariation = 1,
-    autostart = Fire.BASE_PARTICLE_CONFIG.autostart
-  })
-end
+---Creates a particle system based on a predefined configuration type
+---@param type string The particle system type ('fire', 'core', 'spark', 'smoke')
+---@param image love.Canvas The image to use for the particles
+---@return love.ParticleSystem The configured particle system
+function Fire:createParticleSystem(type, image)
+  -- Get the configuration for this type
+  local config = Fire.PARTICLE_CONFIGS[type]
+  if not config then
+    error("Unknown particle system type: " .. tostring(type))
+  end
 
----Creates the core fire particle system
----@param image love.Canvas The flame image to use
----@return love.ParticleSystem The configured core fire particle system
-function Fire:createCoreSystem(image)
-  local system = love.graphics.newParticleSystem(image, 50)
-  return self:configureParticleSystem(system, {
-    lifetime = { min = 0.3, max = 0.8 },
-    emissionRate = 50,
-    sizeVariation = 0.3,
-    acceleration = { minX = -5, minY = -100, maxX = 5, maxY = -130 },
-    speed = { min = 20, max = 40 },
-    sizes = { 0.4, 0.6, 0.3, 0.1 },
-    direction = Fire.BASE_PARTICLE_CONFIG.direction,
-    spread = math.pi/8,
-    radial = { min = -2, max = 2 },
-    tangential = { min = -5, max = 5 },
-    colors = self.colors.corefire,
-    autostart = Fire.BASE_PARTICLE_CONFIG.autostart
-  })
-end
+  -- Create the system with the specified particle count
+  local system = love.graphics.newParticleSystem(image, config.count)
 
----Creates the spark particle system
----@param image love.Canvas The spark image to use
----@return love.ParticleSystem The configured spark particle system
-function Fire:createSparkSystem(image)
-  local system = love.graphics.newParticleSystem(image, 30)
-  return self:configureParticleSystem(system, {
-    lifetime = { min = 0.5, max = 1.5 },
-    emissionRate = 0, -- Controlled manually
+  -- Apply any special configuration before standard configuration
+  if type == "smoke" and config.offset then
+    local offsetX, offsetY = config.offset()
+    system:setOffset(offsetX, offsetY)
+  end
+
+  -- Prepare the configuration by merging with base config
+  local fullConfig = {
+    -- Apply base defaults
+    direction = Fire.BASE_PARTICLE_CONFIG.direction,
     sizeVariation = Fire.BASE_PARTICLE_CONFIG.sizeVariation,
-    acceleration = { minX = -20, minY = -200, maxX = 20, maxY = -300 },
-    speed = { min = 50, max = 150 },
-    sizes = { 0.6, 0.4, 0.2, 0 },
-    direction = Fire.BASE_PARTICLE_CONFIG.direction,
-    spread = math.pi/2,
-    radial = { min = -50, max = 50 },
-    tangential = { min = -20, max = 20 },
-    colors = self.colors.spark,
-    spin = { min = -2, max = 2 },
-    spinVariation = 1,
-    autostart = false
-  })
-end
+    autostart = Fire.BASE_PARTICLE_CONFIG.autostart,
 
----Creates the smoke particle system
----@param image love.Canvas The flame image to use
----@return love.ParticleSystem The configured smoke particle system
-function Fire:createSmokeSystem(image)
-  local system = love.graphics.newParticleSystem(image, 40)
-  system:setOffset(love.math.random(-5,5), love.math.random(60,90))
-  return self:configureParticleSystem(system, {
-    lifetime = { min = 1.0, max = 2.5 },
-    emissionRate = 15,
-    sizeVariation = 0.8,
-    acceleration = { minX = -5, minY = -20, maxX = 5, maxY = -40 },
-    speed = { min = 5, max = 15 },
-    sizes = { 0.1, 0.6, 1.0, 1.3 },
-    direction = Fire.BASE_PARTICLE_CONFIG.direction,
-    spread = math.pi/2,
-    radial = { min = -10, max = 10 },
-    tangential = { min = -20, max = 20 },
-    colors = self.colors.smoke,
-    spin = { min = 0.1, max = 0.8 },
-    spinVariation = 1,
-    autostart = Fire.BASE_PARTICLE_CONFIG.autostart
-  })
+    -- Then apply type-specific config
+    lifetime = config.lifetime,
+    emissionRate = config.emissionRate,
+    sizeVariation = config.sizeVariation or Fire.BASE_PARTICLE_CONFIG.sizeVariation,
+    acceleration = config.acceleration,
+    speed = config.speed,
+    sizes = config.sizes,
+    spread = config.spread,
+    radial = config.radial,
+    tangential = config.tangential,
+    colors = self.colors[type == "core" and "corefire" or type], -- Map 'core' to 'corefire'
+    spin = config.spin,
+    spinVariation = config.spinVariation,
+    autostart = config.autostart ~= nil and config.autostart or Fire.BASE_PARTICLE_CONFIG.autostart
+  }
+
+  -- Configure and return the particle system
+  return self:configureParticleSystem(system, fullConfig)
 end
 
 ---Configures a particle system with common properties
@@ -307,11 +329,11 @@ end
 ---@return love.ParticleSystem The spark particle system
 ---@return love.ParticleSystem The smoke particle system
 function Fire:initParticleSystem()
-  -- Use shared resources instead of creating new ones
-  local fireSystem = self:createFireSystem(Fire.resources.particleImage)
-  local coreSystem = self:createCoreSystem(Fire.resources.particleImage)
-  local sparkSystem = self:createSparkSystem(Fire.resources.sparkImage)
-  local smokeSystem = self:createSmokeSystem(Fire.resources.particleImage)
+  -- Use shared resources and unified creation function
+  local fireSystem = self:createParticleSystem("fire", Fire.resources.particleImage)
+  local coreSystem = self:createParticleSystem("core", Fire.resources.particleImage)
+  local sparkSystem = self:createParticleSystem("spark", Fire.resources.sparkImage)
+  local smokeSystem = self:createParticleSystem("smoke", Fire.resources.particleImage)
 
   -- Store the systems in instance properties
   self.fireSystem = fireSystem
