@@ -20,6 +20,31 @@ local eyes = {
   eyeFadeLeft = 0,
   eyeFadeRight = 0,
 
+  -- Reflection state for fire effects
+  reflection = {
+    leftIntensity = 0,
+    rightIntensity = 0,
+    leftX = 0,
+    leftY = 0,
+    rightX = 0,
+    rightY = 0,
+    fadeSpeed = 3,      -- How quickly reflection fades in/out
+    maxIntensity = 0.9, -- Maximum reflection intensity (increased for visibility)
+    minDistance = 80,   -- Minimum distance for reflection to appear
+    maxDistance = 350,  -- Distance at which reflection is at minimum intensity
+    baseSize = 0.07     -- Base size of reflection as fraction of eye size (smaller)
+  },
+
+  -- Pupil dilation state (responds to fire proximity)
+  pupilDilation = {
+    left = 0,
+    right = 0,
+    fadeSpeed = 2.5,       -- Speed of dilation transitions
+    maxDilation = 0.30,    -- Maximum additional size factor (30% larger)
+    minDistance = 100,     -- Distance at which maximum dilation occurs
+    maxDistance = 400,     -- Distance at which dilation begins
+  },
+
   -- Blood veins texture
   bloodVeinsTexture = nil,
 
@@ -98,6 +123,11 @@ eyes.colors = {
     { 0.4, 0.4, 0.4, 0.2 }, -- light gray with some transparency
     { 0.3, 0.3, 0.3, 0.1 }, -- mid gray, fading
     { 0.2, 0.2, 0.2, 0 }    -- dark gray, completely transparent
+  },
+  -- Fire reflection color in the eyes
+  reflection = {
+    { 1, 0.95, 0.8, 1.0 },  -- Bright white-yellow
+    { 1, 0.8, 0.3, 0.7 }    -- Fading orange-yellow
   }
 }
 
@@ -211,7 +241,12 @@ end
 ---@param eyeSize number The size of the eye
 ---@param colors table Color definitions
 ---@param fadeValue number The fade progress (0-1) from white to pink
-local function drawEye(eyeX, eyeY, isWinking, eyeSize, colors, fadeValue)
+---@param reflectionX number X position of the fire reflection
+---@param reflectionY number Y position of the fire reflection
+---@param reflectionIntensity number Intensity of the fire reflection (0-1)
+---@param dilationFactor number Pupil dilation factor (0-1, with 1 being most dilated)
+local function drawEye(eyeX, eyeY, isWinking, eyeSize, colors, fadeValue,
+                       reflectionX, reflectionY, reflectionIntensity, dilationFactor)
   -- Interpolate between white and pink based on fade value
   local eyeColor = interpolateColor(colors.white, colors.lightPink, fadeValue)
   local pupilColor = interpolateColor(colors.blue, colors.darkRed, fadeValue)
@@ -294,8 +329,10 @@ local function drawEye(eyeX, eyeY, isWinking, eyeSize, colors, fadeValue)
 
     -- Draw pupil texture on top of iris with subtle offset
     if eyes.pupilTexture then
-      -- Pupil should be smaller than iris
-      local pupilScale = (eyeSize * 0.8) / 512
+      -- Calculate base pupil scale with dilation effect
+      local basePupilScale = eyeSize * 0.8 / 512
+      -- Apply dilation factor (up to maxDilation % larger)
+      local dilatedScale = basePupilScale * (1 + (eyes.pupilDilation.maxDilation * dilationFactor))
 
       -- Draw pupil with original color
       love.graphics.setColor(1, 1, 1)
@@ -303,9 +340,50 @@ local function drawEye(eyeX, eyeY, isWinking, eyeSize, colors, fadeValue)
         eyes.pupilTexture,
         pupilX, pupilY,
         0,                -- no rotation
-        pupilScale, pupilScale,
+        dilatedScale, dilatedScale,
         256, 256         -- center of 512x512 texture
       )
+    end
+
+    -- Draw fire reflection as a glint on the edge of pupil opposite to the fire source
+    -- The glint should fade away completely when the eye is being touched
+    if reflectionIntensity > 0 then
+      -- Calculate actual reflection intensity - fades out completely when eye is touched
+      local actualIntensity = reflectionIntensity * (1.0 - fadeValue)
+
+      if actualIntensity > 0.01 then -- Only draw if visible
+        -- Save current blend mode
+        local prevBlendMode = love.graphics.getBlendMode()
+
+        -- Calculate the angle from pupil to cursor (fire source)
+        local fireAngle = math.atan2(love.mouse.getY() - pupilY, love.mouse.getX() - pupilX)
+
+        -- Calculate the opposite angle (pupil edge away from fire)
+        local glintAngle = fireAngle + math.pi
+
+        -- Calculate the pupil radius and position glint on its edge
+        local pupilRadius = eyeSize * 0.2 -- Approximation of pupil radius
+        local glintX = pupilX + math.cos(glintAngle) * pupilRadius
+        local glintY = pupilY + math.sin(glintAngle) * pupilRadius
+
+        -- Calculate glint size - significantly smaller than before
+        local baseGlintSize = eyeSize * eyes.reflection.baseSize
+        local glintSize = baseGlintSize * actualIntensity
+
+        -- Use additive blending for glow effect
+        love.graphics.setBlendMode("add")
+
+        -- Draw the main glint
+        love.graphics.setColor(1, 0.95, 0.8, 0.8 * actualIntensity)
+        love.graphics.circle("fill", glintX, glintY, glintSize)
+
+        -- Add a brighter core
+        love.graphics.setColor(1, 1, 1, 0.9 * actualIntensity)
+        love.graphics.circle("fill", glintX, glintY, glintSize * 0.6)
+
+        -- Restore previous blend mode
+        love.graphics.setBlendMode(prevBlendMode)
+      end
     end
   end
 end
@@ -661,6 +739,90 @@ local function updateAudioSystem(ambientFireSound, x, y, windowWidth, windowHeig
   ambientFireSound.right:setVolume(rightVolume * baseVolume)
 end
 
+---Calculates reflection properties for the eyes based on cursor position
+---@param mouseX number Current mouse X position
+---@param mouseY number Current mouse Y position
+---@param leftEyeX number X position of left eye
+---@param rightEyeX number X position of right eye
+---@param eyeY number Y position of both eyes
+---@param eyeSize number Size of eyes
+---@param config table Reflection configuration parameters
+---@return number leftIntensity Intensity for left eye reflection (0-1)
+---@return number rightIntensity Intensity for right eye reflection (0-1)
+---@return number leftX X position for left eye reflection
+---@return number leftY Y position for left eye reflection
+---@return number rightX X position for right eye reflection
+---@return number rightY Y position for right eye reflection
+local function calculateReflectionProperties(mouseX, mouseY, leftEyeX, rightEyeX, eyeY, eyeSize, config)
+  -- Calculate distances to each eye
+  local distanceToLeft = math.sqrt((mouseX - leftEyeX)^2 + (mouseY - eyeY)^2)
+  local distanceToRight = math.sqrt((mouseX - rightEyeX)^2 + (mouseY - eyeY)^2)
+
+  -- Calculate intensity based on distance (closer = more intense)
+  local leftIntensity = 0
+  local rightIntensity = 0
+
+  if distanceToLeft < config.maxDistance then
+    leftIntensity = math.max(0, math.min(config.maxIntensity,
+      config.maxIntensity * (1 - (distanceToLeft - config.minDistance) /
+      (config.maxDistance - config.minDistance))))
+
+    -- Ensure minimum visibility when fire is present
+    leftIntensity = math.max(leftIntensity, 0.2)
+  end
+
+  if distanceToRight < config.maxDistance then
+    rightIntensity = math.max(0, math.min(config.maxIntensity,
+      config.maxIntensity * (1 - (distanceToRight - config.minDistance) /
+      (config.maxDistance - config.minDistance))))
+
+    -- Ensure minimum visibility when fire is present
+    rightIntensity = math.max(rightIntensity, 0.2)
+  end
+
+  -- Note: we're not using these positions directly anymore for drawing the glint
+  -- but we still need to return something for the existing API
+  local leftX = leftEyeX
+  local leftY = eyeY
+  local rightX = rightEyeX
+  local rightY = eyeY
+
+  return leftIntensity, rightIntensity, leftX, leftY, rightX, rightY
+end
+
+---Calculates pupil dilation based on fire proximity to each eye
+---@param mouseX number Current mouse X position
+---@param mouseY number Current mouse Y position
+---@param leftEyeX number X position of left eye
+---@param rightEyeX number X position of right eye
+---@param eyeY number Y position of both eyes
+---@param config table Pupil dilation configuration parameters
+---@return number leftDilation Dilation factor for left eye (0-1)
+---@return number rightDilation Dilation factor for right eye (0-1)
+local function calculatePupilDilation(mouseX, mouseY, leftEyeX, rightEyeX, eyeY, config)
+  -- Calculate distances to each eye
+  local distanceToLeft = math.sqrt((mouseX - leftEyeX)^2 + (mouseY - eyeY)^2)
+  local distanceToRight = math.sqrt((mouseX - rightEyeX)^2 + (mouseY - eyeY)^2)
+
+  -- Calculate dilation factors based on distance (closer = more dilated)
+  local leftDilation = 0
+  local rightDilation = 0
+
+  if distanceToLeft < config.maxDistance then
+    leftDilation = math.max(0, math.min(1,
+      1 - (distanceToLeft - config.minDistance) /
+      (config.maxDistance - config.minDistance)))
+  end
+
+  if distanceToRight < config.maxDistance then
+    rightDilation = math.max(0, math.min(1,
+      1 - (distanceToRight - config.minDistance) /
+      (config.maxDistance - config.minDistance)))
+  end
+
+  return leftDilation, rightDilation
+end
+
 ---Loads resources and initializes the eyes
 function eyes.load()
   if checkOnlineStatus() then
@@ -765,6 +927,42 @@ function eyes.update(dt)
 
   -- Update sound based on eye state
   updateSoundState(eyes.state, eyes.sounds, eyes.soundState)
+
+  -- Calculate target reflection properties
+  local leftIntensityTarget, rightIntensityTarget, leftX, leftY, rightX, rightY =
+    calculateReflectionProperties(
+      eyes.x, eyes.y,
+      leftEyeX, rightEyeX, centerY,
+      eyes.eyeSize, eyes.reflection
+    )
+
+  -- Smoothly transition reflection intensity
+  eyes.reflection.leftIntensity = eyes.reflection.leftIntensity +
+    (leftIntensityTarget - eyes.reflection.leftIntensity) * dt * eyes.reflection.fadeSpeed
+
+  eyes.reflection.rightIntensity = eyes.reflection.rightIntensity +
+    (rightIntensityTarget - eyes.reflection.rightIntensity) * dt * eyes.reflection.fadeSpeed
+
+  -- Update reflection positions
+  eyes.reflection.leftX = leftX
+  eyes.reflection.leftY = leftY
+  eyes.reflection.rightX = rightX
+  eyes.reflection.rightY = rightY
+
+  -- Calculate target pupil dilation based on fire proximity
+  local leftDilationTarget, rightDilationTarget =
+    calculatePupilDilation(
+      eyes.x, eyes.y,
+      leftEyeX, rightEyeX, centerY,
+      eyes.pupilDilation
+    )
+
+  -- Smoothly transition pupil dilation
+  eyes.pupilDilation.left = eyes.pupilDilation.left +
+    (leftDilationTarget - eyes.pupilDilation.left) * dt * eyes.pupilDilation.fadeSpeed
+
+  eyes.pupilDilation.right = eyes.pupilDilation.right +
+    (rightDilationTarget - eyes.pupilDilation.right) * dt * eyes.pupilDilation.fadeSpeed
 end
 
 function eyes.draw()
@@ -782,11 +980,22 @@ function eyes.draw()
   love.graphics.push()
   love.graphics.translate(eyes.shakeX, eyes.shakeY)
 
-  -- Draw eyes with their respective fade values
-  drawEye(eyes.eyePositions.left, eyes.eyePositions.centerY, eyes.state.leftEyeWinking,
-          eyes.eyeSize, eyes.colors, eyes.eyeFadeLeft)
-  drawEye(eyes.eyePositions.right, eyes.eyePositions.centerY, eyes.state.rightEyeWinking,
-          eyes.eyeSize, eyes.colors, eyes.eyeFadeRight)
+  -- Draw eyes with their respective fade values, reflection effects, and pupil dilation
+  drawEye(
+    eyes.eyePositions.left, eyes.eyePositions.centerY,
+    eyes.state.leftEyeWinking, eyes.eyeSize, eyes.colors,
+    eyes.eyeFadeLeft,
+    eyes.reflection.leftX, eyes.reflection.leftY, eyes.reflection.leftIntensity,
+    eyes.pupilDilation.left
+  )
+
+  drawEye(
+    eyes.eyePositions.right, eyes.eyePositions.centerY,
+    eyes.state.rightEyeWinking, eyes.eyeSize, eyes.colors,
+    eyes.eyeFadeRight,
+    eyes.reflection.rightX, eyes.reflection.rightY, eyes.reflection.rightIntensity,
+    eyes.pupilDilation.right
+  )
 
   drawStatusMessages(windowWidth, windowHeight, font, eyes.state, eyes.colors)
   drawMouseCursor(windowWidth, font, eyes.x, eyes.y, eyes.colors,
