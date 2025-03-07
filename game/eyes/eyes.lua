@@ -23,6 +23,10 @@ local eyes = {
   -- Blood veins texture
   bloodVeinsTexture = nil,
 
+  -- Eye textures
+  irisTexture = nil,
+  pupilTexture = nil,
+
   -- Online status
   online_color = { 1, 0, 0 },
   online_message = "Offline",
@@ -57,7 +61,7 @@ local eyes = {
 -- Constants - Define colors before they're used in functions
 eyes.colors = {
   white = { 1, 1, 1 },
-  blue = { 0, 0, 0.4 },
+  blue = { 0, 0.5, 0.95 },
   yellow = { 1, 1, 0 },
   orange = { 1, 0.5, 0 },
   red = { 1, 0, 0 },
@@ -241,8 +245,8 @@ local function drawEye(eyeX, eyeY, isWinking, eyeSize, colors, fadeValue)
   end
 
   -- Draw either the winking line or the pupil
-  love.graphics.setColor(pupilColor)
   if isWinking then
+    love.graphics.setColor(pupilColor)
     love.graphics.setLineWidth(8)
     love.graphics.line(eyeX - eyeSize, eyeY, eyeX + eyeSize, eyeY)
   else
@@ -261,10 +265,48 @@ local function drawEye(eyeX, eyeY, isWinking, eyeSize, colors, fadeValue)
     local oscillationY = eyeY + love.math.random(-oscillationRange, oscillationRange)
 
     -- Interpolate between tracking and oscillation based on fade value
-    local pupilX = trackingX + (oscillationX - trackingX) * fadeValue
-    local pupilY = trackingY + (oscillationY - trackingY) * fadeValue
+    local irisX = trackingX + (oscillationX - trackingX) * fadeValue
+    local irisY = trackingY + (oscillationY - trackingY) * fadeValue
 
-    love.graphics.circle("fill", pupilX, pupilY, 16)
+    -- Calculate a subtle additional offset for the pupil (25% of the main tracking)
+    local pupilOffsetFactor = 0.10 -- Controls how much extra the pupil moves relative to iris
+    local subtleDistance = distance * pupilOffsetFactor
+
+    -- Apply the subtle offset to the pupil position
+    local pupilX = irisX + (math.cos(angle) * subtleDistance)
+    local pupilY = irisY + (math.sin(angle) * subtleDistance)
+
+    -- Draw textured iris with color tinting based on fade value
+    if eyes.irisTexture then
+      -- Calculate scale for iris texture (about 140% of the eye size)
+      local irisScale = (eyeSize * 1.4) / 512
+
+      -- Apply color tinting to iris
+      love.graphics.setColor(pupilColor)
+      love.graphics.draw(
+        eyes.irisTexture,
+        irisX, irisY,
+        0,                -- no rotation
+        irisScale, irisScale,
+        256, 256         -- center of 512x512 texture
+      )
+    end
+
+    -- Draw pupil texture on top of iris with subtle offset
+    if eyes.pupilTexture then
+      -- Pupil should be smaller than iris
+      local pupilScale = (eyeSize * 0.7) / 512
+
+      -- Draw pupil with original color
+      love.graphics.setColor(1, 1, 1)
+      love.graphics.draw(
+        eyes.pupilTexture,
+        pupilX, pupilY,
+        0,                -- no rotation
+        pupilScale, pupilScale,
+        256, 256         -- center of 512x512 texture
+      )
+    end
   end
 end
 
@@ -628,6 +670,10 @@ function eyes.load()
 
   -- Load blood veins texture
   eyes.bloodVeinsTexture = love.graphics.newImage("eyes/gfx/blood_veins_100.png")
+
+  -- Load eye textures
+  eyes.irisTexture = love.graphics.newImage("eyes/gfx/iris.png")
+  eyes.pupilTexture = love.graphics.newImage("eyes/gfx/pupil.png")
 
   -- Initialize the particle systems - pass colors as parameter
   eyes.fireSystem, eyes.coreSystem, eyes.sparkSystem, eyes.smokeSystem = initParticleSystem(eyes.colors)
