@@ -130,9 +130,28 @@ function overlayStats.draw()
 
   -- Set up overlay drawing
   love.graphics.push("all")
-  love.graphics.setNewFont(16)
+  local font = love.graphics.setNewFont(16)
+
+  -- Calculate dynamic width based on renderer version and other content
+  local padding = 20    -- 10px padding on each side
+  local baseWidth = 280 -- Minimum width
+
+  -- Check width needed for the renderer version text
+  local versionTextWidth = font:getWidth(string.format("%s", overlayStats.renderInfo.version))
+  local rendererInfoWidth = font:getWidth(
+    string.format("Renderer: %s (%s)", overlayStats.renderInfo.name, overlayStats.renderInfo.vendor)
+  )
+  local systemInfoWidth = font:getWidth(
+    overlayStats.sysInfo.os .. " " .. overlayStats.sysInfo.arch .. ": " .. overlayStats.sysInfo.cpuCount .. "x CPU"
+  )
+
+  -- Calculate rectangle width based on the widest content
+  local contentWidth = math.max(versionTextWidth, rendererInfoWidth, systemInfoWidth, baseWidth)
+  local rectangleWidth = contentWidth + padding
+
+  -- Draw background rectangle with dynamic width
   love.graphics.setColor(0, 0, 0, 0.8)
-  love.graphics.rectangle("fill", 10, 10, 280, 300)
+  love.graphics.rectangle("fill", 10, 10, rectangleWidth, 300)
   love.graphics.setColor(0.678, 0.847, 0.902, 1)
 
   -- System Info
