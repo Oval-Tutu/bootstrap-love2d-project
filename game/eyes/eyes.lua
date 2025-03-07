@@ -1,16 +1,127 @@
 ---@class Eyes Module for drawing and managing interactive eyes
 local overlayStats = require("lib.overlayStats")
 
+-- The public module
+local eyes = {
+  -- Configuration
+  eyeSize = 128,
+  eyeSpacing = 320,
+  shakeAmount = 5,
+
+  -- State variables
+  shakeX = 0,
+  shakeY = 0,
+  x = 0,
+  y = 0,
+  eyePositions = { left = 0, right = 0, centerY = 0 },
+
+  -- Online status
+  online_color = { 1, 0, 0 },
+  online_message = "Offline",
+
+  -- Particle systems
+  fireSystem = nil,    -- Outer erratic flames
+  coreSystem = nil,    -- Stable inner core
+  sparkSystem = nil,   -- Occasional bright sparks
+  smokeSystem = nil,   -- Smoke effect
+
+  -- Timer for spark emission control
+  sparkTimer = 0,
+  sparkInterval = 0.15,
+
+  -- Sound effects
+  sounds = {},
+
+  -- Ambient sound
+  ambientFireSound = nil,
+
+  -- Sound state tracking
+  soundState = {
+    currentSound = nil,
+    soundPlaying = false,
+    soundJustFinished = false,
+    lastTouchTime = 0,
+    touchCooldown = 0.5,
+    lastTouchingState = false
+  }
+}
+
+-- Constants - Define colors before they're used in functions
+eyes.colors = {
+  white = { 1, 1, 1 },
+  blue = { 0, 0, 0.4 },
+  yellow = { 1, 1, 0 },
+  orange = { 1, 0.5, 0 },
+  red = { 1, 0, 0 },
+  purple = { 1, 0, 1 },
+  green = { 0, 1, 0 },
+  darkGrey = { 0.1, 0.1, 0.1 },
+  lightPink = { 1, 0.92, 0.92 },
+  darkRed = { 0.6, 0, 0 },
+  fire = {
+    { 1, 0.7, 0, 0.8 },   -- golden orange
+    { 1, 0.4, 0, 0.7 },   -- orange
+    { 1, 0.2, 0, 0.5 },   -- red-orange
+    { 0.7, 0.1, 0, 0.3 }, -- dark red
+    { 0.4, 0, 0, 0 }      -- fade out to transparent
+  },
+  -- Core fire colors (brighter and more intense)
+  corefire = {
+    { 1, 1, 0.8, 0.9 },   -- bright yellow
+    { 1, 0.8, 0.2, 0.7 }, -- yellow-orange
+    { 1, 0.6, 0, 0.5 },   -- orange
+    { 1, 0.3, 0, 0.3 },   -- reddish-orange
+    { 0.8, 0.1, 0 }    -- fade out
+  },
+  -- Spark colors (bright and short-lived)
+  spark = {
+    { 1, 1, 1, 1 },     -- white
+    { 1, 1, 0.6, 0.8 }, -- bright yellow
+    { 1, 0.3, 0, 0.3 },   -- reddish-orange
+    { 1, 0.6, 0.1, 0 }  -- fade to transparent
+  },
+  -- Smoke colors for the smoke particle system
+  smoke = {
+    { 0.5, 0.5, 0.5, 0 },   -- transparent to start
+    { 0.4, 0.4, 0.4, 0.2 }, -- light gray with some transparency
+    { 0.3, 0.3, 0.3, 0.1 }, -- mid gray, fading
+    { 0.2, 0.2, 0.2, 0 }    -- dark gray, completely transparent
+  }
+}
+
+-- Eye state
+eyes.state = {
+  leftEyeWinking = false,
+  rightEyeWinking = false,
+  bothBlinking = false,
+  touching = false
+}
+
 -- Private functions defined as locals
 ---Checks if the mouse is over an eye
 ---@param eyeX number The x-coordinate of the eye
 ---@param eyeY number The y-coordinate of the eye
+---@param eyeSize number The size of the eye
 ---@return boolean isOver True if mouse is over the eye
 local function isMouseOverEye(eyeX, eyeY, eyeSize)
   local mouseX = love.mouse.getX()
   local mouseY = love.mouse.getY()
   local distance = math.sqrt((mouseX - eyeX) ^ 2 + (mouseY - eyeY) ^ 2)
   return distance < eyeSize
+end
+
+---Calculates the eye positions based on window dimensions
+---@param windowWidth number Width of the window
+---@param windowHeight number Height of the window
+---@param eyeSpacing number The spacing between eyes
+---@return number leftEyeX The x-coordinate of the left eye
+---@return number rightEyeX The x-coordinate of the right eye
+---@return number centerY The y-coordinate of both eyes
+local function calculateEyePositions(windowWidth, windowHeight, eyeSpacing)
+  local centerY = windowHeight / 2
+  local leftEyeX = (windowWidth / 2) - (eyeSpacing / 2)
+  local rightEyeX = (windowWidth / 2) + (eyeSpacing / 2)
+  return leftEyeX, rightEyeX, centerY
 end
 
 ---Loads all available "aargh" sound effects
@@ -73,22 +184,22 @@ end
 ---@param colors table Color definitions
 ---@param isTouching boolean Whether any eye is being touched
 local function drawEye(eyeX, eyeY, isWinking, eyeSize, colors, isTouching)
+  -- Draw the eye base with appropriate color
+  love.graphics.setColor(isTouching and colors.lightPink or colors.white)
+  love.graphics.circle("fill", eyeX, eyeY, eyeSize)
+
+  -- Draw either the winking line or the pupil
+  love.graphics.setColor(isTouching and colors.darkRed or colors.blue)
   if isWinking then
-    love.graphics.setColor(isTouching and colors.lightPink or colors.white)
-    love.graphics.circle("fill", eyeX, eyeY, eyeSize)
-    love.graphics.setColor(isTouching and colors.darkRed or colors.blue)
     love.graphics.setLineWidth(8)
     love.graphics.line(eyeX - eyeSize, eyeY, eyeX + eyeSize, eyeY)
   else
     local pupilX, pupilY
-
     if (isTouching) then
       -- Random oscillation around the center when any eye is being touched
       local oscillationRange = eyeSize / 16
       pupilX = eyeX + love.math.random(-oscillationRange, oscillationRange)
       pupilY = eyeY + love.math.random(-oscillationRange, oscillationRange)
-
-      love.graphics.setColor(colors.lightPink)
     else
       -- Normal eye tracking behavior
       local distanceX = love.mouse.getX() - eyeX
@@ -98,13 +209,8 @@ local function drawEye(eyeX, eyeY, isWinking, eyeSize, colors, isTouching)
 
       pupilX = eyeX + (math.cos(angle) * distance)
       pupilY = eyeY + (math.sin(angle) * distance)
-
-      love.graphics.setColor(colors.white)
     end
 
-    love.graphics.circle("fill", eyeX, eyeY, eyeSize)
-
-    love.graphics.setColor(isTouching and colors.darkRed or colors.blue)
     love.graphics.circle("fill", pupilX, pupilY, 16)
   end
 end
@@ -114,8 +220,6 @@ end
 ---@param windowHeight number Height of the window
 ---@param font love.Font The font to use for messages
 ---@param state table Current eye state
----@param shakeX number Current X shake amount
----@param shakeY number Current Y shake amount
 ---@param colors table Color definitions
 local function drawStatusMessages(windowWidth, windowHeight, font, state, colors)
   local padding = 128
@@ -207,11 +311,9 @@ end
 
 ---Updates the eye state based on input and cursor position
 ---@param state table Current eye state reference
----@param leftEyeX number The x-coordinate of the left eye
----@param rightEyeX number The x-coordinate of the right eye
----@param centerY number The y-coordinate of both eyes
+---@param eyePositions table Table with eye position data
 ---@param eyeSize number The size of the eye
-local function updateEyeState(state, leftEyeX, rightEyeX, centerY, eyeSize)
+local function updateEyeState(state, eyePositions, eyeSize)
   local leftButton = love.mouse.isDown(1)
   local rightButton = love.mouse.isDown(2)
   local middleButton = love.mouse.isDown(3)
@@ -221,121 +323,61 @@ local function updateEyeState(state, leftEyeX, rightEyeX, centerY, eyeSize)
   state.rightEyeWinking = state.bothBlinking or (rightButton and not state.bothBlinking)
 
   -- Check if either eye is being touched
-  state.touching = isMouseOverEye(leftEyeX, centerY, eyeSize) or isMouseOverEye(rightEyeX, centerY, eyeSize)
+  state.touching = isMouseOverEye(eyePositions.left, eyePositions.centerY, eyeSize) or
+                   isMouseOverEye(eyePositions.right, eyePositions.centerY, eyeSize)
 end
 
 ---Updates the shake effect when mouse is over eyes
----@param leftEyeX number The x-coordinate of the left eye
----@param rightEyeX number The x-coordinate of the right eye
----@param centerY number The y-coordinate of both eyes
+---@param eyePositions table Table with eye position data
 ---@param eyeSize number The size of the eye
 ---@param shakeAmount number Maximum shake amount
 ---@return number shakeX Resulting X shake value
 ---@return number shakeY Resulting Y shake value
-local function updateShakeEffect(leftEyeX, rightEyeX, centerY, eyeSize, shakeAmount)
-  if isMouseOverEye(leftEyeX, centerY, eyeSize) or isMouseOverEye(rightEyeX, centerY, eyeSize) then
+local function updateShakeEffect(eyePositions, eyeSize, shakeAmount)
+  if isMouseOverEye(eyePositions.left, eyePositions.centerY, eyeSize) or
+     isMouseOverEye(eyePositions.right, eyePositions.centerY, eyeSize) then
     return love.math.random(-shakeAmount, shakeAmount), love.math.random(-shakeAmount, shakeAmount)
   else
     return 0, 0
   end
 end
 
--- The public module
-local eyes = {
-  -- Configuration
-  eyeSize = 128,
-  eyeSpacing = 320,
-  shakeAmount = 5,
+---Configures a particle system with common properties
+---@param particleSystem love.ParticleSystem The particle system to configure
+---@param config table Configuration parameters
+local function configureParticleSystem(particleSystem, config)
+  particleSystem:setParticleLifetime(config.lifetime.min, config.lifetime.max)
+  particleSystem:setEmissionRate(config.emissionRate)
+  particleSystem:setSizeVariation(config.sizeVariation)
+  particleSystem:setLinearAcceleration(config.acceleration.minX, config.acceleration.minY,
+                                       config.acceleration.maxX, config.acceleration.maxY)
+  particleSystem:setSpeed(config.speed.min, config.speed.max)
+  particleSystem:setSizes(unpack(config.sizes))
+  particleSystem:setDirection(config.direction)
+  particleSystem:setSpread(config.spread)
+  particleSystem:setRadialAcceleration(config.radial.min, config.radial.max)
+  particleSystem:setTangentialAcceleration(config.tangential.min, config.tangential.max)
+  particleSystem:setColors(unpack(config.colors))
 
-  -- State variables
-  shakeX = 0,
-  shakeY = 0,
-  x = 0,
-  y = 0,
+  if config.spin then
+    particleSystem:setSpin(config.spin.min, config.spin.max)
+    particleSystem:setSpinVariation(config.spinVariation or 1)
+  end
 
-  -- Online status
-  online_color = { 1, 0, 0 },
-  online_message = "Offline",
+  if config.autostart then
+    particleSystem:start()
+  end
 
-  -- Particle systems
-  fireSystem = nil,    -- Outer erratic flames
-  coreSystem = nil,    -- Stable inner core
-  sparkSystem = nil,   -- Occasional bright sparks
-  smokeSystem = nil,   -- Smoke effect
-
-  -- Timer for spark emission control
-  sparkTimer = 0,
-  sparkInterval = 0.15,
-
-  -- Sound effects
-  sounds = {},
-  currentSound = nil,
-  soundPlaying = false,
-  soundJustFinished = false, -- New flag to track if a sound just finished
-  lastTouchTime = 0,
-  touchCooldown = 0.5, -- Minimum time between sound triggers
-
-  -- Ambient sound
-  ambientFireSound = nil,
-}
-
--- Constants
-eyes.colors = {
-  white = { 1, 1, 1 },
-  blue = { 0, 0, 0.4 },
-  yellow = { 1, 1, 0 },
-  orange = { 1, 0.5, 0 },
-  red = { 1, 0, 0 },
-  purple = { 1, 0, 1 },
-  green = { 0, 1, 0 },
-  darkGrey = { 0.1, 0.1, 0.1 },
-  lightPink = { 1, 0.92, 0.92 },
-  darkRed = { 0.6, 0, 0 },
-  fire = {
-    { 1, 0.7, 0, 0.8 },   -- golden orange
-    { 1, 0.4, 0, 0.7 },   -- orange
-    { 1, 0.2, 0, 0.5 },   -- red-orange
-    { 0.7, 0.1, 0, 0.3 }, -- dark red
-    { 0.4, 0, 0, 0 }      -- fade out to transparent
-  },
-  -- Core fire colors (brighter and more intense)
-  corefire = {
-    { 1, 1, 0.8, 0.9 },   -- bright yellow
-    { 1, 0.8, 0.2, 0.7 }, -- yellow-orange
-    { 1, 0.6, 0, 0.5 },   -- orange
-    { 1, 0.3, 0, 0.3 },   -- reddish-orange
-    { 0.8, 0.1, 0 }    -- fade out
-  },
-  -- Spark colors (bright and short-lived)
-  spark = {
-    { 1, 1, 1, 1 },     -- white
-    { 1, 1, 0.6, 0.8 }, -- bright yellow
-    { 1, 0.3, 0, 0.3 },   -- reddish-orange
-    { 1, 0.6, 0.1, 0 }  -- fade to transparent
-  },
-  -- Smoke colors for the smoke particle system
-  smoke = {
-    { 0.5, 0.5, 0.5, 0 },   -- transparent to start
-    { 0.4, 0.4, 0.4, 0.2 }, -- light gray with some transparency
-    { 0.3, 0.3, 0.3, 0.1 }, -- mid gray, fading
-    { 0.2, 0.2, 0.2, 0 }    -- dark gray, completely transparent
-  }
-}
-
--- Eye state
-eyes.state = {
-  leftEyeWinking = false,
-  rightEyeWinking = false,
-  bothBlinking = false,
-  touching = false
-}
+  return particleSystem
+end
 
 ---Creates and initializes the particle systems for the cursor flame effect
+---@param colors table The color definitions to use for particles
 ---@return love.ParticleSystem The outer fire particle system
 ---@return love.ParticleSystem The core fire particle system
 ---@return love.ParticleSystem The spark particle system
 ---@return love.ParticleSystem The smoke particle system
-local function initParticleSystem()
+local function initParticleSystem(colors)
   -- Create flame particle image
   local particleImg = love.graphics.newCanvas(32, 32)
   love.graphics.setCanvas(particleImg)
@@ -381,110 +423,146 @@ local function initParticleSystem()
 
   -- 1. OUTER FIRE SYSTEM - More erratic, dancing flames
   local fireSystem = love.graphics.newParticleSystem(particleImg, 100)
-  fireSystem:setParticleLifetime(0.5, 1.2)
-  fireSystem:setEmissionRate(70)
-  fireSystem:setSizeVariation(0.6)  -- More variation for chaotic look
-
-  -- More erratic movement at the tips
-  fireSystem:setLinearAcceleration(-15, -80, 15, -100)
-  -- Higher speed variation for flickering effect
-  fireSystem:setSpeed(15, 60)
-
-  -- Start small, grow, then shrink
-  fireSystem:setSizes(0.2, 0.7, 0.5, 0.2)
-
-  -- Wider spread for outer flames
-  fireSystem:setDirection(-math.pi/2)  -- Upward
-  fireSystem:setSpread(math.pi/3)      -- Wider spread
-
-  -- More chaotic movement at the flame tips
-  fireSystem:setRadialAcceleration(-10, 10)
-  fireSystem:setTangentialAcceleration(-30, 30) -- Much more swirling
-
-  -- Outer fire colors
-  fireSystem:setColors(unpack(eyes.colors.fire))
-
-  -- Add some slow rotation for swirling flames
-  fireSystem:setSpin(-0.5, 0.5)
-  fireSystem:setSpinVariation(1)
-
-  fireSystem:start()
+  configureParticleSystem(fireSystem, {
+    lifetime = { min = 0.5, max = 1.2 },
+    emissionRate = 70,
+    sizeVariation = 0.6,
+    acceleration = { minX = -15, minY = -80, maxX = 15, maxY = -100 },
+    speed = { min = 15, max = 60 },
+    sizes = { 0.2, 0.7, 0.5, 0.2 },
+    direction = -math.pi/2,
+    spread = math.pi/3,
+    radial = { min = -10, max = 10 },
+    tangential = { min = -30, max = 30 },
+    colors = colors.fire,
+    spin = { min = -0.5, max = 0.5 },
+    spinVariation = 1,
+    autostart = true
+  })
 
   -- 2. CORE FIRE SYSTEM - Stable inner core
   local coreSystem = love.graphics.newParticleSystem(particleImg, 50)
-  coreSystem:setParticleLifetime(0.3, 0.8)  -- Shorter lifetime for core
-  coreSystem:setEmissionRate(50)
-  coreSystem:setSizeVariation(0.3)  -- Less variation for stability
-
-  -- More focused upward movement
-  coreSystem:setLinearAcceleration(-5, -100, 5, -130)
-  coreSystem:setSpeed(20, 40)  -- Consistent speed
-
-  -- Start a bit larger than outer flames
-  coreSystem:setSizes(0.4, 0.6, 0.3, 0.1)
-
-  -- Narrower spread for focused core
-  coreSystem:setDirection(-math.pi/2)  -- Upward
-  coreSystem:setSpread(math.pi/8)      -- Narrower spread
-
-  -- Minimal chaos for stability
-  coreSystem:setRadialAcceleration(-2, 2)
-  coreSystem:setTangentialAcceleration(-5, 5) -- Minimal swirling
-
-  -- Brighter core colors
-  coreSystem:setColors(unpack(eyes.colors.corefire))
-
-  coreSystem:start()
+  configureParticleSystem(coreSystem, {
+    lifetime = { min = 0.3, max = 0.8 },
+    emissionRate = 50,
+    sizeVariation = 0.3,
+    acceleration = { minX = -5, minY = -100, maxX = 5, maxY = -130 },
+    speed = { min = 20, max = 40 },
+    sizes = { 0.4, 0.6, 0.3, 0.1 },
+    direction = -math.pi/2,
+    spread = math.pi/8,
+    radial = { min = -2, max = 2 },
+    tangential = { min = -5, max = 5 },
+    colors = colors.corefire,
+    autostart = true
+  })
 
   -- 3. SPARK SYSTEM - Occasional bright particles shooting upward
   local sparkSystem = love.graphics.newParticleSystem(sparkImg, 30)
-  sparkSystem:setParticleLifetime(0.5, 1.5)  -- Variable lifetime
-  sparkSystem:setEmissionRate(0)  -- We'll control emission manually
-  sparkSystem:setSizeVariation(0.5)
+  configureParticleSystem(sparkSystem, {
+    lifetime = { min = 0.5, max = 1.5 },
+    emissionRate = 0, -- Controlled manually
+    sizeVariation = 0.5,
+    acceleration = { minX = -20, minY = -200, maxX = 20, maxY = -300 },
+    speed = { min = 50, max = 150 },
+    sizes = { 0.6, 0.4, 0.2, 0 },
+    direction = -math.pi/2,
+    spread = math.pi/2,
+    radial = { min = -50, max = 50 },
+    tangential = { min = -20, max = 20 },
+    colors = colors.spark,
+    spin = { min = -2, max = 2 },
+    spinVariation = 1,
+    autostart = false
+  })
 
-  -- Fast upward movement with wider spread
-  sparkSystem:setLinearAcceleration(-20, -200, 20, -300)
-  sparkSystem:setSpeed(50, 150)  -- Fast sparks
-
-  -- Sparks shrink as they rise
-  sparkSystem:setSizes(0.6, 0.4, 0.2, 0)
-
-  -- Wide directional spread for sparks
-  sparkSystem:setDirection(-math.pi/2)
-  sparkSystem:setSpread(math.pi/2)  -- Full spread
-
-  -- Random movement for sparks
-  sparkSystem:setRadialAcceleration(-50, 50)  -- Can move away from center
-  sparkSystem:setTangentialAcceleration(-20, 20)  -- Some swirl
-
-  -- Bright spark colors
-  sparkSystem:setColors(unpack(eyes.colors.spark))
-
-  -- Sparks rotate as they move
-  sparkSystem:setSpin(-2, 2)
-  sparkSystem:setSpinVariation(1)
-
-  -- 4. SMOKE SYSTEM - same as before with minor adjustments
+  -- 4. SMOKE SYSTEM
   local smokeSystem = love.graphics.newParticleSystem(particleImg, 40)
   smokeSystem:setOffset(love.math.random(-5,5), love.math.random(60,90))
-  smokeSystem:setParticleLifetime(1.0, 2.5)
-  smokeSystem:setEmissionRate(15)
-  smokeSystem:setSizeVariation(0.8)
-
-  smokeSystem:setLinearAcceleration(-5, -20, 5, -40)
-  smokeSystem:setSpeed(5, 15)
-
-  smokeSystem:setSizes(0.1, 0.6, 1.0, 1.3)
-  smokeSystem:setDirection(-math.pi/2)
-  smokeSystem:setSpread(math.pi/2)
-  smokeSystem:setRadialAcceleration(-10, 10)
-  smokeSystem:setTangentialAcceleration(-20, 20)
-  smokeSystem:setColors(unpack(eyes.colors.smoke))
-  smokeSystem:setSpin(0.1, 0.8)
-  smokeSystem:setSpinVariation(1.0)
-  smokeSystem:start()
+  configureParticleSystem(smokeSystem, {
+    lifetime = { min = 1.0, max = 2.5 },
+    emissionRate = 15,
+    sizeVariation = 0.8,
+    acceleration = { minX = -5, minY = -20, maxX = 5, maxY = -40 },
+    speed = { min = 5, max = 15 },
+    sizes = { 0.1, 0.6, 1.0, 1.3 },
+    direction = -math.pi/2,
+    spread = math.pi/2,
+    radial = { min = -10, max = 10 },
+    tangential = { min = -20, max = 20 },
+    colors = colors.smoke,
+    spin = { min = 0.1, max = 0.8 },
+    spinVariation = 1,
+    autostart = true
+  })
 
   return fireSystem, coreSystem, sparkSystem, smokeSystem
+end
+
+---Updates the sound state based on eye touching
+---@param state table Current eye state
+---@param sounds table Array of sound sources
+---@param soundState table Sound state tracking
+local function updateSoundState(state, sounds, soundState)
+  local wasTouching = soundState.lastTouchingState
+  local currentTime = love.timer.getTime()
+  local cooldownElapsed = (currentTime - soundState.lastTouchTime) > soundState.touchCooldown
+
+  -- Play a sound if:
+  -- 1. We just started touching an eye, OR
+  -- 2. A sound just finished and we're still touching an eye
+  -- AND in both cases: No sound is playing and cooldown has elapsed
+  if ((state.touching and not wasTouching) or
+      (state.touching and soundState.soundJustFinished)) and
+     not soundState.soundPlaying and cooldownElapsed then
+
+    soundState.soundPlaying = true
+    soundState.soundJustFinished = false -- Reset flag after using it
+    soundState.lastTouchTime = currentTime
+
+    -- Play a random sound and keep track of it
+    soundState.currentSound = playRandomSound(sounds)
+  end
+
+  -- If we're not touching anymore, reset the finished sound flag
+  if not state.touching then
+    soundState.soundJustFinished = false
+  end
+
+  -- Save current touching state for next frame
+  soundState.lastTouchingState = state.touching
+end
+
+---Updates the audio system's volume and position based on cursor position
+---@param ambientFireSound table Table containing left and right channel fire sounds
+---@param x number Current cursor X position
+---@param y number Current cursor Y position
+---@param windowWidth number Width of the window
+---@param windowHeight number Height of the window
+local function updateAudioSystem(ambientFireSound, x, y, windowWidth, windowHeight)
+  if not ambientFireSound then return end
+
+  -- Create a balanced stereo effect with smooth crossfade
+  local normalizedX = x / windowWidth
+
+  -- Calculate smooth volume levels for each channel
+  -- Left channel is louder when cursor is left (normalizedX near 0)
+  -- Right channel is louder when cursor is right (normalizedX near 1)
+  -- Both channels maintain at least 30% volume for continuous stereo sound
+  local leftVolume = math.max(0.3, 1.0 - (normalizedX * 0.7))
+  local rightVolume = math.max(0.3, 0.3 + (normalizedX * 0.7))
+
+  -- Calculate overall volume based on proximity to center
+  local centerX = windowWidth / 2
+  local centerY = windowHeight / 2
+  local distanceFromCenterX = 1.0 - math.abs(x - centerX) / centerX
+  local distanceFromCenterY = 1.0 - math.abs(y - centerY) / centerY
+  local volumeMultiplier = distanceFromCenterX * distanceFromCenterY
+  local baseVolume = 0.5 + (volumeMultiplier * 0.7)
+
+  -- Apply volumes to both channels
+  ambientFireSound.left:setVolume(leftVolume * baseVolume)
+  ambientFireSound.right:setVolume(rightVolume * baseVolume)
 end
 
 ---Loads resources and initializes the eyes
@@ -494,8 +572,8 @@ function eyes.load()
     eyes.online_message = "Online"
   end
 
-  -- Initialize the particle systems
-  eyes.fireSystem, eyes.coreSystem, eyes.sparkSystem, eyes.smokeSystem = initParticleSystem()
+  -- Initialize the particle systems - pass colors as parameter
+  eyes.fireSystem, eyes.coreSystem, eyes.sparkSystem, eyes.smokeSystem = initParticleSystem(eyes.colors)
 
   -- Register particle systems with overlayStats
   overlayStats.registerParticleSystem(eyes.fireSystem)
@@ -522,31 +600,17 @@ function eyes.update(dt)
   local windowWidth = love.graphics.getWidth()
   local windowHeight = love.graphics.getHeight()
 
-  if eyes.ambientFireSound then
-    -- Create a balanced stereo effect with smooth crossfade
-    local normalizedX = eyes.x / windowWidth
+  -- Calculate eye positions once per frame
+  local leftEyeX, rightEyeX, centerY = calculateEyePositions(windowWidth, windowHeight, eyes.eyeSpacing)
+  eyes.eyePositions = {
+    left = leftEyeX,
+    right = rightEyeX,
+    centerY = centerY
+  }
 
-    -- Calculate smooth volume levels for each channel
-    -- Left channel is louder when cursor is left (normalizedX near 0)
-    -- Right channel is louder when cursor is right (normalizedX near 1)
-    -- Both channels maintain at least 30% volume for continuous stereo sound
-    local leftVolume = math.max(0.3, 1.0 - (normalizedX * 0.7))
-    local rightVolume = math.max(0.3, 0.3 + (normalizedX * 0.7))
+  updateAudioSystem(eyes.ambientFireSound, eyes.x, eyes.y, windowWidth, windowHeight)
 
-    -- Calculate overall volume based on proximity to center (same as before)
-    local centerX = windowWidth / 2
-    local centerY = windowHeight / 2
-    local distanceFromCenterX = 1.0 - math.abs(eyes.x - centerX) / centerX
-    local distanceFromCenterY = 1.0 - math.abs(eyes.y - centerY) / centerY
-    local volumeMultiplier = distanceFromCenterX * distanceFromCenterY
-    local baseVolume = 0.5 + (volumeMultiplier * 0.7)
-
-    -- Apply volumes to both channels
-    eyes.ambientFireSound.left:setVolume(leftVolume * baseVolume)
-    eyes.ambientFireSound.right:setVolume(rightVolume * baseVolume)
-  end
-
-  -- Update standard particle systems
+  -- Update particle systems
   eyes.fireSystem:update(dt)
   eyes.fireSystem:setPosition(eyes.x, eyes.y)
 
@@ -556,7 +620,6 @@ function eyes.update(dt)
   eyes.smokeSystem:update(dt)
   eyes.smokeSystem:setPosition(eyes.x, eyes.y)
 
-  -- Update spark system with random emission
   eyes.sparkSystem:update(dt)
   eyes.sparkSystem:setPosition(eyes.x, eyes.y)
 
@@ -572,71 +635,42 @@ function eyes.update(dt)
   end
 
   -- Check sound state - if we have a current sound, check if it's still playing
-  if eyes.currentSound then
-    if not eyes.currentSound:isPlaying() then
+  if eyes.soundState.currentSound then
+    if not eyes.soundState.currentSound:isPlaying() then
       -- Sound finished playing
-      eyes.currentSound = nil
-      eyes.soundPlaying = false
-      eyes.soundJustFinished = true -- Set flag when sound finishes
+      eyes.soundState.currentSound = nil
+      eyes.soundState.soundPlaying = false
+      eyes.soundState.soundJustFinished = true -- Set flag when sound finishes
     end
   end
 
-  -- Handle eye touching and sound effects
-  local centerY = windowHeight / 2
-  local leftEyeX = (windowWidth / 2) - (eyes.eyeSpacing / 2)
-  local rightEyeX = (windowWidth / 2) + (eyes.eyeSpacing / 2)
+  -- Update eye state and process touch detection
+  updateEyeState(eyes.state, eyes.eyePositions, eyes.eyeSize)
 
-  -- Update eye state with position information for touch detection
-  local wasTouching = eyes.state.touching
-  updateEyeState(eyes.state, leftEyeX, rightEyeX, centerY, eyes.eyeSize)
-
-  local currentTime = love.timer.getTime()
-  local cooldownElapsed = (currentTime - eyes.lastTouchTime) > eyes.touchCooldown
-
-  -- Play a sound if:
-  -- 1. We just started touching an eye, OR
-  -- 2. A sound just finished and we're still touching an eye
-  -- AND in both cases: No sound is playing and cooldown has elapsed
-  if ((eyes.state.touching and not wasTouching) or
-      (eyes.state.touching and eyes.soundJustFinished)) and
-     not eyes.soundPlaying and cooldownElapsed then
-
-    eyes.soundPlaying = true
-    eyes.soundJustFinished = false -- Reset flag after using it
-    eyes.lastTouchTime = currentTime
-
-    -- Play a random sound and keep track of it
-    eyes.currentSound = playRandomSound(eyes.sounds)
-  end
-
-  -- If we're not touching anymore, reset the finished sound flag
-  if not eyes.state.touching then
-    eyes.soundJustFinished = false
-  end
+  -- Update sound based on eye state
+  updateSoundState(eyes.state, eyes.sounds, eyes.soundState)
 end
 
 function eyes.draw()
   local windowWidth = love.graphics.getWidth()
   local windowHeight = love.graphics.getHeight()
   local font = love.graphics.getFont()
-  local centerY = windowHeight / 2
-  local leftEyeX = (windowWidth / 2) - (eyes.eyeSpacing / 2)
-  local rightEyeX = (windowWidth / 2) + (eyes.eyeSpacing / 2)
 
   -- Draw background
   love.graphics.setColor(eyes.colors.darkGrey)
   love.graphics.rectangle("fill", 0, 0, windowWidth, windowHeight)
 
-  eyes.shakeX, eyes.shakeY = updateShakeEffect(leftEyeX, rightEyeX, centerY, eyes.eyeSize, eyes.shakeAmount)
+  -- Calculate shake effect
+  eyes.shakeX, eyes.shakeY = updateShakeEffect(eyes.eyePositions, eyes.eyeSize, eyes.shakeAmount)
 
   love.graphics.push()
   love.graphics.translate(eyes.shakeX, eyes.shakeY)
 
-  -- Update eye state with position information for touch detection
-  updateEyeState(eyes.state, leftEyeX, rightEyeX, centerY, eyes.eyeSize)
-
-  drawEye(leftEyeX, centerY, eyes.state.leftEyeWinking, eyes.eyeSize, eyes.colors, eyes.state.touching)
-  drawEye(rightEyeX, centerY, eyes.state.rightEyeWinking, eyes.eyeSize, eyes.colors, eyes.state.touching)
+  -- Draw eyes
+  drawEye(eyes.eyePositions.left, eyes.eyePositions.centerY, eyes.state.leftEyeWinking,
+          eyes.eyeSize, eyes.colors, eyes.state.touching)
+  drawEye(eyes.eyePositions.right, eyes.eyePositions.centerY, eyes.state.rightEyeWinking,
+          eyes.eyeSize, eyes.colors, eyes.state.touching)
 
   drawStatusMessages(windowWidth, windowHeight, font, eyes.state, eyes.colors)
   drawMouseCursor(windowWidth, font, eyes.x, eyes.y, eyes.colors,
