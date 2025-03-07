@@ -53,6 +53,9 @@ local eyes = {
   irisTexture = nil,
   pupilTexture = nil,
 
+  -- Eye shading shader
+  eyeShader = nil,
+
   -- Online status
   online_color = { 1, 0, 0 },
   online_message = "Offline",
@@ -87,6 +90,7 @@ local eyes = {
 -- Constants - Define colors before they're used in functions
 eyes.colors = {
   white = { 1, 1, 1 },
+  shadedWhite = { 0.8, 0.8, 0.9 }, -- Darker shading for more pronounced depth effect
   blue = { 0, 0.5, 0.95 },
   yellow = { 1, 1, 0 },
   orange = { 1, 0.5, 0 },
@@ -250,11 +254,40 @@ local function drawEye(eyeX, eyeY, isWinking, eyeSize, colors, fadeValue,
                        reflectionX, reflectionY, reflectionIntensity, dilationFactor)
   -- Interpolate between white and pink based on fade value
   local eyeColor = interpolateColor(colors.white, colors.lightPink, fadeValue)
+  local shadedEyeColor = interpolateColor(colors.shadedWhite, colors.lightPink, fadeValue)
   local pupilColor = interpolateColor(colors.blue, colors.darkRed, fadeValue)
 
-  -- Draw the eye base with interpolated color
-  love.graphics.setColor(eyeColor)
+  -- Calculate the direction vector from eye to fire/cursor
+  local fireX, fireY = love.mouse.getPosition()
+  local dirX = fireX - eyeX
+  local dirY = fireY - eyeY
+  local length = math.sqrt(dirX * dirX + dirY * dirY)
+
+  -- Normalize direction vector
+  if length > 0 then
+    dirX = dirX / length
+    dirY = dirY / length
+  else
+    dirX, dirY = 0, -1  -- Default direction if cursor is exactly on eye center
+  end
+
+  -- Calculate offset for highlight position (towards the fire/cursor)
+  local highlightOffsetFactor = 0.4 -- Increased from 0.3 for more defined highlight position
+  local highlightX = eyeX + (dirX * eyeSize * highlightOffsetFactor)
+  local highlightY = eyeY + (dirY * eyeSize * highlightOffsetFactor)
+
+  -- Send the values to the shader
+  eyes.eyeShader:send("eyeCenter", {eyeX, eyeY})
+  eyes.eyeShader:send("highlightCenter", {highlightX, highlightY})
+  eyes.eyeShader:send("eyeSize", eyeSize)
+  eyes.eyeShader:send("brightColor", {eyeColor[1], eyeColor[2], eyeColor[3], 1.0})
+  eyes.eyeShader:send("shadedColor", {shadedEyeColor[1], shadedEyeColor[2], shadedEyeColor[3], 1.0})
+
+  -- Draw the eye base with shader for gradient effect
+  love.graphics.setShader(eyes.eyeShader)
+  love.graphics.setColor(1, 1, 1, 1) -- Set to white with full alpha for proper shader application
   love.graphics.circle("fill", eyeX, eyeY, eyeSize)
+  love.graphics.setShader()
 
   -- Draw blood veins if texture is loaded with opacity based on fade value
   if eyes.bloodVeinsTexture and fadeValue > 0 then
@@ -840,6 +873,42 @@ function eyes.load()
   -- Load eye textures
   eyes.irisTexture = love.graphics.newImage("eyes/gfx/iris.png")
   eyes.pupilTexture = love.graphics.newImage("eyes/gfx/pupil.png")
+
+  -- Create eye shader for spherical gradient effect
+  local shaderCode = [[
+    uniform vec2 eyeCenter;
+    uniform vec2 highlightCenter;
+    uniform float eyeSize;
+    uniform vec4 brightColor;
+    uniform vec4 shadedColor;
+
+    vec4 effect(vec4 color, Image texture, vec2 texture_coords, vec2 screen_coords) {
+      // Calculate distance from current pixel to eye center
+      float dist = distance(screen_coords, eyeCenter);
+
+      // Only apply effect within the eye circle
+      if (dist > eyeSize) {
+        return vec4(0.0, 0.0, 0.0, 0.0); // Transparent outside the eye
+      }
+
+      // Calculate normalized distance from highlight center (0-1)
+      float highlightDist = distance(screen_coords, highlightCenter) / eyeSize;
+
+      // Create a more pronounced gradient curve that's brightest at highlight center
+      // and more strongly shadows the edges
+      float gradientFactor = smoothstep(0.0, 1.3, highlightDist); // Adjusted from 1.5 to 1.3
+
+      // Add a slight power curve to enhance the 3D effect
+      gradientFactor = pow(gradientFactor, 1.2);
+
+      // Interpolate between bright and shaded colors
+      vec4 finalColor = mix(brightColor, shadedColor, gradientFactor);
+
+      // Preserve the incoming alpha value from the love.graphics.setColor call
+      return vec4(finalColor.rgb, color.a);
+    }
+  ]]
+  eyes.eyeShader = love.graphics.newShader(shaderCode)
 
   -- Initialize the particle systems - pass colors as parameter
   eyes.fireSystem, eyes.coreSystem, eyes.sparkSystem, eyes.smokeSystem = initParticleSystem(eyes.colors)
