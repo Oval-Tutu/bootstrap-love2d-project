@@ -7,6 +7,7 @@ local eyes = {
   eyeSize = 128,
   eyeSpacing = 320,
   shakeAmount = 5,
+  fadeSpeed = 2, -- Speed of color fade transition (units per second)
 
   -- State variables
   shakeX = 0,
@@ -14,6 +15,10 @@ local eyes = {
   x = 0,
   y = 0,
   eyePositions = { left = 0, right = 0, centerY = 0 },
+
+  -- Fade state (0 = normal, 1 = fully touched)
+  eyeFadeLeft = 0,
+  eyeFadeRight = 0,
 
   -- Online status
   online_color = { 1, 0, 0 },
@@ -94,7 +99,9 @@ eyes.state = {
   leftEyeWinking = false,
   rightEyeWinking = false,
   bothBlinking = false,
-  touching = false
+  touching = false,
+  touchingLeft = false, -- Track left eye touch specifically
+  touchingRight = false -- Track right eye touch specifically
 }
 
 -- Private functions defined as locals
@@ -108,6 +115,20 @@ local function isMouseOverEye(eyeX, eyeY, eyeSize)
   local mouseY = love.mouse.getY()
   local distance = math.sqrt((mouseX - eyeX) ^ 2 + (mouseY - eyeY) ^ 2)
   return distance < eyeSize
+end
+
+---Interpolates between two colors based on a factor (0 to 1)
+---@param color1 table First color {r, g, b}
+---@param color2 table Second color {r, g, b}
+---@param factor number Interpolation factor (0 = color1, 1 = color2)
+---@return table Interpolated color {r, g, b}
+local function interpolateColor(color1, color2, factor)
+  factor = math.max(0, math.min(1, factor)) -- Clamp factor between 0 and 1
+  return {
+    color1[1] + (color2[1] - color1[1]) * factor,
+    color1[2] + (color2[2] - color1[2]) * factor,
+    color1[3] + (color2[3] - color1[3]) * factor
+  }
 end
 
 ---Calculates the eye positions based on window dimensions
@@ -182,34 +203,39 @@ end
 ---@param isWinking boolean Whether the eye is winking
 ---@param eyeSize number The size of the eye
 ---@param colors table Color definitions
----@param isTouching boolean Whether any eye is being touched
-local function drawEye(eyeX, eyeY, isWinking, eyeSize, colors, isTouching)
-  -- Draw the eye base with appropriate color
-  love.graphics.setColor(isTouching and colors.lightPink or colors.white)
+---@param fadeValue number The fade progress (0-1) from white to pink
+local function drawEye(eyeX, eyeY, isWinking, eyeSize, colors, fadeValue)
+  -- Interpolate between white and pink based on fade value
+  local eyeColor = interpolateColor(colors.white, colors.lightPink, fadeValue)
+  local pupilColor = interpolateColor(colors.blue, colors.darkRed, fadeValue)
+
+  -- Draw the eye base with interpolated color
+  love.graphics.setColor(eyeColor)
   love.graphics.circle("fill", eyeX, eyeY, eyeSize)
 
   -- Draw either the winking line or the pupil
-  love.graphics.setColor(isTouching and colors.darkRed or colors.blue)
+  love.graphics.setColor(pupilColor)
   if isWinking then
     love.graphics.setLineWidth(8)
     love.graphics.line(eyeX - eyeSize, eyeY, eyeX + eyeSize, eyeY)
   else
-    local pupilX, pupilY
-    if (isTouching) then
-      -- Random oscillation around the center when any eye is being touched
-      local oscillationRange = eyeSize / 16
-      pupilX = eyeX + love.math.random(-oscillationRange, oscillationRange)
-      pupilY = eyeY + love.math.random(-oscillationRange, oscillationRange)
-    else
-      -- Normal eye tracking behavior
-      local distanceX = love.mouse.getX() - eyeX
-      local distanceY = love.mouse.getY() - eyeY
-      local distance = math.min(math.sqrt(distanceX ^ 2 + distanceY ^ 2), eyeSize / 2)
-      local angle = math.atan2(distanceY, distanceX)
+    -- Calculate tracking position (where pupil would be when tracking mouse)
+    local distanceX = love.mouse.getX() - eyeX
+    local distanceY = love.mouse.getY() - eyeY
+    local distance = math.min(math.sqrt(distanceX^2 + distanceY^2), eyeSize / 2)
+    local angle = math.atan2(distanceY, distanceX)
 
-      pupilX = eyeX + (math.cos(angle) * distance)
-      pupilY = eyeY + (math.sin(angle) * distance)
-    end
+    local trackingX = eyeX + (math.cos(angle) * distance)
+    local trackingY = eyeY + (math.sin(angle) * distance)
+
+    -- Calculate oscillation position (where pupil would be when eye is touched)
+    local oscillationRange = eyeSize / 16
+    local oscillationX = eyeX + love.math.random(-oscillationRange, oscillationRange)
+    local oscillationY = eyeY + love.math.random(-oscillationRange, oscillationRange)
+
+    -- Interpolate between tracking and oscillation based on fade value
+    local pupilX = trackingX + (oscillationX - trackingX) * fadeValue
+    local pupilY = trackingY + (oscillationY - trackingY) * fadeValue
 
     love.graphics.circle("fill", pupilX, pupilY, 16)
   end
@@ -322,9 +348,10 @@ local function updateEyeState(state, eyePositions, eyeSize)
   state.leftEyeWinking = state.bothBlinking or (leftButton and not state.bothBlinking)
   state.rightEyeWinking = state.bothBlinking or (rightButton and not state.bothBlinking)
 
-  -- Check if either eye is being touched
-  state.touching = isMouseOverEye(eyePositions.left, eyePositions.centerY, eyeSize) or
-                   isMouseOverEye(eyePositions.right, eyePositions.centerY, eyeSize)
+  -- Check touches for each eye individually
+  state.touchingLeft = isMouseOverEye(eyePositions.left, eyePositions.centerY, eyeSize)
+  state.touchingRight = isMouseOverEye(eyePositions.right, eyePositions.centerY, eyeSize)
+  state.touching = state.touchingLeft or state.touchingRight
 end
 
 ---Updates the shake effect when mouse is over eyes
@@ -608,6 +635,22 @@ function eyes.update(dt)
     centerY = centerY
   }
 
+  -- Update eye state and process touch detection
+  updateEyeState(eyes.state, eyes.eyePositions, eyes.eyeSize)
+
+  -- Update fade values based on touch state with smooth transitions
+  if eyes.state.touchingLeft then
+    eyes.eyeFadeLeft = math.min(1, eyes.eyeFadeLeft + dt * eyes.fadeSpeed)
+  else
+    eyes.eyeFadeLeft = math.max(0, eyes.eyeFadeLeft - dt * eyes.fadeSpeed)
+  end
+
+  if eyes.state.touchingRight then
+    eyes.eyeFadeRight = math.min(1, eyes.eyeFadeRight + dt * eyes.fadeSpeed)
+  else
+    eyes.eyeFadeRight = math.max(0, eyes.eyeFadeRight - dt * eyes.fadeSpeed)
+  end
+
   updateAudioSystem(eyes.ambientFireSound, eyes.x, eyes.y, windowWidth, windowHeight)
 
   -- Update particle systems
@@ -644,9 +687,6 @@ function eyes.update(dt)
     end
   end
 
-  -- Update eye state and process touch detection
-  updateEyeState(eyes.state, eyes.eyePositions, eyes.eyeSize)
-
   -- Update sound based on eye state
   updateSoundState(eyes.state, eyes.sounds, eyes.soundState)
 end
@@ -666,11 +706,11 @@ function eyes.draw()
   love.graphics.push()
   love.graphics.translate(eyes.shakeX, eyes.shakeY)
 
-  -- Draw eyes
+  -- Draw eyes with their respective fade values
   drawEye(eyes.eyePositions.left, eyes.eyePositions.centerY, eyes.state.leftEyeWinking,
-          eyes.eyeSize, eyes.colors, eyes.state.touching)
+          eyes.eyeSize, eyes.colors, eyes.eyeFadeLeft)
   drawEye(eyes.eyePositions.right, eyes.eyePositions.centerY, eyes.state.rightEyeWinking,
-          eyes.eyeSize, eyes.colors, eyes.state.touching)
+          eyes.eyeSize, eyes.colors, eyes.eyeFadeRight)
 
   drawStatusMessages(windowWidth, windowHeight, font, eyes.state, eyes.colors)
   drawMouseCursor(windowWidth, font, eyes.x, eyes.y, eyes.colors,
