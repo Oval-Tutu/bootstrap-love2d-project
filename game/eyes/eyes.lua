@@ -4,6 +4,173 @@ local audio = require("eyes.audio")
 local fire = require("eyes.fire")
 local shadows = require("eyes.shadows")
 
+---@class Eye Represents a single eye with all its properties
+---@field x number X-coordinate of the eye
+---@field y number Y-coordinate of the eye
+---@field size number Size of the eye
+---@field fade number Current fade state (0-1)
+---@field floatOffset table {x=number, y=number} Current floating offsets
+---@field velocity table {x=number, y=number} Current attraction velocity
+---@field attractOffset table {x=number, y=number} Current attraction offset
+---@field reflection table {intensity=number, x=number, y=number} Reflection properties
+---@field pupilDilation number Current pupil dilation value (0-1)
+---@field isTouching boolean Whether the eye is currently being touched
+local Eye = {}
+Eye.__index = Eye
+
+---Creates a new Eye instance
+---@param id string Eye identifier (e.g. "left", "right")
+---@param x number Initial X position
+---@param y number Initial Y position
+---@param size number Eye size
+---@param phaseX number Initial phase for X floating
+---@param phaseY number Initial phase for Y floating
+---@return Eye
+function Eye.new(id, x, y, size, phaseX, phaseY)
+  local self = setmetatable({}, Eye)
+  self.id = id
+  self.x = x
+  self.y = y
+  self.baseX = x -- Store the base position
+  self.baseY = y
+  self.size = size
+  self.fade = 0
+  self.floatOffset = {x = 0, y = 0}
+  self.velocity = {x = 0, y = 0}
+  self.attractOffset = {x = 0, y = 0}
+  self.phaseX = phaseX
+  self.phaseY = phaseY
+  self.reflection = {
+    intensity = 0,
+    x = 0,
+    y = 0
+  }
+  self.pupilDilation = 0
+  self.isTouching = false
+  return self
+end
+
+---Updates the position of the eye based on base position and float offset
+---@return number x The actual X position
+---@return number y The actual Y position
+function Eye:getPosition()
+  return self.baseX + self.floatOffset.x,
+         self.baseY + self.floatOffset.y
+end
+
+---Sets the base position for the eye
+---@param x number Base X position
+---@param y number Base Y position
+function Eye:setBasePosition(x, y)
+  self.baseX = x
+  self.baseY = y
+end
+
+---Updates the floating effect for this eye
+---@param dt number Delta time
+---@param timeX number Global time X
+---@param timeY number Global time Y
+---@param config table Floating configuration
+---@param attractionPoint table {x=number, y=number} Point of attraction (e.g. mouse/fire position)
+function Eye:updateFloating(dt, timeX, timeY, config, attractionPoint)
+  -- Calculate basic floating motion with independent X and Y oscillation
+  local floatX = math.sin(timeX + self.phaseX) * config.amplitudeX
+  local floatY = math.sin(timeY + self.phaseY) * config.amplitudeY
+
+  -- Apply damping to current velocities
+  self.velocity.x = self.velocity.x * config.dampingFactor
+  self.velocity.y = self.velocity.y * config.dampingFactor
+
+  -- Get the current actual position
+  local eyeX, eyeY = self:getPosition()
+
+  -- Calculate distance to attraction point
+  local dx = attractionPoint.x - eyeX
+  local dy = attractionPoint.y - eyeY
+  local distance = math.sqrt(dx * dx + dy * dy)
+
+  -- Apply attraction force if within range
+  if distance < config.attractionRange then
+    -- Normalize direction vector
+    local normalizedX = dx / distance
+    local normalizedY = dy / distance
+
+    -- Calculate attraction strength based on distance (stronger when closer)
+    local strengthFactor = 1.0 - (distance / config.attractionRange)
+    local attractForce = strengthFactor * config.attractionStrength
+
+    -- Apply acceleration to velocity (limited by maxAttractionForce)
+    local accelerationX = normalizedX * attractForce
+    local accelerationY = normalizedY * attractForce
+
+    self.velocity.x = self.velocity.x + accelerationX * dt
+    self.velocity.y = self.velocity.y + accelerationY * dt
+
+    -- Clamp maximum velocity
+    local maxVel = config.maxAttractionForce * dt
+    local velLength = math.sqrt(self.velocity.x^2 + self.velocity.y^2)
+    if velLength > maxVel then
+      local factor = maxVel / velLength
+      self.velocity.x = self.velocity.x * factor
+      self.velocity.y = self.velocity.y * factor
+    end
+  end
+
+  -- Update attraction offsets using velocities
+  self.attractOffset.x = self.attractOffset.x + self.velocity.x
+  self.attractOffset.y = self.attractOffset.y + self.velocity.y
+
+  -- Combine oscillation with attraction offset
+  self.floatOffset.x = floatX + self.attractOffset.x
+  self.floatOffset.y = floatY + self.attractOffset.y
+end
+
+---Checks if a point is over this eye
+---@param x number X coordinate of the point
+---@param y number Y coordinate of the point
+---@return boolean isOver True if the point is over this eye
+function Eye:isPointOver(x, y)
+  local eyeX, eyeY = self:getPosition()
+  local distance = math.sqrt((x - eyeX)^2 + (y - eyeY)^2)
+  return distance < self.size
+end
+
+---Updates the touch state and fade value
+---@param dt number Delta time
+---@param isTouched boolean Whether the eye is being touched
+---@param fadeSpeed number Speed at which fade changes
+function Eye:updateTouchState(dt, isTouched, fadeSpeed)
+  self.isTouching = isTouched
+
+  if isTouched then
+    self.fade = math.min(1, self.fade + dt * fadeSpeed)
+  else
+    self.fade = math.max(0, self.fade - dt * fadeSpeed)
+  end
+end
+
+---Updates the reflection properties
+---@param targetIntensity number Target reflection intensity
+---@param x number Reflection X position
+---@param y number Reflection Y position
+---@param fadeSpeed number Speed at which reflection fades
+---@param dt number Delta time
+function Eye:updateReflection(targetIntensity, x, y, fadeSpeed, dt)
+  self.reflection.intensity = self.reflection.intensity +
+    (targetIntensity - self.reflection.intensity) * dt * fadeSpeed
+  self.reflection.x = x
+  self.reflection.y = y
+end
+
+---Updates the pupil dilation
+---@param targetDilation number Target pupil dilation
+---@param fadeSpeed number Speed at which dilation changes
+---@param dt number Delta time
+function Eye:updatePupilDilation(targetDilation, fadeSpeed, dt)
+  self.pupilDilation = self.pupilDilation +
+    (targetDilation - self.pupilDilation) * dt * fadeSpeed
+end
+
 -- The public module
 local eyes = {
   -- Configuration
@@ -17,7 +184,9 @@ local eyes = {
   shakeY = 0,
   x = 0,
   y = 0,
-  eyePositions = { left = 0, right = 0, centerY = 0 },
+
+  -- Eyes collection
+  eyes = {},
 
   -- Floating effect configuration
   floating = {
@@ -27,11 +196,6 @@ local eyes = {
     -- Maximum float distance from origin
     amplitudeX = 15,
     amplitudeY = 10,
-    -- Phase offset for horizontal and vertical oscillations
-    phaseLeftX = 0,
-    phaseLeftY = math.pi * 0.5, -- Added phase difference between X and Y
-    phaseRightX = math.pi * 0.7, -- Independent right eye phase
-    phaseRightY = math.pi * 0.3, -- Independent right eye phase
     -- Time accumulator for animation
     timeX = 0,
     timeY = 0,
@@ -40,40 +204,10 @@ local eyes = {
     attractionRange = 400,       -- Maximum distance at which attraction has an effect
     maxAttractionForce = 0.4,    -- Maximum force of attraction per second
     dampingFactor = 0.85,        -- How quickly attraction velocity decays
-
-    -- Current attraction velocities for each eye
-    velocityLeftX = 0,
-    velocityLeftY = 0,
-    velocityRightX = 0,
-    velocityRightY = 0,
-
-    -- Attraction offset (separate from oscillation)
-    attractOffsetLeftX = 0,
-    attractOffsetLeftY = 0,
-    attractOffsetRightX = 0,
-    attractOffsetRightY = 0
   },
-
-  -- Current floating offsets for each eye
-  floatOffset = {
-    leftX = 0,
-    leftY = 0,
-    rightX = 0,
-    rightY = 0
-  },
-
-  -- Fade state (0 = normal, 1 = fully touched)
-  eyeFadeLeft = 0,
-  eyeFadeRight = 0,
 
   -- Reflection state for fire effects
   reflection = {
-    leftIntensity = 0,
-    rightIntensity = 0,
-    leftX = 0,
-    leftY = 0,
-    rightX = 0,
-    rightY = 0,
     fadeSpeed = 3,      -- How quickly reflection fades in/out
     maxIntensity = 0.9, -- Maximum reflection intensity (increased for visibility)
     minDistance = 80,   -- Minimum distance for reflection to appear
@@ -83,8 +217,6 @@ local eyes = {
 
   -- Pupil dilation state (responds to fire proximity)
   pupilDilation = {
-    left = 0,
-    right = 0,
     fadeSpeed = 2.5,       -- Speed of dilation transitions
     maxDilation = 0.30,    -- Maximum additional size factor (30% larger)
     minDistance = 100,     -- Distance at which maximum dilation occurs
@@ -124,23 +256,9 @@ eyes.colors = {
 -- Eye state
 eyes.state = {
   touching = false,
-  touchingLeft = false,
-  touchingRight = false
 }
 
 -- Private functions defined as locals
----Checks if the mouse is over an eye
----@param eyeX number The x-coordinate of the eye
----@param eyeY number The y-coordinate of the eye
----@param eyeSize number The size of the eye
----@return boolean isOver True if mouse is over the eye
-local function isMouseOverEye(eyeX, eyeY, eyeSize)
-  local mouseX = love.mouse.getX()
-  local mouseY = love.mouse.getY()
-  local distance = math.sqrt((mouseX - eyeX) ^ 2 + (mouseY - eyeY) ^ 2)
-  return distance < eyeSize
-end
-
 ---Interpolates between two colors based on a factor (0 to 1)
 ---@param color1 table First color {r, g, b}
 ---@param color2 table Second color {r, g, b}
@@ -169,145 +287,19 @@ local function calculateEyePositions(windowWidth, windowHeight, eyeSpacing)
   return leftEyeX, rightEyeX, centerY
 end
 
----Calculates the floating offset for an eye
----@param timeX number Current time accumulator for X axis
----@param timeY number Current time accumulator for Y axis
----@param phaseX number Phase offset for X axis
----@param phaseY number Phase offset for Y axis
----@param amplitudeX number Max amplitude for X axis
----@param amplitudeY number Max amplitude for Y axis
----@param attractionFactor number Factor of attraction towards fire (0-1)
----@param attractionVector table {x, y} normalized vector towards fire
----@return number offsetX Resulting X offset
----@return number offsetY Resulting Y offset
-local function calculateFloatingOffset(timeX, timeY, phaseX, phaseY, amplitudeX, amplitudeY, attractionFactor, attractionVector)
-  -- Calculate basic floating motion with independent X and Y oscillation
-  local floatX = math.sin(timeX + phaseX) * amplitudeX
-  local floatY = math.sin(timeY + phaseY) * amplitudeY
-
-  -- Add attraction component
-  local attractX = attractionVector.x * attractionFactor * amplitudeX * 1.5
-  local attractY = attractionVector.y * attractionFactor * amplitudeY * 1.5
-
-  -- Fixed: attractY now properly uses attractY instead of attractX
-  return floatX + attractX, floatY + attractY
-end
-
----Updates the floating effect timing and offsets
----@param dt number Delta time since last frame
----@param eyePositions table Eye positions {left, right, centerY}
----@param floating table Floating configuration and state
----@param mouseX number Current mouse X position
----@param mouseY number Current mouse Y position
----@return table offsets Table with calculated offsets for both eyes
-local function updateFloatingEffect(dt, eyePositions, floating, mouseX, mouseY)
-  -- Update time accumulators for continuous animation
-  floating.timeX = (floating.timeX + dt * floating.speedX) % (2 * math.pi)
-  floating.timeY = (floating.timeY + dt * floating.speedY) % (2 * math.pi)
-
-  local offsets = {}
-
-  -- Calculate attraction vectors for both eyes
-  local leftAttractionVector = {x = 0, y = 0}
-  local rightAttractionVector = {x = 0, y = 0}
-
-  -- Calculate distance to cursor/fire for each eye
-  local leftDx = mouseX - (eyePositions.left + floating.attractOffsetLeftX)
-  local leftDy = mouseY - (eyePositions.centerY + floating.attractOffsetLeftY)
-  local leftDistance = math.sqrt(leftDx * leftDx + leftDy * leftDy)
-
-  local rightDx = mouseX - (eyePositions.right + floating.attractOffsetRightX)
-  local rightDy = mouseY - (eyePositions.centerY + floating.attractOffsetRightY)
-  local rightDistance = math.sqrt(rightDx * rightDx + rightDy * rightDy)
-
-  -- Apply damping to current velocities
-  floating.velocityLeftX = floating.velocityLeftX * floating.dampingFactor
-  floating.velocityLeftY = floating.velocityLeftY * floating.dampingFactor
-  floating.velocityRightX = floating.velocityRightX * floating.dampingFactor
-  floating.velocityRightY = floating.velocityRightY * floating.dampingFactor
-
-  -- Gradually calculate attraction force
-  if leftDistance < floating.attractionRange then
-    -- Normalize direction vector
-    local normalizedLeftX = leftDx / leftDistance
-    local normalizedLeftY = leftDy / leftDistance
-
-    -- Calculate attraction strength based on distance (stronger when closer)
-    local strengthFactor = 1.0 - (leftDistance / floating.attractionRange)
-    local attractForce = strengthFactor * floating.attractionStrength
-
-    -- Apply acceleration to velocity (limited by maxAttractionForce)
-    local accelerationX = normalizedLeftX * attractForce
-    local accelerationY = normalizedLeftY * attractForce
-
-    floating.velocityLeftX = floating.velocityLeftX + accelerationX * dt
-    floating.velocityLeftY = floating.velocityLeftY + accelerationY * dt
-
-    -- Clamp maximum velocity
-    local maxVel = floating.maxAttractionForce * dt
-    local velLength = math.sqrt(floating.velocityLeftX^2 + floating.velocityLeftY^2)
-    if velLength > maxVel then
-      local factor = maxVel / velLength
-      floating.velocityLeftX = floating.velocityLeftX * factor
-      floating.velocityLeftY = floating.velocityLeftY * factor
-    end
-  end
-
-  -- Apply same velocity-based attraction for right eye
-  if rightDistance < floating.attractionRange then
-    local normalizedRightX = rightDx / rightDistance
-    local normalizedRightY = rightDy / rightDistance
-
-    local strengthFactor = 1.0 - (rightDistance / floating.attractionRange)
-    local attractForce = strengthFactor * floating.attractionStrength
-
-    floating.velocityRightX = floating.velocityRightX + normalizedRightX * attractForce * dt
-    floating.velocityRightY = floating.velocityRightY + normalizedRightY * attractForce * dt
-
-    -- Clamp maximum velocity
-    local maxVel = floating.maxAttractionForce * dt
-    local velLength = math.sqrt(floating.velocityRightX^2 + floating.velocityRightY^2)
-    if velLength > maxVel then
-      local factor = maxVel / velLength
-      floating.velocityRightX = floating.velocityRightX * factor
-      floating.velocityRightY = floating.velocityRightY * factor
-    end
-  end
-
-  -- Update attraction offsets using velocities
-  floating.attractOffsetLeftX = floating.attractOffsetLeftX + floating.velocityLeftX
-  floating.attractOffsetLeftY = floating.attractOffsetLeftY + floating.velocityLeftY
-  floating.attractOffsetRightX = floating.attractOffsetRightX + floating.velocityRightX
-  floating.attractOffsetRightY = floating.attractOffsetRightY + floating.velocityRightY
-
-  -- Calculate oscillation component
-  local leftOscX = math.sin(floating.timeX + floating.phaseLeftX) * floating.amplitudeX
-  local leftOscY = math.sin(floating.timeY + floating.phaseLeftY) * floating.amplitudeY
-  local rightOscX = math.sin(floating.timeX + floating.phaseRightX) * floating.amplitudeX
-  local rightOscY = math.sin(floating.timeY + floating.phaseRightY) * floating.amplitudeY
-
-  -- Combine oscillation with attraction offset
-  offsets.leftX = leftOscX + floating.attractOffsetLeftX
-  offsets.leftY = leftOscY + floating.attractOffsetLeftY
-  offsets.rightX = rightOscX + floating.attractOffsetRightX
-  offsets.rightY = rightOscY + floating.attractOffsetRightY
-
-  return offsets
-end
-
 ---Draws a single eye
----@param eyeX number The x-coordinate of the eye
----@param eyeY number The y-coordinate of the eye
----@param eyeSize number The size of the eye
+---@param eye Eye The eye to draw
 ---@param colors table Color definitions
----@param fadeValue number The fade progress (0-1) from white to pink
----@param reflectionX number X position of the fire reflection
----@param reflectionY number Y position of the fire reflection
----@param reflectionIntensity number Intensity of the fire reflection (0-1)
----@param dilationFactor number Pupil dilation factor (0-1, with 1 being most dilated)
 ---@param isOnline boolean Whether the system is online
-local function drawEye(eyeX, eyeY, eyeSize, colors, fadeValue,
-                       reflectionX, reflectionY, reflectionIntensity, dilationFactor, isOnline)
+local function drawEye(eye, colors, isOnline)
+  local eyeX, eyeY = eye:getPosition()
+  local eyeSize = eye.size
+  local fadeValue = eye.fade
+  local reflectionIntensity = eye.reflection.intensity
+  local reflectionX = eye.reflection.x
+  local reflectionY = eye.reflection.y
+  local dilationFactor = eye.pupilDilation
+
   -- Interpolate between white and pink based on fade value
   local eyeColor = interpolateColor(colors.white, colors.lightPink, fadeValue)
   local shadedEyeColor = interpolateColor(colors.shadedWhite, colors.lightPink, fadeValue)
@@ -506,35 +498,12 @@ local function checkOnlineStatus()
   return success and result and result.code and result.code < 400
 end
 
----Updates the eye state based on input and cursor position
----@param state table Current eye state reference
----@param eyePositions table Table with eye position data
----@param eyeSize number The size of the eye
----@param floatOffset table Floating offsets for each eye
-local function updateEyeState(state, eyePositions, eyeSize, floatOffset)
-  -- Check touches for each eye individually, using floating positions
-  state.touchingLeft = isMouseOverEye(
-    eyePositions.left + floatOffset.leftX,
-    eyePositions.centerY + floatOffset.leftY,
-    eyeSize
-  )
-  state.touchingRight = isMouseOverEye(
-    eyePositions.right + floatOffset.rightX,
-    eyePositions.centerY + floatOffset.rightY,
-    eyeSize
-  )
-  state.touching = state.touchingLeft or state.touchingRight
-end
-
 ---Updates the shake effect when mouse is over eyes
----@param eyePositions table Table with eye position data
----@param eyeSize number The size of the eye
 ---@param shakeAmount number Maximum shake amount
 ---@return number shakeX Resulting X shake value
 ---@return number shakeY Resulting Y shake value
-local function updateShakeEffect(eyePositions, eyeSize, shakeAmount)
-  if isMouseOverEye(eyePositions.left, eyePositions.centerY, eyeSize) or
-     isMouseOverEye(eyePositions.right, eyePositions.centerY, eyeSize) then
+local function updateShakeEffect(shakeAmount)
+  if eyes.state.touching then
     return love.math.random(-shakeAmount, shakeAmount), love.math.random(-shakeAmount, shakeAmount)
   else
     return 0, 0
@@ -596,6 +565,19 @@ function eyes.load()
   ]]
   eyes.eyeShader = love.graphics.newShader(shaderCode)
 
+  -- Create our eye instances
+  local windowWidth, windowHeight = love.graphics.getDimensions()
+  local leftX, rightX, centerY = calculateEyePositions(windowWidth, windowHeight, eyes.eyeSpacing)
+
+  -- Create eyes with their appropriate phases
+  eyes.eyes.left = Eye.new("left", leftX, centerY, eyes.eyeSize,
+                          eyes.floating.phaseLeftX or 0,
+                          eyes.floating.phaseLeftY or math.pi * 0.5)
+
+  eyes.eyes.right = Eye.new("right", rightX, centerY, eyes.eyeSize,
+                           eyes.floating.phaseRightX or math.pi * 0.7,
+                           eyes.floating.phaseRightY or math.pi * 0.3)
+
   love.graphics.setFont(love.graphics.newFont(42))
   love.mouse.setVisible(false)
 end
@@ -614,131 +596,105 @@ function eyes.update(dt)
 
   -- Calculate base eye positions once per frame
   local leftEyeX, rightEyeX, centerY = calculateEyePositions(windowWidth, windowHeight, eyes.eyeSpacing)
-  eyes.eyePositions = {
-    left = leftEyeX,
-    right = rightEyeX,
-    centerY = centerY
-  }
 
-  -- Update floating effect before eye state check
-  local floatOffsets = updateFloatingEffect(dt, eyes.eyePositions, eyes.floating, eyes.x, eyes.y)
-  eyes.floatOffset.leftX = floatOffsets.leftX
-  eyes.floatOffset.leftY = floatOffsets.leftY
-  eyes.floatOffset.rightX = floatOffsets.rightX
-  eyes.floatOffset.rightY = floatOffsets.rightY
+  -- Update base positions for our eye objects
+  eyes.eyes.left:setBasePosition(leftEyeX, centerY)
+  eyes.eyes.right:setBasePosition(rightEyeX, centerY)
 
-  -- Update eye state and process touch detection with floating positions
-  updateEyeState(eyes.state, eyes.eyePositions, eyes.eyeSize, eyes.floatOffset)
+  -- Update floating time accumulators
+  eyes.floating.timeX = (eyes.floating.timeX + dt * eyes.floating.speedX) % (2 * math.pi)
+  eyes.floating.timeY = (eyes.floating.timeY + dt * eyes.floating.speedY) % (2 * math.pi)
 
-  -- Update fade values based on touch state with smooth transitions
-  if eyes.state.touchingLeft then
-    eyes.eyeFadeLeft = math.min(1, eyes.eyeFadeLeft + dt * eyes.fadeSpeed)
-  else
-    eyes.eyeFadeLeft = math.max(0, eyes.eyeFadeLeft - dt * eyes.fadeSpeed)
-  end
+  -- Update floating effect for each eye
+  local mousePos = {x = eyes.x, y = eyes.y}
+  eyes.eyes.left:updateFloating(dt, eyes.floating.timeX, eyes.floating.timeY, eyes.floating, mousePos)
+  eyes.eyes.right:updateFloating(dt, eyes.floating.timeX, eyes.floating.timeY, eyes.floating, mousePos)
 
-  if eyes.state.touchingRight then
-    eyes.eyeFadeRight = math.min(1, eyes.eyeFadeRight + dt * eyes.fadeSpeed)
-  else
-    eyes.eyeFadeRight = math.max(0, eyes.eyeFadeRight - dt * eyes.fadeSpeed)
-  end
+  -- Update touch detection for each eye
+  eyes.eyes.left:updateTouchState(dt, eyes.eyes.left:isPointOver(eyes.x, eyes.y), eyes.fadeSpeed)
+  eyes.eyes.right:updateTouchState(dt, eyes.eyes.right:isPointOver(eyes.x, eyes.y), eyes.fadeSpeed)
+
+  -- Update overall touch state
+  eyes.state.touching = eyes.eyes.left.isTouching or eyes.eyes.right.isTouching
 
   -- Update audio system with current state and cursor position
-  audio:update(dt, eyes.state, eyes.x, eyes.y)
+  audio:update(dt, {
+    touching = eyes.state.touching,
+    touchingLeft = eyes.eyes.left.isTouching,
+    touchingRight = eyes.eyes.right.isTouching
+  }, eyes.x, eyes.y)
 
   -- Update fire module with current mouse position
   fire.update(dt, eyes.x, eyes.y)
 
-  -- Calculate target reflection properties using the fire module
-  -- Use the actual floating eye positions for reflection calculations
+  -- Calculate and update reflections for both eyes
+  local leftEyeX, leftEyeY = eyes.eyes.left:getPosition()
+  local rightEyeX, rightEyeY = eyes.eyes.right:getPosition()
+
   local leftIntensityTarget, rightIntensityTarget, leftX, leftY, rightX, rightY =
     fire.calculateReflectionProperties(
       eyes.x, eyes.y,
-      leftEyeX + eyes.floatOffset.leftX,
-      rightEyeX + eyes.floatOffset.rightX,
-      centerY + eyes.floatOffset.leftY, -- Using left Y offset for the left eye
+      leftEyeX, rightEyeX, leftEyeY,
       eyes.eyeSize, eyes.reflection
     )
 
-  -- Smoothly transition reflection intensity
-  eyes.reflection.leftIntensity = eyes.reflection.leftIntensity +
-    (leftIntensityTarget - eyes.reflection.leftIntensity) * dt * eyes.reflection.fadeSpeed
+  eyes.eyes.left:updateReflection(
+    leftIntensityTarget, leftX, leftY,
+    eyes.reflection.fadeSpeed, dt
+  )
 
-  eyes.reflection.rightIntensity = eyes.reflection.rightIntensity +
-    (rightIntensityTarget - eyes.reflection.rightIntensity) * dt * eyes.reflection.fadeSpeed
+  eyes.eyes.right:updateReflection(
+    rightIntensityTarget, rightX, rightY,
+    eyes.reflection.fadeSpeed, dt
+  )
 
-  -- Update reflection positions
-  eyes.reflection.leftX = leftX
-  eyes.reflection.leftY = leftY
-  eyes.reflection.rightX = rightX
-  eyes.reflection.rightY = rightY
-
-  -- Calculate target pupil dilation based on fire proximity using the fire module
-  -- Use the actual floating eye positions for dilation calculations
+  -- Calculate and update pupil dilation for both eyes
   local leftDilationTarget, rightDilationTarget =
     fire.calculatePupilDilation(
       eyes.x, eyes.y,
-      leftEyeX + eyes.floatOffset.leftX,
-      rightEyeX + eyes.floatOffset.rightX,
-      centerY + eyes.floatOffset.leftY, -- Using left Y offset for the left eye
+      leftEyeX, rightEyeX, leftEyeY,
       eyes.pupilDilation
     )
 
-  -- Smoothly transition pupil dilation
-  eyes.pupilDilation.left = eyes.pupilDilation.left +
-    (leftDilationTarget - eyes.pupilDilation.left) * dt * eyes.pupilDilation.fadeSpeed
+  eyes.eyes.left:updatePupilDilation(
+    leftDilationTarget,
+    eyes.pupilDilation.fadeSpeed,
+    dt
+  )
 
-  eyes.pupilDilation.right = eyes.pupilDilation.right +
-    (rightDilationTarget - eyes.pupilDilation.right) * dt * eyes.pupilDilation.fadeSpeed
+  eyes.eyes.right:updatePupilDilation(
+    rightDilationTarget,
+    eyes.pupilDilation.fadeSpeed,
+    dt
+  )
 end
 
 function eyes.draw()
   local windowWidth = love.graphics.getWidth()
   local windowHeight = love.graphics.getHeight()
-  local font = love.graphics.getFont()
 
   -- Draw a solid black background first
   love.graphics.setColor(0, 0, 0)
   love.graphics.rectangle("fill", 0, 0, windowWidth, windowHeight)
 
   -- Calculate shake effect
-  eyes.shakeX, eyes.shakeY = updateShakeEffect(eyes.eyePositions, eyes.eyeSize, eyes.shakeAmount)
+  eyes.shakeX, eyes.shakeY = updateShakeEffect(eyes.shakeAmount)
 
   love.graphics.push()
   love.graphics.translate(eyes.shakeX, eyes.shakeY)
   background:draw()
 
-  -- Draw shadows first so they appear beneath the eyes
-  shadows.draw(
-    eyes.eyePositions.left + eyes.floatOffset.leftX,
-    eyes.eyePositions.centerY + eyes.floatOffset.leftY,
-    eyes.eyeSize
-  )
+  -- Get actual eye positions for shadows
+  local leftX, leftY = eyes.eyes.left:getPosition()
+  local rightX, rightY = eyes.eyes.right:getPosition()
 
-  shadows.draw(
-    eyes.eyePositions.right + eyes.floatOffset.rightX,
-    eyes.eyePositions.centerY + eyes.floatOffset.rightY,
-    eyes.eyeSize
-  )
+  -- Draw shadows first so they appear beneath the eyes
+  shadows.draw(leftX, leftY, eyes.eyeSize)
+  shadows.draw(rightX, rightY, eyes.eyeSize)
 
   -- Draw eyes with their respective fade values, reflection effects, pupil dilation, and online status
-  drawEye(
-    eyes.eyePositions.left + eyes.floatOffset.leftX, eyes.eyePositions.centerY + eyes.floatOffset.leftY,
-    eyes.eyeSize, eyes.colors,
-    eyes.eyeFadeLeft,
-    eyes.reflection.leftX, eyes.reflection.leftY, eyes.reflection.leftIntensity,
-    eyes.pupilDilation.left,
-    eyes.isOnline
-  )
-
-  drawEye(
-    eyes.eyePositions.right + eyes.floatOffset.rightX, eyes.eyePositions.centerY + eyes.floatOffset.rightY,
-    eyes.eyeSize, eyes.colors,
-    eyes.eyeFadeRight,
-    eyes.reflection.rightX, eyes.reflection.rightY, eyes.reflection.rightIntensity,
-    eyes.pupilDilation.right,
-    eyes.isOnline
-  )
+  drawEye(eyes.eyes.left, eyes.colors, eyes.isOnline)
+  drawEye(eyes.eyes.right, eyes.colors, eyes.isOnline)
 
   -- Draw only the fire effect, no mouse coordinates or online status
   drawFireEffect(eyes.x, eyes.y)
