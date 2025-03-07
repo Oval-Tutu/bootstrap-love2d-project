@@ -354,6 +354,41 @@ function Fire:calculateDistanceToEye(pointX, pointY, eyeX, eyeY)
   return math.sqrt((pointX - eyeX)^2 + (pointY - eyeY)^2)
 end
 
+---Calculates intensity value based on distance and configuration
+---@param distance number Distance to the eye
+---@param config table Configuration with minDistance, maxDistance and (optionally) maxIntensity
+---@param minIntensity number Minimum intensity to use when in range (defaults to 0)
+---@param invert boolean If true, closer distance means lower intensity (defaults to false)
+---@return number intensity The calculated intensity value (0-1 or 0-maxIntensity)
+function Fire:calculateIntensityFromDistance(distance, config, minIntensity, invert)
+  -- Default values
+  minIntensity = minIntensity or 0
+  local maxIntensity = config.maxIntensity or 1
+
+  -- If outside range, no intensity
+  if distance >= config.maxDistance then
+    return 0
+  end
+
+  -- Calculate normalized distance factor (0-1)
+  local distanceFactor = (distance - config.minDistance) / (config.maxDistance - config.minDistance)
+
+  -- Clamp to 0-1 range
+  distanceFactor = math.max(0, math.min(1, distanceFactor))
+
+  -- Invert if needed (for dilation, closer = more effect)
+  if invert then
+    distanceFactor = 1 - distanceFactor
+  else
+    -- For normal case (reflection), closer = more intensity
+    distanceFactor = 1 - distanceFactor
+  end
+
+  -- Calculate final intensity and clamp to range
+  local intensity = distanceFactor * maxIntensity
+  return math.max(minIntensity, math.min(maxIntensity, intensity))
+end
+
 ---Calculates reflection properties for the eyes based on cursor position
 ---@param mouseX number Current mouse X position
 ---@param mouseY number Current mouse Y position
@@ -373,20 +408,9 @@ function Fire:calculateReflectionProperties(mouseX, mouseY, leftEyeX, rightEyeX,
   local distanceToLeft = self:calculateDistanceToEye(mouseX, mouseY, leftEyeX, eyeY)
   local distanceToRight = self:calculateDistanceToEye(mouseX, mouseY, rightEyeX, eyeY)
 
-  -- Calculate intensity based on distance (closer = more intense)
-  local leftIntensity, rightIntensity = 0, 0
-
-  if distanceToLeft < config.maxDistance then
-    leftIntensity = math.max(0.2, math.min(config.maxIntensity,
-      config.maxIntensity * (1 - (distanceToLeft - config.minDistance) /
-      (config.maxDistance - config.minDistance))))
-  end
-
-  if distanceToRight < config.maxDistance then
-    rightIntensity = math.max(0.2, math.min(config.maxIntensity,
-      config.maxIntensity * (1 - (distanceToRight - config.minDistance) /
-      (config.maxDistance - config.minDistance))))
-  end
+  -- Calculate intensity using the helper function (minimum 0.2 for reflection)
+  local leftIntensity = self:calculateIntensityFromDistance(distanceToLeft, config, 0.2)
+  local rightIntensity = self:calculateIntensityFromDistance(distanceToRight, config, 0.2)
 
   -- Use simple position values for backward compatibility
   return leftIntensity, rightIntensity, leftEyeX, eyeY, rightEyeX, eyeY
@@ -406,20 +430,10 @@ function Fire:calculatePupilDilation(mouseX, mouseY, leftEyeX, rightEyeX, eyeY, 
   local distanceToLeft = self:calculateDistanceToEye(mouseX, mouseY, leftEyeX, eyeY)
   local distanceToRight = self:calculateDistanceToEye(mouseX, mouseY, rightEyeX, eyeY)
 
-  -- Calculate dilation factors based on distance (closer = more dilated)
-  local leftDilation, rightDilation = 0, 0
-
-  if distanceToLeft < config.maxDistance then
-    leftDilation = math.max(0, math.min(1,
-      1 - (distanceToLeft - config.minDistance) /
-      (config.maxDistance - config.minDistance)))
-  end
-
-  if distanceToRight < config.maxDistance then
-    rightDilation = math.max(0, math.min(1,
-      1 - (distanceToRight - config.minDistance) /
-      (config.maxDistance - config.minDistance)))
-  end
+  -- Calculate dilation using the helper function (no minimum, but we need to invert)
+  -- For dilation, closer = more dilated (unlike reflection where closer = more intense)
+  local leftDilation = self:calculateIntensityFromDistance(distanceToLeft, config, 0, true)
+  local rightDilation = self:calculateIntensityFromDistance(distanceToRight, config, 0, true)
 
   return leftDilation, rightDilation
 end
