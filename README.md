@@ -152,3 +152,4 @@ The sample "game" included in this template uses the following assets:
 - [Aargh! (male screams)](https://opengameart.org/content/aargh-male-screams)
 - [Eyeballs](https://opengameart.org/content/eyeballs)
 - [Fireplace Sound Loop](https://opengameart.org/content/fireplace-sound-loop)
+- [Parallax Backgrounds](https://opengameart.org/content/3-parallax-backgrounds)
