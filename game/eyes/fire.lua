@@ -275,6 +275,16 @@ function Fire:initParticleSystem()
   return fireSystem, coreSystem, sparkSystem, smokeSystem
 end
 
+---Calculate distance from a point to an eye
+---@param pointX number X position of the point
+---@param pointY number Y position of the point
+---@param eyeX number X position of the eye
+---@param eyeY number Y position of the eye
+---@return number distance Distance from point to eye
+function Fire:calculateDistanceToEye(pointX, pointY, eyeX, eyeY)
+  return math.sqrt((pointX - eyeX)^2 + (pointY - eyeY)^2)
+end
+
 ---Calculates reflection properties for the eyes based on cursor position
 ---@param mouseX number Current mouse X position
 ---@param mouseY number Current mouse Y position
@@ -290,40 +300,27 @@ end
 ---@return number rightX X position for right eye reflection
 ---@return number rightY Y position for right eye reflection
 function Fire:calculateReflectionProperties(mouseX, mouseY, leftEyeX, rightEyeX, eyeY, eyeSize, config)
-  -- Calculate distances to each eye
-  local distanceToLeft = math.sqrt((mouseX - leftEyeX)^2 + (mouseY - eyeY)^2)
-  local distanceToRight = math.sqrt((mouseX - rightEyeX)^2 + (mouseY - eyeY)^2)
+  -- Calculate distances to each eye using the helper function
+  local distanceToLeft = self:calculateDistanceToEye(mouseX, mouseY, leftEyeX, eyeY)
+  local distanceToRight = self:calculateDistanceToEye(mouseX, mouseY, rightEyeX, eyeY)
 
   -- Calculate intensity based on distance (closer = more intense)
-  local leftIntensity = 0
-  local rightIntensity = 0
+  local leftIntensity, rightIntensity = 0, 0
 
   if distanceToLeft < config.maxDistance then
-    leftIntensity = math.max(0, math.min(config.maxIntensity,
+    leftIntensity = math.max(0.2, math.min(config.maxIntensity,
       config.maxIntensity * (1 - (distanceToLeft - config.minDistance) /
       (config.maxDistance - config.minDistance))))
-
-    -- Ensure minimum visibility when fire is present
-    leftIntensity = math.max(leftIntensity, 0.2)
   end
 
   if distanceToRight < config.maxDistance then
-    rightIntensity = math.max(0, math.min(config.maxIntensity,
+    rightIntensity = math.max(0.2, math.min(config.maxIntensity,
       config.maxIntensity * (1 - (distanceToRight - config.minDistance) /
       (config.maxDistance - config.minDistance))))
-
-    -- Ensure minimum visibility when fire is present
-    rightIntensity = math.max(rightIntensity, 0.2)
   end
 
-  -- Note: we're not using these positions directly anymore for drawing the glint
-  -- but we still need to return something for the existing API
-  local leftX = leftEyeX
-  local leftY = eyeY
-  local rightX = rightEyeX
-  local rightY = eyeY
-
-  return leftIntensity, rightIntensity, leftX, leftY, rightX, rightY
+  -- Use simple position values for backward compatibility
+  return leftIntensity, rightIntensity, leftEyeX, eyeY, rightEyeX, eyeY
 end
 
 ---Calculates pupil dilation based on fire proximity to each eye
@@ -336,13 +333,12 @@ end
 ---@return number leftDilation Dilation factor for left eye (0-1)
 ---@return number rightDilation Dilation factor for right eye (0-1)
 function Fire:calculatePupilDilation(mouseX, mouseY, leftEyeX, rightEyeX, eyeY, config)
-  -- Calculate distances to each eye
-  local distanceToLeft = math.sqrt((mouseX - leftEyeX)^2 + (mouseY - eyeY)^2)
-  local distanceToRight = math.sqrt((mouseX - rightEyeX)^2 + (mouseY - eyeY)^2)
+  -- Calculate distances to each eye using the helper function
+  local distanceToLeft = self:calculateDistanceToEye(mouseX, mouseY, leftEyeX, eyeY)
+  local distanceToRight = self:calculateDistanceToEye(mouseX, mouseY, rightEyeX, eyeY)
 
   -- Calculate dilation factors based on distance (closer = more dilated)
-  local leftDilation = 0
-  local rightDilation = 0
+  local leftDilation, rightDilation = 0, 0
 
   if distanceToLeft < config.maxDistance then
     leftDilation = math.max(0, math.min(1,
@@ -362,12 +358,22 @@ end
 ---Register particle systems with the stats overlay
 ---@param overlayStatsModule table Optional stats overlay module for registering particle systems
 function Fire:registerWithStats(overlayStatsModule)
-  if overlayStatsModule then
-    overlayStatsModule.registerParticleSystem(self.fireSystem)
-    overlayStatsModule.registerParticleSystem(self.coreSystem)
-    overlayStatsModule.registerParticleSystem(self.sparkSystem)
-    overlayStatsModule.registerParticleSystem(self.smokeSystem)
+  if not overlayStatsModule then return end
+
+  local systems = {self.fireSystem, self.coreSystem, self.sparkSystem, self.smokeSystem}
+  for _, system in ipairs(systems) do
+    overlayStatsModule.registerParticleSystem(system)
   end
+end
+
+---Updates a particle system position
+---@param system love.ParticleSystem The particle system to update
+---@param dt number Delta time
+---@param x number X position
+---@param y number Y position
+local function updateSystem(system, dt, x, y)
+  system:update(dt)
+  system:setPosition(x, y)
 end
 
 ---Update the fire particle systems
@@ -375,27 +381,17 @@ end
 ---@param x number Current x position of the fire (mouse)
 ---@param y number Current y position of the fire (mouse)
 function Fire:update(dt, x, y)
-  -- Update particle systems
-  self.fireSystem:update(dt)
-  self.fireSystem:setPosition(x, y)
-
-  self.coreSystem:update(dt)
-  self.coreSystem:setPosition(x, y)
-
-  self.smokeSystem:update(dt)
-  self.smokeSystem:setPosition(x, y)
-
-  self.sparkSystem:update(dt)
-  self.sparkSystem:setPosition(x, y)
+  -- Update all particle systems
+  updateSystem(self.fireSystem, dt, x, y)
+  updateSystem(self.coreSystem, dt, x, y)
+  updateSystem(self.smokeSystem, dt, x, y)
+  updateSystem(self.sparkSystem, dt, x, y)
 
   -- Spark emission control - randomly emit sparks
   self.sparkTimer = self.sparkTimer + dt
   if self.sparkTimer >= self.sparkInterval then
-    -- Reset timer and set a random interval for next spark
     self.sparkTimer = 0
     self.sparkInterval = love.math.random(0.05, 0.3)
-
-    -- Emit a random number of sparks in a burst
     self.sparkSystem:emit(love.math.random(1, 5))
   end
 end
@@ -403,64 +399,41 @@ end
 ---Draw the fire effect
 function Fire:draw()
   -- FIXME: Set color to yellow to prevent the fire from being snuffed out while the mouse is moving
-  -- Bisected by analysing commit f5abe687d04f62418fc00e31310d50f64f7b83fb
   love.graphics.setColor({ 1, 1, 0 })
 
   -- Save current blend mode
   local prevBlendMode = love.graphics.getBlendMode()
 
   -- Draw the layers in back-to-front order
-
-  -- 1. Smoke behind everything (alpha blending)
   love.graphics.setBlendMode("alpha")
   love.graphics.draw(self.smokeSystem)
-
-  -- 2. Core fire on top of outer fire (brighter)
   love.graphics.draw(self.coreSystem)
 
-  -- 3. Outer fire with additive blending
   love.graphics.setBlendMode("add")
   love.graphics.draw(self.fireSystem)
-
-  -- 4. Sparks on top of everything (brightest)
   love.graphics.draw(self.sparkSystem)
 
   -- Restore previous blend mode
   love.graphics.setBlendMode(prevBlendMode)
 end
 
--- For backward compatibility with old code
+-- For backward compatibility with old code - simplified approach
 local fire = {}
-
--- Create a global singleton instance and expose its methods
 local globalInstance = Fire.new()
 
--- Copy all Fire class methods to the module table
-for k, v in pairs(Fire) do
-  if type(v) == "function" and k ~= "new" then
-    fire[k] = function(...)
-      return globalInstance[k](globalInstance, ...)
-    end
-  end
+-- Expose key functions directly with forwarding
+fire.load = function() globalInstance:registerWithStats(overlayStats) end
+fire.update = function(dt, x, y) globalInstance:update(dt, x, y) end
+fire.draw = function() globalInstance:draw() end
+fire.calculateReflectionProperties = function(...)
+  return globalInstance:calculateReflectionProperties(...)
+end
+fire.calculatePupilDilation = function(...)
+  return globalInstance:calculatePupilDilation(...)
 end
 
--- Add the convenience method to access the class
+-- Add class constructor
 fire.Fire = Fire
-
--- Create a load function for backward compatibility
-function fire.load()
-  globalInstance:registerWithStats(overlayStats)
-end
-
--- Forward other instance methods from the global instance
-fire.update = function(dt, x, y)
-  return globalInstance:update(dt, x, y)
-end
-
-fire.draw = function()
-  return globalInstance:draw()
-end
-
 -- Make colors accessible
 fire.colors = globalInstance.colors
 
