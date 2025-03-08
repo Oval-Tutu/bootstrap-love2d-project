@@ -4,6 +4,7 @@ local audio = require("eyes.audio")
 local fire = require("eyes.fire")
 local shadows = require("eyes.shadows")
 local vector = require("eyes.utils.vector")
+local StateManager = require("eyes.state.state_manager")
 
 ---@class Eye Represents a single eye with all its properties
 ---@field x number X-coordinate of the eye
@@ -183,9 +184,7 @@ local eyes = {
   shakeAmount = 5,
   fadeSpeed = 2, -- Speed of color fade transition (units per second)
 
-  -- State variables
-  shakeX = 0,
-  shakeY = 0,
+  -- State variables - will be managed by StateManager
   x = 0,
   y = 0,
 
@@ -200,9 +199,6 @@ local eyes = {
     -- Maximum float distance from origin
     amplitudeX = 15,
     amplitudeY = 10,
-    -- Time accumulator for animation
-    timeX = 0,
-    timeY = 0,
     -- Fire attraction parameters
     attractionStrength = 0.08,   -- Reduced from 0.15 for more gradual movement
     attractionRange = 400,       -- Maximum distance at which attraction has an effect
@@ -573,6 +569,9 @@ function eyes.load()
   fire:load()
   shadows.load()
 
+  -- Store reference to fire module for state manager
+  eyes.fireModule = fire
+
   -- Check online status
   eyes.isOnline = checkOnlineStatus()
 
@@ -611,6 +610,9 @@ function eyes.load()
                            eyes.floating.phaseRightX or math.pi * 0.7,
                            eyes.floating.phaseRightY or math.pi * 0.3)
 
+  -- Initialize the state manager
+  eyes.stateManager = StateManager.new(eyes)
+
   love.graphics.setFont(love.graphics.newFont(42))
   love.mouse.setVisible(false)
 end
@@ -618,9 +620,6 @@ end
 function eyes.update(dt)
   background:update(dt)
 
-  eyes.x, eyes.y = love.mouse.getPosition()
-  eyes.x = math.floor(eyes.x)
-  eyes.y = math.floor(eyes.y)
   local windowWidth = love.graphics.getWidth()
   local windowHeight = love.graphics.getHeight()
 
@@ -634,72 +633,24 @@ function eyes.update(dt)
   eyes.eyes.left:setBasePosition(leftEyeX, centerY)
   eyes.eyes.right:setBasePosition(rightEyeX, centerY)
 
-  -- Update floating time accumulators
-  eyes.floating.timeX = (eyes.floating.timeX + dt * eyes.floating.speedX) % (2 * math.pi)
-  eyes.floating.timeY = (eyes.floating.timeY + dt * eyes.floating.speedY) % (2 * math.pi)
+  -- Update all state through the centralized state manager
+  eyes.stateManager:update(dt)
 
-  -- Update floating effect for each eye
-  local mousePos = {x = eyes.x, y = eyes.y}
-  eyes.eyes.left:updateFloating(dt, eyes.floating.timeX, eyes.floating.timeY, eyes.floating, mousePos)
-  eyes.eyes.right:updateFloating(dt, eyes.floating.timeX, eyes.floating.timeY, eyes.floating, mousePos)
-
-  -- Update touch detection for each eye
-  eyes.eyes.left:updateTouchState(dt, eyes.eyes.left:isPointOver(eyes.x, eyes.y), eyes.fadeSpeed)
-  eyes.eyes.right:updateTouchState(dt, eyes.eyes.right:isPointOver(eyes.x, eyes.y), eyes.fadeSpeed)
-
-  -- Update overall touch state
-  eyes.state.touching = eyes.eyes.left.isTouching or eyes.eyes.right.isTouching
+  -- Copy important state values for convenience/backward compatibility
+  eyes.x = eyes.stateManager.mousePosition.x
+  eyes.y = eyes.stateManager.mousePosition.y
+  eyes.shakeX = eyes.stateManager.shake.x
+  eyes.shakeY = eyes.stateManager.shake.y
 
   -- Update audio system with current state and cursor position
   audio:update(dt, {
-    touching = eyes.state.touching,
+    touching = eyes.stateManager.touching,
     touchingLeft = eyes.eyes.left.isTouching,
     touchingRight = eyes.eyes.right.isTouching
   }, eyes.x, eyes.y)
 
   -- Update fire module with current mouse position
   fire.update(dt, eyes.x, eyes.y)
-
-  -- Calculate and update reflections for both eyes
-  local leftEyeX, leftEyeY = eyes.eyes.left:getPosition()
-  local rightEyeX, rightEyeY = eyes.eyes.right:getPosition()
-
-  local leftIntensityTarget, rightIntensityTarget, leftX, leftY, rightX, rightY =
-    fire.calculateReflectionProperties(
-      eyes.x, eyes.y,
-      leftEyeX, rightEyeX, leftEyeY,
-      eyes.eyeSize, eyes.reflection
-    )
-
-  eyes.eyes.left:updateReflection(
-    leftIntensityTarget, leftX, leftY,
-    eyes.reflection.fadeSpeed, dt
-  )
-
-  eyes.eyes.right:updateReflection(
-    rightIntensityTarget, rightX, rightY,
-    eyes.reflection.fadeSpeed, dt
-  )
-
-  -- Calculate and update pupil dilation for both eyes
-  local leftDilationTarget, rightDilationTarget =
-    fire.calculatePupilDilation(
-      eyes.x, eyes.y,
-      leftEyeX, rightEyeX, leftEyeY,
-      eyes.pupilDilation
-    )
-
-  eyes.eyes.left:updatePupilDilation(
-    leftDilationTarget,
-    eyes.pupilDilation.fadeSpeed,
-    dt
-  )
-
-  eyes.eyes.right:updatePupilDilation(
-    rightDilationTarget,
-    eyes.pupilDilation.fadeSpeed,
-    dt
-  )
 end
 
 function eyes.draw()
@@ -710,11 +661,12 @@ function eyes.draw()
   love.graphics.setColor(0, 0, 0)
   love.graphics.rectangle("fill", 0, 0, windowWidth, windowHeight)
 
-  -- Calculate shake effect
-  eyes.shakeX, eyes.shakeY = updateShakeEffect(eyes.shakeAmount)
+  -- Get shake effect values from state manager
+  local shakeX = eyes.stateManager.shake.x
+  local shakeY = eyes.stateManager.shake.y
 
   love.graphics.push()
-  love.graphics.translate(eyes.shakeX, eyes.shakeY)
+  love.graphics.translate(shakeX, shakeY)
   background:draw()
 
   -- Get actual eye positions for shadows
@@ -729,7 +681,7 @@ function eyes.draw()
   drawEye(eyes.eyes.left, eyes.colors, eyes.isOnline)
   drawEye(eyes.eyes.right, eyes.colors, eyes.isOnline)
 
-  -- Draw only the fire effect, no mouse coordinates or online status
+  -- Draw only the fire effect
   drawFireEffect(eyes.x, eyes.y)
 
   love.graphics.pop()
