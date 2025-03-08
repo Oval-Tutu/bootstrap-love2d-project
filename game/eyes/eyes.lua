@@ -5,6 +5,7 @@ local fire = require("eyes.fire")
 local shadows = require("eyes.shadows")
 local vector = require("eyes.utils.vector")
 local StateManager = require("eyes.state.state_manager")
+local ResourceManager = require("eyes.resources.resource_manager")
 
 ---@class Eye Represents a single eye with all its properties
 ---@field x number X-coordinate of the eye
@@ -235,6 +236,9 @@ local eyes = {
 
   -- Online status
   isOnline = false,
+
+  -- Resource manager
+  resources = nil,
 }
 
 -- Constants - Define colors
@@ -564,6 +568,19 @@ end
 
 ---Loads resources and initializes the eyes
 function eyes.load()
+  -- Initialize resource manager and load all resources
+  eyes.resources = ResourceManager.new():loadAll()
+
+  -- Store references to commonly used resources for convenience
+  eyes.bloodVeinsTexture = eyes.resources:getTexture("bloodVeins")
+  eyes.irisTexture = eyes.resources:getTexture("iris")
+  eyes.pupilTexture = eyes.resources:getTexture("pupil")
+  eyes.eyeShader = eyes.resources:getShader("eye")
+
+  -- Set the default font
+  eyes.resources:setDefaultFont("default")
+
+  -- Load other modules
   background:load()
   audio:load()
   fire:load()
@@ -574,28 +591,6 @@ function eyes.load()
 
   -- Check online status
   eyes.isOnline = checkOnlineStatus()
-
-  -- Load textures
-  eyes.bloodVeinsTexture = love.graphics.newImage("eyes/gfx/blood_veins_100.png")
-  eyes.irisTexture = love.graphics.newImage("eyes/gfx/iris.png")
-  eyes.pupilTexture = love.graphics.newImage("eyes/gfx/pupil.png")
-
-  -- Load eye shader from file
-  local success, result = pcall(function()
-    return love.graphics.newShader("eyes/shaders/eye.glsl")
-  end)
-
-  if success then
-    eyes.eyeShader = result
-  else
-    print("Error loading eye shader: " .. tostring(result))
-    -- Create a simple fallback shader if loading fails
-    eyes.eyeShader = love.graphics.newShader([[
-      vec4 effect(vec4 color, Image tex, vec2 tc, vec2 sc) {
-        return color;
-      }
-    ]])
-  end
 
   -- Create our eye instances
   local windowWidth, windowHeight = love.graphics.getDimensions()
@@ -613,7 +608,7 @@ function eyes.load()
   -- Initialize the state manager
   eyes.stateManager = StateManager.new(eyes)
 
-  love.graphics.setFont(love.graphics.newFont(42))
+  -- Hide the mouse cursor
   love.mouse.setVisible(false)
 end
 
