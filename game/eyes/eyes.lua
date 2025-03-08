@@ -19,6 +19,8 @@ local ResourceManager = require("eyes.utils.resource_manager")
 ---@field reflection table {intensity=number, x=number, y=number} Reflection properties
 ---@field pupilDilation number Current pupil dilation value (0-1)
 ---@field isTouching boolean Whether the eye is currently being touched
+---@field pupilTarget table {x=number, y=number} Target position for the pupil
+---@field pupilCurrent table {x=number, y=number} Current position of the pupil
 local Eye = {}
 Eye.__index = Eye
 
@@ -51,6 +53,11 @@ function Eye.new(id, x, y, size, phaseX, phaseY)
   }
   self.pupilDilation = 0
   self.isTouching = false
+
+  -- Initialize pupil tracking properties
+  self.pupilTarget = {x = x, y = y}
+  self.pupilCurrent = {x = x, y = y}
+
   return self
 end
 
@@ -178,6 +185,23 @@ function Eye:updatePupilDilation(targetDilation, fadeSpeed, dt)
     (targetDilation - self.pupilDilation) * dt * fadeSpeed
 end
 
+---Updates the tracking position of the pupil with inertia
+---@param dt number Delta time
+---@param targetX number Target X position
+---@param targetY number Target Y position
+---@param trackingSpeed number How quickly the pupil tracks the target
+function Eye:updatePupilTracking(dt, targetX, targetY, trackingSpeed)
+  -- Update the target position
+  self.pupilTarget.x = targetX
+  self.pupilTarget.y = targetY
+
+  -- Move current position toward target with inertia
+  self.pupilCurrent.x = self.pupilCurrent.x +
+    (self.pupilTarget.x - self.pupilCurrent.x) * dt * trackingSpeed
+  self.pupilCurrent.y = self.pupilCurrent.y +
+    (self.pupilTarget.y - self.pupilCurrent.y) * dt * trackingSpeed
+end
+
 -- The public module
 local eyes = {
   -- Configuration
@@ -206,6 +230,13 @@ local eyes = {
     attractionRange = 400,       -- Maximum distance at which attraction has an effect
     maxAttractionForce = 0.4,    -- Maximum force of attraction per second
     dampingFactor = 0.85,        -- How quickly attraction velocity decays
+  },
+
+  -- Eye tracking configuration
+  tracking = {
+    speed = 15.0,                -- Base speed of eye tracking (higher = faster tracking)
+    touchedSpeedFactor = 0.3,    -- When touched, tracking is this much slower
+    maxTrackingDistance = 0.5,   -- Max percentage of eye size the pupil can move from center
   },
 
   -- Reflection state for fire effects
@@ -356,21 +387,28 @@ end
 ---@param eyeY number Y position of the eye
 ---@param eyeSize number Size of the eye
 ---@param fadeValue number 0-1 fade value for oscillation
+---@param currentPupilX number Current X position of the pupil (for inertia)
+---@param currentPupilY number Current Y position of the pupil (for inertia)
 ---@return number irisX X position of the iris
 ---@return number irisY Y position of the iris
 ---@return number pupilX X position of the pupil
 ---@return number pupilY Y position of the pupil
 ---@return number angle Direction angle
-local function calculatePupilPosition(eyeX, eyeY, eyeSize, fadeValue)
-  -- Calculate tracking position (where pupil would be when tracking mouse)
+local function calculatePupilPosition(eyeX, eyeY, eyeSize, fadeValue, currentPupilX, currentPupilY)
   local mouseX, mouseY = love.mouse.getPosition()
   local distanceX = mouseX - eyeX
   local distanceY = mouseY - eyeY
-  local distance = math.min(math.sqrt(distanceX^2 + distanceY^2), eyeSize / 2)
+
+  -- Calculate the maximum distance the pupil can move
+  local maxDistance = eyeSize * eyes.tracking.maxTrackingDistance
+
+  -- Calculate tracking position
+  local distance = math.min(math.sqrt(distanceX^2 + distanceY^2), maxDistance)
   local angle = math.atan2(distanceY, distanceX)
 
-  local trackingX = eyeX + (math.cos(angle) * distance)
-  local trackingY = eyeY + (math.sin(angle) * distance)
+  -- Use the current position from the eye's tracking system
+  local trackingX = currentPupilX
+  local trackingY = currentPupilY
 
   -- Calculate oscillation position (where pupil would be when eye is touched)
   local oscillationRange = eyeSize / 16
@@ -546,8 +584,11 @@ local function drawEye(eye, isOnline)
   drawEyeBase(eyeX, eyeY, eyeSize, eyeColor, shadedEyeColor, dirX, dirY)
   drawBloodVeins(eyeX, eyeY, eyeSize, fadeValue)
 
-  -- Calculate iris and pupil positions
-  local irisX, irisY, pupilX, pupilY = calculatePupilPosition(eyeX, eyeY, eyeSize, fadeValue)
+  -- Calculate iris and pupil positions using current tracked position
+  local irisX, irisY, pupilX, pupilY = calculatePupilPosition(
+    eyeX, eyeY, eyeSize, fadeValue,
+    eye.pupilCurrent.x, eye.pupilCurrent.y
+  )
 
   drawIris(irisX, irisY, eyeSize, pupilColor)
   drawPupil(pupilX, pupilY, eyeSize, dilationFactor)
@@ -742,6 +783,50 @@ function eyes.update(dt)
   eyes.y = eyes.stateManager.mousePosition.y
   eyes.shakeX = eyes.stateManager.shake.x
   eyes.shakeY = eyes.stateManager.shake.y
+
+  -- Update eye pupil tracking with inertia
+  local leftEye = eyes.eyes.left
+  local rightEye = eyes.eyes.right
+  local leftEyeX, leftEyeY = leftEye:getPosition()
+  local rightEyeX, rightEyeY = rightEye:getPosition()
+
+  -- Calculate target positions for both eyes
+  local function calculateTargetPosition(eyeX, eyeY, eyeSize)
+    local mouseX, mouseY = love.mouse.getPosition()
+    local distanceX = mouseX - eyeX
+    local distanceY = mouseY - eyeY
+
+    -- Limit how far the pupil can move from center
+    local maxDistance = eyeSize * eyes.tracking.maxTrackingDistance
+    local distance = math.sqrt(distanceX^2 + distanceY^2)
+
+    if distance > maxDistance then
+      local factor = maxDistance / distance
+      distanceX = distanceX * factor
+      distanceY = distanceY * factor
+    end
+
+    return eyeX + distanceX, eyeY + distanceY
+  end
+
+  -- Calculate tracking speed based on touch state
+  local leftTrackingSpeed = eyes.tracking.speed
+  local rightTrackingSpeed = eyes.tracking.speed
+
+  if leftEye.isTouching then
+    leftTrackingSpeed = leftTrackingSpeed * eyes.tracking.touchedSpeedFactor
+  end
+
+  if rightEye.isTouching then
+    rightTrackingSpeed = rightTrackingSpeed * eyes.tracking.touchedSpeedFactor
+  end
+
+  -- Get target positions and update pupil tracking
+  local leftTargetX, leftTargetY = calculateTargetPosition(leftEyeX, leftEyeY, leftEye.size)
+  local rightTargetX, rightTargetY = calculateTargetPosition(rightEyeX, rightEyeY, rightEye.size)
+
+  leftEye:updatePupilTracking(dt, leftTargetX, leftTargetY, leftTrackingSpeed)
+  rightEye:updatePupilTracking(dt, rightTargetX, rightTargetY, rightTrackingSpeed)
 
   -- Update audio system with current state and cursor position
   audio:update(dt, {
