@@ -5,8 +5,8 @@ local fire = require("eyes.fire")
 local shadows = require("eyes.shadows")
 local vector = require("eyes.utils.vector")
 local colorUtils = require("eyes.utils.color_utils")
-local StateManager = require("eyes.state.state_manager")
-local ResourceManager = require("eyes.resources.resource_manager")
+local StateManager = require("eyes.utils.state_manager")
+local ResourceManager = require("eyes.utils.resource_manager")
 
 ---@class Eye Represents a single eye with all its properties
 ---@field x number X-coordinate of the eye
