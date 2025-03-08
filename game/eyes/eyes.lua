@@ -3,6 +3,7 @@ local background = require("eyes.background")
 local audio = require("eyes.audio")
 local fire = require("eyes.fire")
 local shadows = require("eyes.shadows")
+local vector = require("eyes.utils.vector")
 
 ---@class Eye Represents a single eye with all its properties
 ---@field x number X-coordinate of the eye
@@ -73,33 +74,43 @@ end
 ---@param config table Floating configuration
 ---@param attractionPoint table {x=number, y=number} Point of attraction (e.g. mouse/fire position)
 function Eye:updateFloating(dt, timeX, timeY, config, attractionPoint)
-  -- Calculate basic floating motion with independent X and Y oscillation
+  -- Calculate oscillation component (simple harmonic motion)
   local floatX = math.sin(timeX + self.phaseX) * config.amplitudeX
   local floatY = math.sin(timeY + self.phaseY) * config.amplitudeY
 
-  -- Apply damping to current velocities
+  -- Update attraction physics (velocity-based movement towards attraction point)
+  self:updateAttractionPhysics(dt, attractionPoint, config)
+
+  -- Combine oscillation with attraction offset for final position
+  self.floatOffset.x = floatX + self.attractOffset.x
+  self.floatOffset.y = floatY + self.attractOffset.y
+end
+
+---Updates the attraction physics for the eye
+---@param dt number Delta time
+---@param attractionPoint table {x=number, y=number} Point of attraction
+---@param config table Floating configuration with attraction parameters
+function Eye:updateAttractionPhysics(dt, attractionPoint, config)
+  -- Apply damping to current velocity (simulates drag/friction)
   self.velocity.x = self.velocity.x * config.dampingFactor
   self.velocity.y = self.velocity.y * config.dampingFactor
 
-  -- Get the current actual position
+  -- Get current eye position
   local eyeX, eyeY = self:getPosition()
 
-  -- Calculate distance to attraction point
+  -- Calculate vector to attraction point
   local dx = attractionPoint.x - eyeX
   local dy = attractionPoint.y - eyeY
-  local distance = math.sqrt(dx * dx + dy * dy)
+  local distance = vector.length(dx, dy)
 
-  -- Apply attraction force if within range
+  -- Only apply attraction if within range
   if distance < config.attractionRange then
-    -- Normalize direction vector
-    local normalizedX = dx / distance
-    local normalizedY = dy / distance
-
-    -- Calculate attraction strength based on distance (stronger when closer)
+    -- Calculate attraction force (stronger when closer)
+    local normalizedX, normalizedY = vector.normalize(dx, dy)
     local strengthFactor = 1.0 - (distance / config.attractionRange)
     local attractForce = strengthFactor * config.attractionStrength
 
-    -- Apply acceleration to velocity (limited by maxAttractionForce)
+    -- Apply acceleration to velocity
     local accelerationX = normalizedX * attractForce
     local accelerationY = normalizedY * attractForce
 
@@ -108,21 +119,14 @@ function Eye:updateFloating(dt, timeX, timeY, config, attractionPoint)
 
     -- Clamp maximum velocity
     local maxVel = config.maxAttractionForce * dt
-    local velLength = math.sqrt(self.velocity.x^2 + self.velocity.y^2)
-    if (velLength > maxVel) then
-      local factor = maxVel / velLength
-      self.velocity.x = self.velocity.x * factor
-      self.velocity.y = self.velocity.y * factor
-    end
+    self.velocity.x, self.velocity.y = vector.clamp(
+      self.velocity.x, self.velocity.y, maxVel
+    )
   end
 
-  -- Update attraction offsets using velocities
+  -- Update position based on velocity
   self.attractOffset.x = self.attractOffset.x + self.velocity.x
   self.attractOffset.y = self.attractOffset.y + self.velocity.y
-
-  -- Combine oscillation with attraction offset
-  self.floatOffset.x = floatX + self.attractOffset.x
-  self.floatOffset.y = floatY + self.attractOffset.y
 end
 
 ---Checks if a point is over this eye
@@ -131,7 +135,7 @@ end
 ---@return boolean isOver True if the point is over this eye
 function Eye:isPointOver(x, y)
   local eyeX, eyeY = self:getPosition()
-  local distance = math.sqrt((x - eyeX)^2 + (y - eyeY)^2)
+  local distance = vector.distance(x, y, eyeX, eyeY)
   return distance < self.size
 end
 
