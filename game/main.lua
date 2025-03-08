@@ -1,8 +1,4 @@
 https = nil
-i18n = require("lib.smiti18n")
-i18n.loadFile("locales/en.lua")
-i18n.setLocale("en")
-
 local overlayStats = require("lib.overlayStats")
 local runtimeLoader = require("runtime.loader")
 local eyes = require("eyes.eyes")
