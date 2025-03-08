@@ -610,53 +610,41 @@ function eyes.calculateIntensityFromDistance(distance, config, minIntensity, inv
   return math.max(minIntensity, math.min(maxIntensity, intensity))
 end
 
----Calculates reflection properties for the eyes based on cursor position
----@param mouseX number Current mouse X position
----@param mouseY number Current mouse Y position
----@param leftEyeX number X position of left eye
----@param rightEyeX number X position of right eye
----@param eyeY number Y position of both eyes
----@param eyeSize number Size of eyes
----@param config table Reflection configuration parameters
----@return number leftIntensity Intensity for left eye reflection (0-1)
----@return number rightIntensity Intensity for right eye reflection (0-1)
----@return number leftX X position for left eye reflection
----@return number leftY Y position for left eye reflection
----@return number rightX X position for right eye reflection
----@return number rightY Y position for right eye reflection
-function eyes.calculateReflectionProperties(mouseX, mouseY, leftEyeX, rightEyeX, eyeY, eyeSize, config)
-  -- Calculate distances to each eye using the helper function
-  local distanceToLeft = eyes.calculateDistanceToEye(mouseX, mouseY, leftEyeX, eyeY)
-  local distanceToRight = eyes.calculateDistanceToEye(mouseX, mouseY, rightEyeX, eyeY)
+---Calculate effects (reflection and dilation) for both eyes in a single pass
+---@param mousePosition table {x=number, y=number} Mouse/cursor position
+---@param leftEye Eye The left eye object
+---@param rightEye Eye The right eye object
+---@param reflectionConfig table Configuration for reflection effect
+---@param dilationConfig table Configuration for pupil dilation effect
+---@return table Effects calculated effects {leftReflection=number, rightReflection=number, leftDilation=number, rightDilation=number}
+function eyes.calculateEyeEffects(mousePosition, leftEye, rightEye, reflectionConfig, dilationConfig)
+  -- Get eye positions
+  local leftEyeX, leftEyeY = leftEye:getPosition()
+  local rightEyeX, rightEyeY = rightEye:getPosition()
 
-  -- Calculate intensity using the helper function (minimum 0.2 for reflection)
-  local leftIntensity = eyes.calculateIntensityFromDistance(distanceToLeft, config, 0.2)
-  local rightIntensity = eyes.calculateIntensityFromDistance(distanceToRight, config, 0.2)
+  -- Calculate distances to eyes just once
+  local distanceToLeft = eyes.calculateDistanceToEye(mousePosition.x, mousePosition.y, leftEyeX, leftEyeY)
+  local distanceToRight = eyes.calculateDistanceToEye(mousePosition.x, mousePosition.y, rightEyeX, rightEyeY)
 
-  -- Use simple position values for backward compatibility
-  return leftIntensity, rightIntensity, leftEyeX, eyeY, rightEyeX, eyeY
-end
+  -- Calculate reflection intensities
+  local leftReflection = eyes.calculateIntensityFromDistance(distanceToLeft, reflectionConfig, 0.2)
+  local rightReflection = eyes.calculateIntensityFromDistance(distanceToRight, reflectionConfig, 0.2)
 
----Calculates pupil dilation based on fire proximity to each eye
----@param mouseX number Current mouse X position
----@param mouseY number Current mouse Y position
----@param leftEyeX number X position of left eye
----@param rightEyeX number X position of right eye
----@param eyeY number Y position of both eyes
----@param config table Pupil dilation configuration parameters
----@return number leftDilation Dilation factor for left eye (0-1)
----@return number rightDilation Dilation factor for right eye (0-1)
-function eyes.calculatePupilDilation(mouseX, mouseY, leftEyeX, rightEyeX, eyeY, config)
-  -- Calculate distances to each eye using the helper function
-  local distanceToLeft = eyes.calculateDistanceToEye(mouseX, mouseY, leftEyeX, eyeY)
-  local distanceToRight = eyes.calculateDistanceToEye(mouseX, mouseY, rightEyeX, eyeY)
+  -- Calculate dilation factors (invert the distance relationship)
+  local leftDilation = eyes.calculateIntensityFromDistance(distanceToLeft, dilationConfig, 0, true)
+  local rightDilation = eyes.calculateIntensityFromDistance(distanceToRight, dilationConfig, 0, true)
 
-  -- Calculate dilation using the helper function (no minimum, but we need to invert)
-  -- For dilation, closer = more dilated (unlike reflection where closer = more intense)
-  local leftDilation = eyes.calculateIntensityFromDistance(distanceToLeft, config, 0, true)
-  local rightDilation = eyes.calculateIntensityFromDistance(distanceToRight, config, 0, true)
-
-  return leftDilation, rightDilation
+  -- Return all calculated values in a single table
+  return {
+    leftReflection = leftReflection,
+    rightReflection = rightReflection,
+    leftDilation = leftDilation,
+    rightDilation = rightDilation,
+    leftX = leftEyeX,
+    leftY = leftEyeY,
+    rightX = rightEyeX,
+    rightY = rightEyeY
+  }
 end
 
 ---Updates the online status by performing a network request

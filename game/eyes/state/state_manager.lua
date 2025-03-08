@@ -81,43 +81,34 @@ function StateManager:createEffectsManager()
       local leftEye = eyes.left
       local rightEye = eyes.right
 
-      local leftEyeX, leftEyeY = leftEye:getPosition()
-      local rightEyeX, rightEyeY = rightEye:getPosition()
+      -- Calculate all effects in a single pass
+      local mousePosition = {x = mouseX, y = mouseY}
+      local effects = self.parent.eyes.calculateEyeEffects(
+        mousePosition,
+        leftEye, rightEye,
+        reflectionConfig, dilationConfig
+      )
 
-      -- Update reflections - Call from parent eyes module instead of fire module
-      local leftIntensityTarget, rightIntensityTarget, leftX, leftY, rightX, rightY =
-        self.parent.eyes.calculateReflectionProperties(
-          mouseX, mouseY,
-          leftEyeX, rightEyeX, leftEyeY,
-          eyeSize, reflectionConfig
-        )
-
+      -- Update reflections
       leftEye:updateReflection(
-        leftIntensityTarget, leftX, leftY,
+        effects.leftReflection, effects.leftX, effects.leftY,
         reflectionConfig.fadeSpeed, dt
       )
 
       rightEye:updateReflection(
-        rightIntensityTarget, rightX, rightY,
+        effects.rightReflection, effects.rightX, effects.rightY,
         reflectionConfig.fadeSpeed, dt
       )
 
-      -- Update pupil dilation - Call from parent eyes module instead of fire module
-      local leftDilationTarget, rightDilationTarget =
-        self.parent.eyes.calculatePupilDilation(
-          mouseX, mouseY,
-          leftEyeX, rightEyeX, leftEyeY,
-          dilationConfig
-        )
-
+      -- Update pupil dilations
       leftEye:updatePupilDilation(
-        leftDilationTarget,
+        effects.leftDilation,
         dilationConfig.fadeSpeed,
         dt
       )
 
       rightEye:updatePupilDilation(
-        rightDilationTarget,
+        effects.rightDilation,
         dilationConfig.fadeSpeed,
         dt
       )
