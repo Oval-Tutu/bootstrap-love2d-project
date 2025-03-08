@@ -84,9 +84,9 @@ function StateManager:createEffectsManager()
       local leftEyeX, leftEyeY = leftEye:getPosition()
       local rightEyeX, rightEyeY = rightEye:getPosition()
 
-      -- Update reflections
+      -- Update reflections - Call from parent eyes module instead of fire module
       local leftIntensityTarget, rightIntensityTarget, leftX, leftY, rightX, rightY =
-        fire.calculateReflectionProperties(
+        self.parent.eyes.calculateReflectionProperties(
           mouseX, mouseY,
           leftEyeX, rightEyeX, leftEyeY,
           eyeSize, reflectionConfig
@@ -102,9 +102,9 @@ function StateManager:createEffectsManager()
         reflectionConfig.fadeSpeed, dt
       )
 
-      -- Update pupil dilation
+      -- Update pupil dilation - Call from parent eyes module instead of fire module
       local leftDilationTarget, rightDilationTarget =
-        fire.calculatePupilDilation(
+        self.parent.eyes.calculatePupilDilation(
           mouseX, mouseY,
           leftEyeX, rightEyeX, leftEyeY,
           dilationConfig
@@ -163,6 +163,9 @@ function StateManager:update(dt)
     self.eyes.fadeSpeed
   )
 
+  -- Store parent reference in sub-managers
+  self.effects.parent = self
+
   -- Update visual effects (reflection, dilation)
   self.effects:updateEffects(
     self.eyes.eyes,
@@ -172,7 +175,7 @@ function StateManager:update(dt)
     self.eyes.eyeSize,
     self.eyes.reflection,
     self.eyes.pupilDilation,
-    self.eyes.fireModule
+    self.eyes.fireModule  -- This is no longer used for calculations
   )
 
   -- Update shake effect

@@ -565,6 +565,100 @@ local function drawFireEffect(x, y)
   love.mouse.setVisible(false)
 end
 
+---Calculate distance from a point to an eye
+---@param pointX number X position of the point
+---@param pointY number Y position of the point
+---@param eyeX number X position of the eye
+---@param eyeY number Y position of the eye
+---@return number distance Distance from point to eye
+function eyes.calculateDistanceToEye(pointX, pointY, eyeX, eyeY)
+  return math.sqrt((pointX - eyeX)^2 + (pointY - eyeY)^2)
+end
+
+---Calculates intensity value based on distance and configuration
+---@param distance number Distance to the eye
+---@param config table Configuration with minDistance, maxDistance and (optionally) maxIntensity
+---@param minIntensity number Minimum intensity to use when in range (defaults to 0)
+---@param invert boolean If true, closer distance means lower intensity (defaults to false)
+---@return number intensity The calculated intensity value (0-1 or 0-maxIntensity)
+function eyes.calculateIntensityFromDistance(distance, config, minIntensity, invert)
+  -- Default values
+  minIntensity = minIntensity or 0
+  local maxIntensity = config.maxIntensity or 1
+
+  -- If outside range, no intensity
+  if distance >= config.maxDistance then
+    return 0
+  end
+
+  -- Calculate normalized distance factor (0-1)
+  local distanceFactor = (distance - config.minDistance) / (config.maxDistance - config.minDistance)
+
+  -- Clamp to 0-1 range
+  distanceFactor = math.max(0, math.min(1, distanceFactor))
+
+  -- Invert if needed (for dilation, closer = more effect)
+  if invert then
+    distanceFactor = 1 - distanceFactor
+  else
+    -- For normal case (reflection), closer = more intensity
+    distanceFactor = 1 - distanceFactor
+  end
+
+  -- Calculate final intensity and clamp to range
+  local intensity = distanceFactor * maxIntensity
+  return math.max(minIntensity, math.min(maxIntensity, intensity))
+end
+
+---Calculates reflection properties for the eyes based on cursor position
+---@param mouseX number Current mouse X position
+---@param mouseY number Current mouse Y position
+---@param leftEyeX number X position of left eye
+---@param rightEyeX number X position of right eye
+---@param eyeY number Y position of both eyes
+---@param eyeSize number Size of eyes
+---@param config table Reflection configuration parameters
+---@return number leftIntensity Intensity for left eye reflection (0-1)
+---@return number rightIntensity Intensity for right eye reflection (0-1)
+---@return number leftX X position for left eye reflection
+---@return number leftY Y position for left eye reflection
+---@return number rightX X position for right eye reflection
+---@return number rightY Y position for right eye reflection
+function eyes.calculateReflectionProperties(mouseX, mouseY, leftEyeX, rightEyeX, eyeY, eyeSize, config)
+  -- Calculate distances to each eye using the helper function
+  local distanceToLeft = eyes.calculateDistanceToEye(mouseX, mouseY, leftEyeX, eyeY)
+  local distanceToRight = eyes.calculateDistanceToEye(mouseX, mouseY, rightEyeX, eyeY)
+
+  -- Calculate intensity using the helper function (minimum 0.2 for reflection)
+  local leftIntensity = eyes.calculateIntensityFromDistance(distanceToLeft, config, 0.2)
+  local rightIntensity = eyes.calculateIntensityFromDistance(distanceToRight, config, 0.2)
+
+  -- Use simple position values for backward compatibility
+  return leftIntensity, rightIntensity, leftEyeX, eyeY, rightEyeX, eyeY
+end
+
+---Calculates pupil dilation based on fire proximity to each eye
+---@param mouseX number Current mouse X position
+---@param mouseY number Current mouse Y position
+---@param leftEyeX number X position of left eye
+---@param rightEyeX number X position of right eye
+---@param eyeY number Y position of both eyes
+---@param config table Pupil dilation configuration parameters
+---@return number leftDilation Dilation factor for left eye (0-1)
+---@return number rightDilation Dilation factor for right eye (0-1)
+function eyes.calculatePupilDilation(mouseX, mouseY, leftEyeX, rightEyeX, eyeY, config)
+  -- Calculate distances to each eye using the helper function
+  local distanceToLeft = eyes.calculateDistanceToEye(mouseX, mouseY, leftEyeX, eyeY)
+  local distanceToRight = eyes.calculateDistanceToEye(mouseX, mouseY, rightEyeX, eyeY)
+
+  -- Calculate dilation using the helper function (no minimum, but we need to invert)
+  -- For dilation, closer = more dilated (unlike reflection where closer = more intense)
+  local leftDilation = eyes.calculateIntensityFromDistance(distanceToLeft, config, 0, true)
+  local rightDilation = eyes.calculateIntensityFromDistance(distanceToRight, config, 0, true)
+
+  return leftDilation, rightDilation
+end
+
 ---Updates the online status by performing a network request
 ---@return boolean isOnline True if the site is online
 local function checkOnlineStatus()
