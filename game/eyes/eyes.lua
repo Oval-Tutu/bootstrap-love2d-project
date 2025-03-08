@@ -4,6 +4,7 @@ local audio = require("eyes.audio")
 local fire = require("eyes.fire")
 local shadows = require("eyes.shadows")
 local vector = require("eyes.utils.vector")
+local colorUtils = require("eyes.utils.color_utils")
 local StateManager = require("eyes.state.state_manager")
 local ResourceManager = require("eyes.resources.resource_manager")
 
@@ -476,12 +477,22 @@ local function drawReflection(pupilX, pupilY, eyeSize, reflectionIntensity, fade
   -- Use additive blending for glow effect
   love.graphics.setBlendMode("add")
 
+  -- Get reflection colors from the palette
+  local mainGlintColor = colorUtils.getColor("reflections", "main")
+  local coreGlintColor = colorUtils.getColor("reflections", "core")
+
   -- Draw the main glint with anti-aliasing
-  love.graphics.setColor(1, 0.95, 0.8, 0.8 * actualIntensity)
+  love.graphics.setColor(
+    mainGlintColor[1], mainGlintColor[2], mainGlintColor[3],
+    0.8 * actualIntensity
+  )
   love.graphics.circle("fill", glintX, glintY, glintSize)
 
   -- Add a brighter core with anti-aliasing
-  love.graphics.setColor(1, 1, 0.9, 0.9 * actualIntensity)
+  love.graphics.setColor(
+    coreGlintColor[1], coreGlintColor[2], coreGlintColor[3],
+    0.9 * actualIntensity
+  )
   love.graphics.circle("fill", glintX, glintY, glintSize * 0.6)
 
   -- Restore previous graphics settings
@@ -492,22 +503,35 @@ end
 
 ---Draws a single eye
 ---@param eye Eye The eye to draw
----@param colors table Color definitions
 ---@param isOnline boolean Whether the system is online
-local function drawEye(eye, colors, isOnline)
+local function drawEye(eye, isOnline)
   local eyeX, eyeY = eye:getPosition()
   local eyeSize = eye.size
   local fadeValue = eye.fade
   local reflectionIntensity = eye.reflection.intensity
   local dilationFactor = eye.pupilDilation
 
-  -- Interpolate between white and pink based on fade value
-  local eyeColor = interpolateColor(colors.white, colors.lightPink, fadeValue)
-  local shadedEyeColor = interpolateColor(colors.shadedWhite, colors.lightPink, fadeValue)
+  -- Get base colors from color utility
+  local whiteColor = colorUtils.getMainColor("white")
+  local shadedWhiteColor = colorUtils.getMainColor("shadedWhite")
+  local lightPinkColor = colorUtils.getMainColor("lightPink")
+  local baseIrisColor
 
   -- Select iris color based on online status
-  local baseIrisColor = isOnline and colors.green or colors.blue
-  local pupilColor = interpolateColor(baseIrisColor, colors.darkRed, fadeValue)
+  if isOnline then
+    baseIrisColor = colorUtils.getColor("eyes", "online.iris")
+  else
+    baseIrisColor = colorUtils.getColor("eyes", "normal.iris")
+  end
+
+  local touchedIrisColor = colorUtils.getColor("eyes", "touched.iris")
+
+  -- Interpolate between white and pink based on fade value
+  local eyeColor = colorUtils.lerp(whiteColor, lightPinkColor, fadeValue)
+  local shadedEyeColor = colorUtils.lerp(shadedWhiteColor, lightPinkColor, fadeValue)
+
+  -- Interpolate iris color based on touch state
+  local pupilColor = colorUtils.lerp(baseIrisColor, touchedIrisColor, fadeValue)
 
   -- Calculate the direction vector from eye to fire/cursor
   local fireX, fireY = love.mouse.getPosition()
@@ -673,8 +697,8 @@ function eyes.draw()
   shadows.draw(rightX, rightY, eyes.eyeSize)
 
   -- Draw eyes with their respective fade values, reflection effects, pupil dilation, and online status
-  drawEye(eyes.eyes.left, eyes.colors, eyes.isOnline)
-  drawEye(eyes.eyes.right, eyes.colors, eyes.isOnline)
+  drawEye(eyes.eyes.left, eyes.isOnline)
+  drawEye(eyes.eyes.right, eyes.isOnline)
 
   -- Draw only the fire effect
   drawFireEffect(eyes.x, eyes.y)
