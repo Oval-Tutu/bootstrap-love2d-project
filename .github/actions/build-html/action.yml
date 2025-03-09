@@ -24,7 +24,6 @@ runs:
     - name: Build HTML package
       shell: bash
       run: |
-        #"${{ inputs.output_folder }}/${{ inputs.product_file }}.love" \
         curl -fsSL --retry 5 --retry-delay 15 --connect-timeout 30 --max-time 300 https://github.com/2dengine/love.js/archive/refs/heads/main.zip -o ./tools/love.js.zip || exit 1
         unzip -q ./tools/love.js.zip -d ./tools/
         sed -i "s/<title>löve.js<\/title>/<title>${{ inputs.product_name }}<\/title>/" ./tools/love.js-main/index.html

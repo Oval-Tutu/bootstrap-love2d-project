@@ -289,10 +289,10 @@ Here are some examples of how to do that.
 ### Local Testing
 
 Use [`miniserve`](https://github.com/svenstaro/miniserve) to serve the HTML build of the game using the correct CORS policy.
-`tools/serve-web.sh` is a convenience script that does that. It takes one argument which is the path to the zip file of the HTML build.
+`tools/test-html.sh` is a convenience script that does that. It looks for `builds/1/<PRODUCT_FILE>-html/<PRODUCT_FILE>-html.zip`, rewrites the `index.html` to bust the cache and adds the required CORS headers.
 
 ```shell
-./tools/serve-web.sh builds/1/Template_html/Template_html.zip
+./tools/test-html.sh
 ```
 
 Then open `http://localhost:1337` in your browser.

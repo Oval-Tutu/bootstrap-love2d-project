@@ -2,12 +2,14 @@
 
 set -euo pipefail
 
-if [ $# -ne 1 ]; then
-  echo "Usage: $0 <zipfile>"
+source ./game/product.env
+# Check if PRODUCT_NAME was found
+if [ -z "${PRODUCT_NAME}" ]; then
+  echo "Error: Could not find PRODUCT_NAME in game/product.env"
   exit 1
 fi
-
-ZIP_FILE="$1"
+PRODUCT_FILE="$(echo "${PRODUCT_NAME}" | tr ' ' '-')"
+ZIP_FILE="builds/1/${PRODUCT_FILE}-html/${PRODUCT_FILE}-html.zip"
 
 # Check if file exists
 if [ ! -f "$ZIP_FILE" ]; then
@@ -34,11 +36,20 @@ trap 'rm -rf -- "$TEMP_DIR"' EXIT
 echo "Extracting to temporary directory..."
 unzip -q "$ZIP_FILE" -d "$TEMP_DIR"
 
+# Add cache-busting timestamp to prevent browser caching
+TIMESTAMP=$(date +%s)
+echo "Adding cache-busting measures for timestamp: $TIMESTAMP"
+mv "$TEMP_DIR/game.love" "$TEMP_DIR/$TIMESTAMP.love"
+sed -i "s/game\.love/$TIMESTAMP.love/g" "$TEMP_DIR/index.html"
+
 echo "Starting server on http://localhost:1337"
 cd "$TEMP_DIR"
 miniserve \
   --header "Cross-Origin-Opener-Policy: same-origin" \
   --header "Cross-Origin-Embedder-Policy: require-corp" \
+  --header "Cache-Control: no-store, no-cache, must-revalidate, max-age=0" \
+  --header "Pragma: no-cache" \
+  --header "Expires: 0" \
   --index index.html \
   --port 1337 \
   --verbose \
