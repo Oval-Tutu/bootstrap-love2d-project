@@ -31,6 +31,7 @@ The implementation plan should include the following:
 - Use the LÖVE 2D API correctly (love.graphics, love.audio, etc.) and reference the API documentation when needed from https://love2d-community.github.io/love-api/
 - Use the LÖVE ParticleSystem API for particle effects. The API docs are here https://love2d-community.github.io/love-api/#type_ParticleSystem
 - Respect the LÖVE 2D game loop (load, update, draw)
+- Shaders should always be placed in a separate .glsl file and should target WebGL 1.0 (OpenGL ES 2.0) for compatibility
 - Be mindful of performance considerations and garbage collection concerns in game development
 
 ## Work with our project structure:

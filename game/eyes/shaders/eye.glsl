@@ -1,10 +1,15 @@
+// WebGL compatibility: only define precision when running on OpenGL ES/WebGL
+#ifdef GL_ES
+precision mediump float;
+#endif
+
 uniform vec2 eyeCenter;
 uniform vec2 highlightCenter;
 uniform float eyeSize;
 uniform vec4 brightColor;
 uniform vec4 shadedColor;
 
-vec4 effect(vec4 color, Image texture, vec2 texture_coords, vec2 screen_coords) {
+vec4 effect(vec4 color, sampler2D texture, vec2 texture_coords, vec2 screen_coords) {
   // Calculate distance from current pixel to eye center
   float dist = distance(screen_coords, eyeCenter);
 
