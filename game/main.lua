@@ -26,3 +26,7 @@ function love.keypressed(key)
     overlayStats.handleKeyboard(key) -- Should always be called last
   end
 end
+
+function love.touchpressed(id, x, y, dx, dy, pressure)
+  overlayStats.handleTouch(id, x, y, dx, dy, pressure) -- Should always be called last
+end
