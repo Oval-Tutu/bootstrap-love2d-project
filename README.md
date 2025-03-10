@@ -109,6 +109,7 @@ When the game is running you can access the performance metrics overlay by press
 #### Touch Controls
 
 - Double Tap top right corner: Toggle Overlay
+- Double Tap the overlay itself: Toggle VSync
 
 ### How to Register/Unregister Particle Systems for performance metrics
 

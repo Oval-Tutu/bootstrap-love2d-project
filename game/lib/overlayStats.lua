@@ -45,6 +45,7 @@ local overlayStats = {
     cornerSize = 80, -- Size of the activation area in pixels
     lastTapTime = 0, -- Time of the last tap
     doubleTapThreshold = 0.5, -- Maximum time between taps to register as double-tap
+    overlayArea = {x = 10, y = 10, width = 280, height = 340}, -- Will be updated in draw
   },
 }
 
@@ -125,26 +126,41 @@ local function isTouchInCorner(x, y)
   return x >= w - overlayStats.touch.cornerSize and y <= overlayStats.touch.cornerSize
 end
 
+---Checks if the given touch position is inside the overlay area
+---@param x number The x-coordinate of the touch
+---@param y number The y-coordinate of the touch
+---@return boolean insideOverlay True if touch is inside the overlay area
+local function isTouchInsideOverlay(x, y)
+  local area = overlayStats.touch.overlayArea
+  return x >= area.x and x <= area.x + area.width and
+         y >= area.y and y <= area.y + area.height
+end
+
 ---Processes touch input for the overlay toggle
 ---@param x number The x-coordinate of the touch
 ---@param y number The y-coordinate of the touch
 ---@return nil
 local function handleTouch(x, y)
-  if not isTouchInCorner(x, y) then
-    return
-  end
-
   local currentTime = love.timer.getTime()
   local timeSinceLastTap = currentTime - overlayStats.touch.lastTapTime
 
-  if timeSinceLastTap <= overlayStats.touch.doubleTapThreshold then
-    -- Double tap detected
-    toggleOverlay()
-    -- Reset tap time to prevent triple-tap from toggling twice
-    overlayStats.touch.lastTapTime = 0
-  else
-    -- First tap, record the time
-    overlayStats.touch.lastTapTime = currentTime
+  if overlayStats.isActive and isTouchInsideOverlay(x, y) then
+    -- Handle touches inside the active overlay
+    if timeSinceLastTap <= overlayStats.touch.doubleTapThreshold then
+      -- Double tap inside overlay - toggle VSync
+      toggleVSync()
+      overlayStats.touch.lastTapTime = 0
+    else
+      overlayStats.touch.lastTapTime = currentTime
+    end
+  elseif isTouchInCorner(x, y) then
+    -- Original behavior for corner taps to toggle overlay
+    if timeSinceLastTap <= overlayStats.touch.doubleTapThreshold then
+      toggleOverlay()
+      overlayStats.touch.lastTapTime = 0
+    else
+      overlayStats.touch.lastTapTime = currentTime
+    end
   end
 end
 
@@ -195,6 +211,14 @@ function overlayStats.draw()
   -- Calculate rectangle width based on the widest content
   local contentWidth = math.max(versionTextWidth, rendererInfoWidth, systemInfoWidth, baseWidth)
   local rectangleWidth = contentWidth + padding
+
+  -- Update the overlay area dimensions for touch detection
+  overlayStats.touch.overlayArea = {
+    x = 10,
+    y = 10,
+    width = rectangleWidth,
+    height = 340
+  }
 
   -- Draw background rectangle with dynamic width
   love.graphics.setColor(0, 0, 0, 0.8)
