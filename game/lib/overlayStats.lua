@@ -23,6 +23,10 @@ local overlayStats = {
     os = love.system.getOS(),
     cpuCount = love.system.getProcessorCount(),
   },
+  supportedFeatures = {
+    glsl3 = false,
+    pixelShaderHighp = false,
+  },
   metrics = {
     canvases = {},
     canvasSwitches = {},
@@ -117,6 +121,11 @@ function overlayStats.load()
   end
   -- Get initial vsync state from LÖVE config
   overlayStats.vsyncEnabled = love.window.getVSync() == 1
+
+  -- Get graphics feature support information
+  local supported = love.graphics.getSupported()
+  overlayStats.supportedFeatures.glsl3 = supported.glsl3
+  overlayStats.supportedFeatures.pixelShaderHighp = supported.pixelshaderhighp
 end
 
 ---Draws the performance overlay when active
@@ -151,7 +160,7 @@ function overlayStats.draw()
 
   -- Draw background rectangle with dynamic width
   love.graphics.setColor(0, 0, 0, 0.8)
-  love.graphics.rectangle("fill", 10, 10, rectangleWidth, 300)
+  love.graphics.rectangle("fill", 10, 10, rectangleWidth, 340)
   love.graphics.setColor(0.678, 0.847, 0.902, 1)
 
   -- System Info
@@ -218,6 +227,16 @@ function overlayStats.draw()
   -- Display particle count
   local currentParticleCount = averages.particleCount or 0
   love.graphics.print(string.format("Particles: %d", math.floor(currentParticleCount)), 20, y)
+  y = y + 20
+
+  -- Add GLSL 3 support indicator
+  love.graphics.setColor(overlayStats.supportedFeatures.glsl3 and { 0, 1, 0, 1 } or { 1, 0, 0, 1 })
+  love.graphics.print(string.format("GLSL 3: %s", overlayStats.supportedFeatures.glsl3 and "Yes" or "No"), 20, y)
+  y = y + 20
+
+  -- Add pixel shader highp support indicator
+  love.graphics.setColor(overlayStats.supportedFeatures.pixelShaderHighp and { 0, 1, 0, 1 } or { 1, 0, 0, 1 })
+  love.graphics.print(string.format("Pixel Shader highp: %s", overlayStats.supportedFeatures.pixelShaderHighp and "Yes" or "No"), 20, y)
   y = y + 20
 
   -- Add VSync status with color indication
