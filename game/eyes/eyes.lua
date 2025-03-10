@@ -347,7 +347,7 @@ local function drawEyeBase(eyeX, eyeY, eyeSize, eyeColor, shadedEyeColor, dirX, 
 
   -- Draw the eye base with shader for gradient effect
   love.graphics.setShader(eyes.eyeShader)
-  love.graphics.setColor(1, 1, 1, 1) -- Set to white with full alpha for proper shader application
+  love.graphics.setColor(1.0, 1.0, 1.0, 1.0)
   love.graphics.circle("fill", eyeX, eyeY, eyeSize)
   love.graphics.setShader()
 end
