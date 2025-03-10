@@ -5,24 +5,24 @@ local colorUtils = {}
 colorUtils.palettes = {
   -- Main application colors
   main = {
-    white = { 1, 1, 1 },
+    white = { 1.0, 1.0, 1.0 },
     shadedWhite = { 0.8, 0.8, 0.9 },
-    blue = { 0, 0.5, 0.95 },
-    yellow = { 1, 1, 0 },
-    orange = { 1, 0.5, 0 },
-    red = { 1, 0, 0 },
-    purple = { 1, 0, 1 },
-    green = { 0, 0.8, 0.2 },
+    blue = { 0.0, 0.5, 0.95 },
+    yellow = { 1.0, 1.0, 0.0 },
+    orange = { 1.0, 0.5, 0.0 },
+    red = { 1.0, 0.0, 0.0 },
+    purple = { 1.0, 0.0, 1.0 },
+    green = { 0.0, 0.8, 0.2 },
     darkGrey = { 0.1, 0.1, 0.1 },
-    lightPink = { 1, 0.92, 0.92 },
-    darkRed = { 0.6, 0, 0 },
+    lightPink = { 1.0, 0.92, 0.92 },
+    darkRed = { 0.6, 0.0, 0.0 },
   },
 
   -- Eye specific colors
   eyes = {
-    normal = { iris = { 0, 0.5, 0.95 } }, -- Blue
-    online = { iris = { 0, 0.8, 0.2 } },  -- Green
-    touched = { iris = { 0.6, 0, 0 } }    -- Dark red
+    normal = { iris = { 0.0, 0.5, 0.95 } }, -- Blue
+    online = { iris = { 0.0, 0.8, 0.2 } },  -- Green
+    touched = { iris = { 0.6, 0.0, 0.0 } }    -- Dark red
   },
 
   -- Eye reflection colors
