@@ -40,6 +40,12 @@ local overlayStats = {
     particleCount = {},
   },
   currentSample = 0,
+  -- Touch activation parameters
+  touch = {
+    cornerSize = 80, -- Size of the activation area in pixels
+    lastTapTime = 0, -- Time of the last tap
+    doubleTapThreshold = 0.5, -- Maximum time between taps to register as double-tap
+  },
 }
 
 -- Private functions
@@ -108,6 +114,38 @@ local function toggleVSync()
   overlayStats.vsyncEnabled = not overlayStats.vsyncEnabled
   love.window.setVSync(overlayStats.vsyncEnabled and 1 or 0)
   print(string.format("VSync %s", overlayStats.vsyncEnabled and "enabled" or "disabled"))
+end
+
+---Checks if the given touch position is in the top-right corner activation area
+---@param x number The x-coordinate of the touch
+---@param y number The y-coordinate of the touch
+---@return boolean inCorner True if touch is in the activation area
+local function isTouchInCorner(x, y)
+  local w, h = love.graphics.getDimensions()
+  return x >= w - overlayStats.touch.cornerSize and y <= overlayStats.touch.cornerSize
+end
+
+---Processes touch input for the overlay toggle
+---@param x number The x-coordinate of the touch
+---@param y number The y-coordinate of the touch
+---@return nil
+local function handleTouch(x, y)
+  if not isTouchInCorner(x, y) then
+    return
+  end
+
+  local currentTime = love.timer.getTime()
+  local timeSinceLastTap = currentTime - overlayStats.touch.lastTapTime
+
+  if timeSinceLastTap <= overlayStats.touch.doubleTapThreshold then
+    -- Double tap detected
+    toggleOverlay()
+    -- Reset tap time to prevent triple-tap from toggling twice
+    overlayStats.touch.lastTapTime = 0
+  else
+    -- First tap, record the time
+    overlayStats.touch.lastTapTime = currentTime
+  end
 end
 
 -- Public API
@@ -291,6 +329,18 @@ function overlayStats.handleKeyboard(key)
   elseif key == "f5" then
     toggleVSync()
   end
+end
+
+---Handles touch press events for toggling the overlay
+---@param id any Touch ID from LÖVE
+---@param x number The x-coordinate of the touch
+---@param y number The y-coordinate of the touch
+---@param dx number The horizontal component of the touch press
+---@param dy number The vertical component of the touch press
+---@param pressure number The pressure of the touch
+---@return nil
+function overlayStats.handleTouch(id, x, y, dx, dy, pressure)
+  handleTouch(x, y)
 end
 
 ---Register a particle system to be tracked
