@@ -273,22 +273,6 @@ local eyes = {
   resources = nil,
 }
 
--- Constants - Define colors
-eyes.colors = {
-  white = { 1, 1, 1 },
-  shadedWhite = { 0.8, 0.8, 0.9 },
-  blue = { 0, 0.5, 0.95 },
-  yellow = { 1, 1, 0 },
-  orange = { 1, 0.5, 0 },
-  red = { 1, 0, 0 },
-  purple = { 1, 0, 1 },
-  green = { 0, 0.8, 0.2 },
-  darkGrey = { 0.1, 0.1, 0.1 },
-  lightPink = { 1, 0.92, 0.92 },
-  darkRed = { 0.6, 0, 0 },
-  -- Fire-related colors are now in fire module
-}
-
 -- Eye state
 eyes.state = {
   touching = false,
