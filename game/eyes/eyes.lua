@@ -7,6 +7,7 @@ local vector = require("eyes.utils.vector")
 local colorUtils = require("eyes.utils.color_utils")
 local StateManager = require("eyes.utils.state_manager")
 local ResourceManager = require("eyes.utils.resource_manager")
+push = require("lib.push")
 
 ---@class Eye Represents a single eye with all its properties
 ---@field x number X-coordinate of the eye
@@ -696,6 +697,8 @@ end
 
 ---Loads resources and initializes the eyes
 function eyes.load()
+  love.window.setMode(1920, 1080, {resizable = true})
+  push.setupScreen(1920, 1080, {upscale = "normal", canvas = false})
   -- Make the mouse invisible
   love.mouse.setVisible(false)
 
@@ -724,7 +727,7 @@ function eyes.load()
   eyes.isOnline = checkOnlineStatus()
 
   -- Create our eye instances
-  local windowWidth, windowHeight = love.graphics.getDimensions()
+  local windowWidth, windowHeight = push.getDimensions()
   local leftX, rightX, centerY = calculateEyePositions(windowWidth, windowHeight, eyes.eyeSpacing)
 
   -- Create eyes with their appropriate phases
@@ -746,8 +749,8 @@ end
 function eyes.update(dt)
   background:update(dt)
 
-  local windowWidth = love.graphics.getWidth()
-  local windowHeight = love.graphics.getHeight()
+  local windowWidth = push.getWidth()
+  local windowHeight = push.getHeight()
 
   -- Update shadow positions
   shadows.update(dt, windowHeight)
@@ -824,35 +827,31 @@ function eyes.update(dt)
 end
 
 function eyes.draw()
-  local windowWidth = love.graphics.getWidth()
-  local windowHeight = love.graphics.getHeight()
-
-  -- Draw a solid black background first
-  love.graphics.setColor(0, 0, 0)
-  love.graphics.rectangle("fill", 0, 0, windowWidth, windowHeight)
-
   -- Get shake effect values from state manager
   local shakeX = eyes.stateManager.shake.x
   local shakeY = eyes.stateManager.shake.y
 
   love.graphics.push()
   love.graphics.translate(shakeX, shakeY)
-  background:draw()
 
-  -- Get actual eye positions for shadows
-  local leftX, leftY = eyes.eyes.left:getPosition()
-  local rightX, rightY = eyes.eyes.right:getPosition()
+  push.start()
+    background:draw()
 
-  -- Draw shadows first so they appear beneath the eyes
-  shadows.draw(leftX, leftY, eyes.eyeSize)
-  shadows.draw(rightX, rightY, eyes.eyeSize)
+    -- Get actual eye positions for shadows
+    local leftX, leftY = eyes.eyes.left:getPosition()
+    local rightX, rightY = eyes.eyes.right:getPosition()
 
-  -- Draw eyes with their respective fade values, reflection effects, pupil dilation, and online status
-  drawEye(eyes.eyes.left, eyes.isOnline)
-  drawEye(eyes.eyes.right, eyes.isOnline)
+    -- Draw shadows first so they appear beneath the eyes
+    shadows.draw(leftX, leftY, eyes.eyeSize)
+    shadows.draw(rightX, rightY, eyes.eyeSize)
 
-  -- Draw only the fire effect
-  drawFireEffect(eyes.x, eyes.y)
+    -- Draw eyes with their respective fade values, reflection effects, pupil dilation, and online status
+    drawEye(eyes.eyes.left, eyes.isOnline)
+    drawEye(eyes.eyes.right, eyes.isOnline)
+
+    -- Draw only the fire effect
+    drawFireEffect(eyes.x, eyes.y)
+  push.finish()
 
   love.graphics.pop()
 end
@@ -860,6 +859,10 @@ end
 -- Add cleanup for audio when the scene is exited
 function eyes.unload()
   audio:stop()
+end
+
+function love.resize(width, height)
+  push.resize(width, height)
 end
 
 return eyes

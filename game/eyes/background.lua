@@ -65,8 +65,8 @@ end
 
 ---Draw the background layers
 function background:draw()
-  local screenWidth = love.graphics.getWidth()
-  local screenHeight = love.graphics.getHeight()
+  local screenWidth = push.getWidth()
+  local screenHeight = push.getHeight()
 
   -- Calculate scale factors to fit the screen while maintaining aspect ratio
   local scaleX = screenWidth / self.width
