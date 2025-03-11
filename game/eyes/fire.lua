@@ -388,7 +388,7 @@ end
 ---Draw the fire effect
 function Fire:draw()
   -- FIXME: Set color to yellow to prevent the fire from being snuffed out while the mouse is moving
-  love.graphics.setColor({ 1, 1, 0 })
+  --love.graphics.setColor({ 1, 1, 0 })
 
   -- Save current blend mode
   local prevBlendMode = love.graphics.getBlendMode()
@@ -404,6 +404,11 @@ function Fire:draw()
 
   -- Restore previous blend mode
   love.graphics.setBlendMode(prevBlendMode)
+
+  -- TODO: Remove this after testing
+  love.graphics.setColor(1, 0, 0)
+  local x, y = love.mouse.getPosition()
+  love.graphics.circle("fill", x, y, 50)
 end
 
 -- For backward compatibility with old code - use metatable for automatic method forwarding
