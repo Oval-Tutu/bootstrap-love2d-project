@@ -2,8 +2,8 @@
 
 Turn your [LÖVE](https://love2d.org/) game ideas into polished multi-platform releases with this powerful template! Featuring professional IDE integration, automated builds, and everything you need to go from prototype to published game. Built for LÖVE 💕
 
-🛑 **Don't fork this repository directly!**
-🟢 [**Create a new repository from this template**](https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-repository-from-a-template) for your game.
+- 🛑 **Don't fork this repository directly!**
+- 🟢 [**Create a new repository from this template**](https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-repository-from-a-template) for your game.
 
 ## Features
 
@@ -70,7 +70,9 @@ Turn your [LÖVE](https://love2d.org/) game ideas into polished multi-platform r
 - Open the `Workspace.code-workspace` file with [Visual Studio Code](https://code.visualstudio.com/) or [VSCodium](https://vscodium.com/)
   - You will be prompted that there are recommended extensions.
     - Click *'Install'*
-- Remove `eyes` from [`game/main.lua`](game/main.lua) and add your game code.
+- Remove our example *"game"* by:
+  - Rename `game/main.template.lua` to `game/main.lua`.
+  - Delete `game/eyes` directory.
 - Configure [`game/product.env`](game/product.env) and [`game/conf.lua`](game/conf.lua) with the settings specific to your game.
   - Disable any platforms you do not want to target.
   - Full details on configuration can be found in the [**USAGE.md**](USAGE.md) file.
