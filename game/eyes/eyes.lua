@@ -585,9 +585,6 @@ end
 local function drawFireEffect(x, y)
   -- Draw fire effect using the fire module
   fire.draw()
-
-  -- Make the mouse invisible
-  love.mouse.setVisible(false)
 end
 
 ---Calculate distance from a point to an eye
@@ -699,6 +696,9 @@ end
 
 ---Loads resources and initializes the eyes
 function eyes.load()
+  -- Make the mouse invisible
+  love.mouse.setVisible(false)
+
   -- Initialize resource manager and load all resources
   eyes.resources = ResourceManager.new():loadAll()
 
