@@ -46,7 +46,7 @@ jobs:
       target_windows_sfx: ${{ env.TARGET_WINDOWS_SFX }}
       target_windows_zip: ${{ env.TARGET_WINDOWS_ZIP }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
           submodules: recursive
@@ -195,7 +195,7 @@ jobs:
       BUILD_NUM: ${{ needs.configure.outputs.build_num }}
       PRODUCT_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || needs.configure.outputs.previous_tag }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 1
           submodules: recursive
@@ -245,7 +245,7 @@ jobs:
       BUILD_NUM: ${{ needs.configure.outputs.build_num }}
       PRODUCT_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || needs.configure.outputs.previous_tag }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 1
           submodules: recursive
@@ -319,7 +319,7 @@ jobs:
       BUILD_NUM: ${{ needs.configure.outputs.build_num }}
       PRODUCT_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || needs.configure.outputs.previous_tag }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 1
           submodules: recursive
@@ -426,7 +426,7 @@ jobs:
       BUILD_NUM: ${{ needs.configure.outputs.build_num }}
       PRODUCT_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || needs.configure.outputs.previous_tag }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
           submodules: recursive
@@ -478,7 +478,7 @@ jobs:
       BUILD_NUM: ${{ needs.configure.outputs.build_num }}
       PRODUCT_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || needs.configure.outputs.previous_tag }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 1
           submodules: recursive
@@ -598,7 +598,7 @@ jobs:
       BUILD_NUM: ${{ needs.configure.outputs.build_num }}
       PRODUCT_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || needs.configure.outputs.previous_tag }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 1
           submodules: recursive
@@ -669,7 +669,7 @@ jobs:
       BUILD_NUM: ${{ needs.configure.outputs.build_num }}
       PRODUCT_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || needs.configure.outputs.previous_tag }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 1
           submodules: recursive
@@ -712,7 +712,7 @@ jobs:
     env:
       PRODUCT_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || needs.configure.outputs.previous_tag }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 1
           submodules: recursive
