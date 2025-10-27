@@ -211,7 +211,7 @@ jobs:
           product_name: ${{ env.PRODUCT_NAME }}
       - name: Upload .love artifact
         if: ${{ needs.configure.outputs.build_type == 'dev' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ${{ env.PRODUCT_FILE }}.love
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_FILE }}.love
@@ -263,19 +263,19 @@ jobs:
           output_folder: ${{ env.OUTPUT_FOLDER }}
       - name: Upload AppImage artifact
         if: ${{ needs.configure.outputs.build_type == 'dev' && env.TARGET_LINUX_APPIMAGE == 'true' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ${{ env.PRODUCT_FILE }}.AppImage
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_FILE }}.AppImage
       - name: Upload AppImage artifact for SteamOS Devkit Client
         if: ${{ env.TARGET_LINUX_APPIMAGE == 'true' && env.ACT == 'true' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ${{ env.PRODUCT_FILE }}.AppImage
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_FILE }}.AppImage
       - name: Upload Tarball artifact
         if: ${{ needs.configure.outputs.build_type == 'dev' && env.TARGET_LINUX_TARBALL == 'true' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ${{ env.PRODUCT_FILE }}.tar.gz
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_FILE }}.tar.gz
@@ -347,7 +347,7 @@ jobs:
           target_windows_zip: ${{ needs.configure.outputs.target_windows_zip }}
       - name: Upload Windows .zip artifact
         if: ${{ needs.configure.outputs.build_type == 'dev' && needs.configure.outputs.target_windows_zip == 'true' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           if-no-files-found: warn
           include-hidden-files: false
@@ -356,13 +356,13 @@ jobs:
           path: ./tools/build/win64/*
       - name: Upload Windows SFX artifact
         if: ${{ needs.configure.outputs.build_type == 'dev' && needs.configure.outputs.target_windows_sfx == 'true' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ${{ env.PRODUCT_FILE }}.exe
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_FILE }}.exe
       - name: Upload Windows Install artifact
         if: ${{ needs.configure.outputs.build_type == 'dev' && needs.configure.outputs.target_windows_install == 'true' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ${{ env.PRODUCT_FILE }}-installer.exe
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_FILE }}-installer.exe
@@ -442,7 +442,7 @@ jobs:
           product_name: ${{ env.PRODUCT_NAME }}
       - name: Upload HTML artifact
         if: ${{ needs.configure.outputs.build_type == 'dev' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ${{ env.PRODUCT_FILE }}-html
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_FILE }}-html
@@ -542,13 +542,13 @@ jobs:
         run: tree ${{ env.OUTPUT_FOLDER }}
       - name: Upload Android debug .apk artifact
         if: ${{ needs.configure.outputs.build_type == 'dev' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ${{ env.PRODUCT_FILE }}-debug-signed.apk
           path: ${{ steps.sign-apk-debug.outputs.signedReleaseFile }}
       - name: Upload Android release .apk artifact
         if: ${{ needs.configure.outputs.build_type == 'dev' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ${{ env.PRODUCT_FILE }}-release-signed.apk
           path: ${{ steps.sign-apk-release.outputs.signedReleaseFile }}
@@ -619,13 +619,13 @@ jobs:
           output_folder: ${{ env.OUTPUT_FOLDER }}
       - name: Upload macOS .app artifact
         if: ${{ needs.configure.outputs.build_type == 'dev' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ${{ env.PRODUCT_FILE }}.app
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_FILE }}.app.zip
       - name: Upload macOS .dmg artifact
         if: ${{ needs.configure.outputs.build_type == 'dev' && runner.os == 'macOS' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ${{ env.PRODUCT_FILE }}.dmg
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_FILE }}.dmg
@@ -691,7 +691,7 @@ jobs:
           output_folder: ${{ env.OUTPUT_FOLDER }}
       - name: Upload iOS artifact
         if: ${{ needs.configure.outputs.build_type == 'dev' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ${{ env.PRODUCT_FILE }}.ipa
           path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_FILE }}.ipa
