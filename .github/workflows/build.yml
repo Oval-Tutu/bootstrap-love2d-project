@@ -100,7 +100,7 @@ jobs:
           esac
       - name: Install gh
         if: ${{ env.ACT == 'true' }}
-        uses: sersoft-gmbh/setup-gh-cli-action@v2
+        uses: sersoft-gmbh/setup-gh-cli-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
