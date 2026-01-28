@@ -162,7 +162,7 @@ runs:
         if command -v ditto >/dev/null 2>&1; then
           ditto -c -k --keepParent ./tools/${{ inputs.product_file }}.app ${{ inputs.output_folder }}/${{ inputs.product_file }}.app.zip
         else
-          zip -ry --symlinks ${{ inputs.output_folder }}/${{ inputs.product_file }}.app.zip ./tools/${{ inputs.product_file }}.app
+          ( cd tools && zip -ry --symlinks ../${{ inputs.output_folder }}/${{ inputs.product_file }}.app.zip ./${{ inputs.product_file }}.app )
         fi
         tree ${{ inputs.output_folder }}
     - name: Create macOS .dmg of .app

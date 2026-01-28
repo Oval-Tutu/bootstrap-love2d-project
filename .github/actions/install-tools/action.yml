@@ -22,6 +22,21 @@ runs:
             libfuse2 \
             tree \
             xmlstarlet
+          if [ "$GITHUB_JOB" == "build-macos" ] && ! command -v plutil; then
+            sudo apt-get -y install \
+              build-essential \
+              cmake \
+              git \
+              libpng-dev \
+              libpng16-16 \
+              libxml2-dev \
+              pkg-config \
+              ninja-build
+            git clone --depth 1 https://github.com/CallMeEchoCodes/plutil
+            cd plutil
+            make
+            sudo make install
+          fi
         elif [ "${RUNNER_OS}" == "macOS" ]; then
           brew install \
             create-dmg \
