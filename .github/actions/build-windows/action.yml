@@ -87,7 +87,7 @@ runs:
           rm ./tools/love-${ARCH}/changes.txt
           rm ./tools/love-${ARCH}/readme.txt
         done
-        curl -fsSL --retry 5 --retry-delay 15 --connect-timeout 30 --max-time 300 https://www.7-zip.org/a/lzma2409.7z -o ./tools/lzma-sdk.7z || exit 1
+        curl -fsSL --retry 5 --retry-delay 15 --connect-timeout 30 --max-time 300 https://www.7-zip.org/a/lzma2600.7z -o ./tools/lzma-sdk.7z || exit 1
         mkdir -p ./tools/lzma-sdk
         7z x -o./tools/lzma-sdk/ ./tools/lzma-sdk.7z
     - name: Create .ico icon
