@@ -87,7 +87,8 @@ runs:
           rm ./tools/love-${ARCH}/changes.txt
           rm ./tools/love-${ARCH}/readme.txt
         done
-        curl -fsSL --retry 5 --retry-delay 15 --connect-timeout 30 --max-time 300 https://www.7-zip.org/a/lzma2600.7z -o ./tools/lzma-sdk.7z || exit 1
+        curl -fsSL --retry 5 --retry-delay 15 --connect-timeout 30 --max-time 300 https://github.com/ip7z/7zip/releases/download/26.00/lzma2600.7z -o ./tools/lzma-sdk.7z || exit 1
+        echo "6b7d0c8ed1a67112d5337e4532ecdcb9fd2eab8b1f6bb54199f9b6a627b506cc  ./tools/lzma-sdk.7z" | sha256sum -c - || exit 1
         mkdir -p ./tools/lzma-sdk
         7z x -o./tools/lzma-sdk/ ./tools/lzma-sdk.7z
     - name: Create .ico icon
