@@ -732,7 +732,7 @@ jobs:
           echo "- Android:          ${{ env.TARGET_ANDROID == 'true' && '✅' || '❌' }}" >> $GITHUB_STEP_SUMMARY
           echo "- AppImage:         ${{ env.TARGET_LINUX_APPIMAGE == 'true' && '✅' || '❌' }}" >> $GITHUB_STEP_SUMMARY
           echo "- iOS:              ${{ env.TARGET_IOS == 'true' && '✅' || '❌' }}" >> $GITHUB_STEP_SUMMARY
-          echo "- HTML:              ${{ env.TARGET_HTML == 'true' && '✅' || '❌' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- HTML:             ${{ env.TARGET_HTML == 'true' && '✅' || '❌' }}" >> $GITHUB_STEP_SUMMARY
           echo "- macOS:            ${{ env.TARGET_MACOS == 'true' && '✅' || '❌' }}" >> $GITHUB_STEP_SUMMARY
           echo "- Tarball:          ${{ env.TARGET_LINUX_TARBALL == 'true' && '✅' || '❌' }}" >> $GITHUB_STEP_SUMMARY
           echo "- Windows Installer ${{ env.TARGET_WINDOWS_INSTALL == 'true' && '✅' || '❌' }}" >> $GITHUB_STEP_SUMMARY
