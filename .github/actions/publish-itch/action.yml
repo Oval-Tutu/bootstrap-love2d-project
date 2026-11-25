@@ -41,7 +41,7 @@ runs:
         fi
         mkdir ./tools 2>/dev/null || true
         pushd tools
-          curl -L -o ./butler.zip "https://broth.itch.ovh/butler/${BUTLER_PLATFORM}/LATEST/archive/default"
+          curl -L -o ./butler.zip "https://broth.itch.zone/butler/${BUTLER_PLATFORM}/LATEST/archive/default"
           unzip butler.zip
           chmod +x ./${BUTLER_EXEC}
         popd
